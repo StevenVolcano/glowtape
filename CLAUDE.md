@@ -30,6 +30,8 @@ Update it as the project evolves.
 │   ├── pb_migrations/     # schema (applied automatically by PocketBase)
 │   ├── pb_hooks/          # glowtape.pb.js (signup/join/email), sms.pb.js, calendar.pb.js
 │   └── pb_data/           # runtime DB + files (gitignored — THE thing to back up)
+├── deploy/                # server-as-code: cloud-init, setup script, Caddyfile,
+│                          # systemd units, update/backup scripts, DEPLOY.md
 ├── public/                # PWA manifest, service worker, icons
 ├── scripts/
 │   ├── get-pocketbase.sh  # downloads the pocketbase binary into backend/

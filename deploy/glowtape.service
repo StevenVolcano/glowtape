@@ -1,0 +1,18 @@
+[Unit]
+Description=Glow Tape (PocketBase)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=glowtape
+Group=glowtape
+WorkingDirectory=/opt/glowtape/backend
+EnvironmentFile=-/etc/glowtape/env
+ExecStart=/opt/glowtape/backend/pocketbase serve --http 127.0.0.1:8090
+Restart=always
+RestartSec=3
+LimitNOFILE=8192
+
+[Install]
+WantedBy=multi-user.target

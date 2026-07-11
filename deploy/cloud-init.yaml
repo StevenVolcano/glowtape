@@ -1,0 +1,17 @@
+#cloud-config
+# Glow Tape server bootstrap. Paste this whole file into the "User data"
+# box when creating the DigitalOcean droplet (Ubuntu 24.04). The server
+# installs and configures itself; watch progress in /var/log/glowtape-setup.log
+#
+# If the GitHub repo is private, change the clone URL to include a
+# fine-grained personal access token:
+#   https://<TOKEN>@github.com/StevenVolcano/glowtape.git
+
+package_update: true
+packages:
+  - git
+  - curl
+
+runcmd:
+  - git clone https://github.com/StevenVolcano/glowtape.git /opt/glowtape
+  - bash /opt/glowtape/deploy/server-setup.sh 2>&1 | tee /var/log/glowtape-setup.log

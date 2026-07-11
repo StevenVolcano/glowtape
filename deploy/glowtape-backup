@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Nightly backup of pb_data (database + uploaded files). Stops the service
+# for a few seconds so the SQLite file is copied in a consistent state.
+# Keeps 14 local archives; if an rclone remote named "offsite" exists, also
+# copies there (e.g. Backblaze B2: rclone config, name it "offsite").
+set -euo pipefail
+
+STAMP=$(date +%F)
+DEST=/var/backups/glowtape
+
+systemctl stop glowtape
+trap 'systemctl start glowtape' EXIT
+tar czf "$DEST/pb_data-$STAMP.tgz" -C /opt/glowtape/backend pb_data
+systemctl start glowtape
+trap - EXIT
+
+ls -1t "$DEST"/pb_data-*.tgz 2>/dev/null | tail -n +15 | xargs -r rm
+
+if command -v rclone >/dev/null && rclone listremotes 2>/dev/null | grep -q '^offsite:'; then
+  rclone copy "$DEST" offsite:glowtape-backups --max-age 48h
+fi

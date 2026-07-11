@@ -1,0 +1,6 @@
+[Unit]
+Description=Glow Tape nightly backup
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/glowtape-backup

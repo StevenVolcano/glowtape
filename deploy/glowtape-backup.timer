@@ -1,0 +1,9 @@
+[Unit]
+Description=Glow Tape nightly backup at ~2am Pacific
+
+[Timer]
+OnCalendar=*-*-* 09:10:00 UTC
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -47,14 +47,10 @@ npm run dev             # http://127.0.0.1:5173 (proxies /api to the backend)
 
 ## Deploy (one small VPS)
 
-```sh
-npm run build                      # outputs dist/
-cp -r dist/* backend/pb_public/    # PocketBase serves the frontend
-# run backend/pocketbase serve behind Caddy/nginx with HTTPS
-```
-
-Configure SMTP in the PocketBase dashboard so sign-in codes and mirrored
-emails deliver. Back up `backend/pb_data/` nightly — it is the entire system.
+Fully scripted — see [`deploy/DEPLOY.md`](deploy/DEPLOY.md). Short version:
+create a $6 DigitalOcean droplet with `deploy/cloud-init.yaml` as user data,
+point glowtape.net at it, create the superuser at `/_/`, set SMTP. Updates are
+`glowtape-update`; nightly data backups are automatic.
 
 ## Deliberately not here yet
 

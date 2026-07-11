@@ -1,0 +1,8 @@
+glowtape.net {
+	reverse_proxy 127.0.0.1:8090
+	encode gzip
+}
+
+www.glowtape.net {
+	redir https://glowtape.net{uri} permanent
+}

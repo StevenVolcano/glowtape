@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# Pull the latest main, rebuild, restart. Run as root: glowtape-update
+set -euo pipefail
+cd /opt/glowtape
+git pull --ff-only
+npm ci --no-audit --no-fund
+npm run build
+rm -rf backend/pb_public
+mkdir -p backend/pb_public
+cp -r dist/* backend/pb_public/
+chown -R glowtape:glowtape backend
+cp deploy/Caddyfile /etc/caddy/Caddyfile
+cp deploy/glowtape.service deploy/glowtape-backup.service deploy/glowtape-backup.timer /etc/systemd/system/
+install -m 0755 deploy/glowtape-backup /usr/local/bin/glowtape-backup
+systemctl daemon-reload
+systemctl restart glowtape
+systemctl reload caddy
+echo "Updated to $(git rev-parse --short HEAD) and restarted."
