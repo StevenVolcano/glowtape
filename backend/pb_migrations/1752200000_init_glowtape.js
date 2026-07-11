@@ -2,9 +2,15 @@
 //
 // Initial Glow Tape schema. Applied automatically when PocketBase starts.
 //
+// Structure first, rules second: PocketBase validates API rules when a
+// collection is saved, and several rules use the `members_via_production`
+// back-relation — which only resolves once the members collection exists.
+// So every collection is created with rules unset (superuser-only), and all
+// rules are applied in a final pass at the end.
+//
 // Authorization model (MVP):
-// - `productions.managers` is a denormalized list of user ids (directors, ADs,
-//   stage managers) kept in sync by the app when members are added/edited.
+// - `productions.managers` is a denormalized list of user ids (directors,
+//   ADs, stage managers) kept in sync by the app when members are edited.
 //   Rules check membership via back-relations and management via `managers`.
 // - All members of a production can read all of its channels; audience
 //   filtering (cast/crew/team) is applied in the UI for the pilot.
@@ -23,7 +29,8 @@ migrate(
     users.otp.length = 6;
     app.save(users);
 
-    // --- orgs (created by the superuser during white-glove setup) ---
+    // --- structure pass: collections without API rules ---
+
     const orgs = new Collection({
       type: "base",
       name: "orgs",
@@ -32,15 +39,9 @@ migrate(
         { type: "autodate", name: "created", onCreate: true },
         { type: "autodate", name: "updated", onCreate: true, onUpdate: true },
       ],
-      listRule: "@request.auth.id != ''",
-      viewRule: "@request.auth.id != ''",
-      createRule: null,
-      updateRule: null,
-      deleteRule: null,
     });
     app.save(orgs);
 
-    // --- productions ---
     const productions = new Collection({
       type: "base",
       name: "productions",
@@ -58,15 +59,9 @@ migrate(
         { type: "autodate", name: "created", onCreate: true },
         { type: "autodate", name: "updated", onCreate: true, onUpdate: true },
       ],
-      listRule: "@request.auth.id != '' && (managers.id ?= @request.auth.id || members_via_production.user ?= @request.auth.id)",
-      viewRule: "@request.auth.id != '' && (managers.id ?= @request.auth.id || members_via_production.user ?= @request.auth.id)",
-      createRule: null, // superuser creates productions during setup (org admin UI later)
-      updateRule: "managers.id ?= @request.auth.id",
-      deleteRule: null,
     });
     app.save(productions);
 
-    // --- members (a person's role in one production) ---
     const members = new Collection({
       type: "base",
       name: "members",
@@ -79,15 +74,9 @@ migrate(
         { type: "autodate", name: "created", onCreate: true },
       ],
       indexes: ["CREATE UNIQUE INDEX idx_members_unique ON members (production, user)"],
-      listRule: "production.managers.id ?= @request.auth.id || production.members_via_production.user ?= @request.auth.id",
-      viewRule: "production.managers.id ?= @request.auth.id || production.members_via_production.user ?= @request.auth.id",
-      createRule: "production.managers.id ?= @request.auth.id",
-      updateRule: "production.managers.id ?= @request.auth.id",
-      deleteRule: "production.managers.id ?= @request.auth.id || user = @request.auth.id",
     });
     app.save(members);
 
-    // --- events (rehearsals, performances, work parties) ---
     const events = new Collection({
       type: "base",
       name: "events",
@@ -105,15 +94,9 @@ migrate(
         { type: "autodate", name: "created", onCreate: true },
         { type: "autodate", name: "updated", onCreate: true, onUpdate: true },
       ],
-      listRule: "production.managers.id ?= @request.auth.id || production.members_via_production.user ?= @request.auth.id",
-      viewRule: "production.managers.id ?= @request.auth.id || production.members_via_production.user ?= @request.auth.id",
-      createRule: "production.managers.id ?= @request.auth.id",
-      updateRule: "production.managers.id ?= @request.auth.id",
-      deleteRule: "production.managers.id ?= @request.auth.id",
     });
     app.save(events);
 
-    // --- acks ("Got it" on an event) ---
     const acks = new Collection({
       type: "base",
       name: "acks",
@@ -123,15 +106,9 @@ migrate(
         { type: "autodate", name: "created", onCreate: true },
       ],
       indexes: ["CREATE UNIQUE INDEX idx_acks_unique ON acks (event, user)"],
-      listRule: "event.production.managers.id ?= @request.auth.id || event.production.members_via_production.user ?= @request.auth.id",
-      viewRule: "event.production.managers.id ?= @request.auth.id || event.production.members_via_production.user ?= @request.auth.id",
-      createRule: "user = @request.auth.id && event.production.members_via_production.user ?= @request.auth.id",
-      updateRule: null,
-      deleteRule: "user = @request.auth.id",
     });
     app.save(acks);
 
-    // --- conflicts (a member's unavailability) ---
     const conflicts = new Collection({
       type: "base",
       name: "conflicts",
@@ -143,15 +120,9 @@ migrate(
         { type: "text", name: "note", max: 500 },
         { type: "autodate", name: "created", onCreate: true },
       ],
-      listRule: "production.managers.id ?= @request.auth.id || production.members_via_production.user ?= @request.auth.id",
-      viewRule: "production.managers.id ?= @request.auth.id || production.members_via_production.user ?= @request.auth.id",
-      createRule: "user = @request.auth.id && production.members_via_production.user ?= @request.auth.id",
-      updateRule: "user = @request.auth.id",
-      deleteRule: "user = @request.auth.id",
     });
     app.save(conflicts);
 
-    // --- channels (auto-created per production by the hooks) ---
     const channels = new Collection({
       type: "base",
       name: "channels",
@@ -161,15 +132,9 @@ migrate(
         { type: "select", name: "audience", values: ["all", "cast", "crew", "team"], required: true, maxSelect: 1 },
         { type: "autodate", name: "created", onCreate: true },
       ],
-      listRule: "production.managers.id ?= @request.auth.id || production.members_via_production.user ?= @request.auth.id",
-      viewRule: "production.managers.id ?= @request.auth.id || production.members_via_production.user ?= @request.auth.id",
-      createRule: "production.managers.id ?= @request.auth.id",
-      updateRule: "production.managers.id ?= @request.auth.id",
-      deleteRule: "production.managers.id ?= @request.auth.id",
     });
     app.save(channels);
 
-    // --- messages ---
     const messages = new Collection({
       type: "base",
       name: "messages",
@@ -179,15 +144,9 @@ migrate(
         { type: "text", name: "text", required: true, max: 4000 },
         { type: "autodate", name: "created", onCreate: true },
       ],
-      listRule: "channel.production.managers.id ?= @request.auth.id || channel.production.members_via_production.user ?= @request.auth.id",
-      viewRule: "channel.production.managers.id ?= @request.auth.id || channel.production.members_via_production.user ?= @request.auth.id",
-      createRule: "author = @request.auth.id && channel.production.members_via_production.user ?= @request.auth.id",
-      updateRule: "author = @request.auth.id",
-      deleteRule: "author = @request.auth.id || channel.production.managers.id ?= @request.auth.id",
     });
     app.save(messages);
 
-    // --- announcements ---
     const announcements = new Collection({
       type: "base",
       name: "announcements",
@@ -199,15 +158,9 @@ migrate(
         { type: "bool", name: "pinned" },
         { type: "autodate", name: "created", onCreate: true },
       ],
-      listRule: "production.managers.id ?= @request.auth.id || production.members_via_production.user ?= @request.auth.id",
-      viewRule: "production.managers.id ?= @request.auth.id || production.members_via_production.user ?= @request.auth.id",
-      createRule: "author = @request.auth.id && production.managers.id ?= @request.auth.id",
-      updateRule: "production.managers.id ?= @request.auth.id",
-      deleteRule: "production.managers.id ?= @request.auth.id",
     });
     app.save(announcements);
 
-    // --- announcement acks ---
     const aAcks = new Collection({
       type: "base",
       name: "announcement_acks",
@@ -216,14 +169,106 @@ migrate(
         { type: "relation", name: "user", collectionId: users.id, required: true, maxSelect: 1, cascadeDelete: true },
         { type: "autodate", name: "created", onCreate: true },
       ],
-      indexes: ["CREATE UNIQUE INDEX idx_announcement_acks_unique ON announcement_acks (announcement, user)"],
-      listRule: "announcement.production.managers.id ?= @request.auth.id || announcement.production.members_via_production.user ?= @request.auth.id",
-      viewRule: "announcement.production.managers.id ?= @request.auth.id || announcement.production.members_via_production.user ?= @request.auth.id",
-      createRule: "user = @request.auth.id && announcement.production.members_via_production.user ?= @request.auth.id",
-      updateRule: null,
-      deleteRule: "user = @request.auth.id",
+      indexes: [
+        "CREATE UNIQUE INDEX idx_announcement_acks_unique ON announcement_acks (announcement, user)",
+      ],
     });
     app.save(aAcks);
+
+    // --- rules pass: every collection now exists, back-relations resolve ---
+
+    const setRules = (name, rules) => {
+      const c = app.findCollectionByNameOrId(name);
+      c.listRule = rules.list;
+      c.viewRule = rules.view;
+      c.createRule = rules.create;
+      c.updateRule = rules.update;
+      c.deleteRule = rules.del;
+      app.save(c);
+    };
+
+    const isMemberOrManager =
+      "production.managers.id ?= @request.auth.id || production.members_via_production.user ?= @request.auth.id";
+
+    setRules("orgs", {
+      list: "@request.auth.id != ''",
+      view: "@request.auth.id != ''",
+      create: null, // superuser only (org admin UI later)
+      update: null,
+      del: null,
+    });
+
+    setRules("productions", {
+      list: "@request.auth.id != '' && (managers.id ?= @request.auth.id || members_via_production.user ?= @request.auth.id)",
+      view: "@request.auth.id != '' && (managers.id ?= @request.auth.id || members_via_production.user ?= @request.auth.id)",
+      create: null, // superuser creates productions during white-glove setup
+      update: "managers.id ?= @request.auth.id",
+      del: null,
+    });
+
+    setRules("members", {
+      list: isMemberOrManager,
+      view: isMemberOrManager,
+      create: "production.managers.id ?= @request.auth.id",
+      update: "production.managers.id ?= @request.auth.id",
+      del: "production.managers.id ?= @request.auth.id || user = @request.auth.id",
+    });
+
+    setRules("events", {
+      list: isMemberOrManager,
+      view: isMemberOrManager,
+      create: "production.managers.id ?= @request.auth.id",
+      update: "production.managers.id ?= @request.auth.id",
+      del: "production.managers.id ?= @request.auth.id",
+    });
+
+    setRules("acks", {
+      list: "event.production.managers.id ?= @request.auth.id || event.production.members_via_production.user ?= @request.auth.id",
+      view: "event.production.managers.id ?= @request.auth.id || event.production.members_via_production.user ?= @request.auth.id",
+      create: "user = @request.auth.id && event.production.members_via_production.user ?= @request.auth.id",
+      update: null,
+      del: "user = @request.auth.id",
+    });
+
+    setRules("conflicts", {
+      list: isMemberOrManager,
+      view: isMemberOrManager,
+      create: "user = @request.auth.id && production.members_via_production.user ?= @request.auth.id",
+      update: "user = @request.auth.id",
+      del: "user = @request.auth.id",
+    });
+
+    setRules("channels", {
+      list: isMemberOrManager,
+      view: isMemberOrManager,
+      create: "production.managers.id ?= @request.auth.id",
+      update: "production.managers.id ?= @request.auth.id",
+      del: "production.managers.id ?= @request.auth.id",
+    });
+
+    setRules("messages", {
+      list: "channel.production.managers.id ?= @request.auth.id || channel.production.members_via_production.user ?= @request.auth.id",
+      view: "channel.production.managers.id ?= @request.auth.id || channel.production.members_via_production.user ?= @request.auth.id",
+      create: "author = @request.auth.id && channel.production.members_via_production.user ?= @request.auth.id",
+      update: "author = @request.auth.id",
+      del: "author = @request.auth.id || channel.production.managers.id ?= @request.auth.id",
+    });
+
+    setRules("announcements", {
+      list: isMemberOrManager,
+      view: isMemberOrManager,
+      create: "author = @request.auth.id && production.managers.id ?= @request.auth.id",
+      update: "production.managers.id ?= @request.auth.id",
+      del: "production.managers.id ?= @request.auth.id",
+    });
+
+    setRules("announcement_acks", {
+      list: "announcement.production.managers.id ?= @request.auth.id || announcement.production.members_via_production.user ?= @request.auth.id",
+      view: "announcement.production.managers.id ?= @request.auth.id || announcement.production.members_via_production.user ?= @request.auth.id",
+      create: "user = @request.auth.id && announcement.production.members_via_production.user ?= @request.auth.id",
+      update: null,
+      del: "user = @request.auth.id",
+    });
   },
   (app) => {
     for (const name of [
