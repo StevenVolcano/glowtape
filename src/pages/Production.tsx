@@ -68,6 +68,9 @@ export default function Production() {
 
   const myMember = members.find((m) => m.user === user?.id) ?? null
   const isManager = !!user && production.managers.includes(user.id)
+  // Absolute tab paths: relative links inside a splat route resolve against
+  // the full current URL in react-router v7 and stack segments endlessly.
+  const base = `/production/${production.id}`
 
   return (
     <ProductionContext.Provider value={{ production, members, myMember, isManager, reload }}>
@@ -81,10 +84,10 @@ export default function Production() {
         <h1>{production.title}</h1>
 
         <nav className="tabs" aria-label="Production sections">
-          <NavLink to="schedule">Schedule</NavLink>
-          <NavLink to="messages">Messages</NavLink>
-          <NavLink to="people">People</NavLink>
-          {isManager && <NavLink to="admin">Manage</NavLink>}
+          <NavLink to={`${base}/schedule`}>Schedule</NavLink>
+          <NavLink to={`${base}/messages`}>Messages</NavLink>
+          <NavLink to={`${base}/people`}>People</NavLink>
+          {isManager && <NavLink to={`${base}/admin`}>Manage</NavLink>}
         </nav>
 
         <Routes>
@@ -92,7 +95,7 @@ export default function Production() {
           <Route path="messages" element={<MessagesTab />} />
           <Route path="people" element={<PeopleTab />} />
           {isManager && <Route path="admin" element={<AdminTab />} />}
-          <Route path="*" element={<Navigate to="schedule" replace />} />
+          <Route path="*" element={<Navigate to={`${base}/schedule`} replace />} />
         </Routes>
       </main>
     </ProductionContext.Provider>
