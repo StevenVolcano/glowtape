@@ -87,8 +87,16 @@ export interface MessageRecord {
   channel: string
   author: string
   text: string
+  image: string
   created: string
   expand?: { author?: UserRecord }
+}
+
+export interface ReactionRecord {
+  id: string
+  message: string
+  user: string
+  emoji: string
 }
 
 export interface AnnouncementRecord {
