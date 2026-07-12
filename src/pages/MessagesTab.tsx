@@ -68,12 +68,20 @@ export default function MessagesTab() {
   }
 
   const activeChannel = channels.find((c) => c.id === active) ?? null
+  const noPhotoMembers = useProduction().members.filter((m) => m.noPhotos)
 
   return (
     <div>
       <Announcements />
       <section>
         <h2>Channels</h2>
+        {noPhotoMembers.length > 0 && (
+          <p className="hint">
+            📷 Heads up: this production includes {noPhotoMembers.length}{' '}
+            {noPhotoMembers.length === 1 ? 'person' : 'people'} without photo consent — please
+            check faces before posting pictures.
+          </p>
+        )}
         <div className="chips" role="tablist">
           {channels.map((c) => (
             <button

@@ -14,6 +14,7 @@ export default function SignIn() {
   const [email, setEmail] = useState('')
   const [name, setName] = useState('')
   const [joinCode, setJoinCode] = useState(localStorage.getItem('gt-pending-code') ?? '')
+  const [age, setAge] = useState('')
   const [phone, setPhone] = useState('')
   const [code, setCode] = useState('')
   const [otpId, setOtpId] = useState('')
@@ -35,7 +36,7 @@ export default function SignIn() {
       if (method === 'email') {
         await pb.send('/api/glowtape/signup', {
           method: 'POST',
-          body: { email, name, code: joinCode },
+          body: { email, name, code: joinCode, age: Number(age) || 0 },
         })
         if (joinCode.trim()) localStorage.setItem('gt-pending-code', joinCode.trim())
         const result = await pb.collection('users').requestOTP(email.trim().toLowerCase())
@@ -129,6 +130,17 @@ export default function SignIn() {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
                   required
+                />
+                <label htmlFor="age">Your age</label>
+                <input
+                  id="age"
+                  type="number"
+                  inputMode="numeric"
+                  min="1"
+                  max="120"
+                  value={age}
+                  onChange={(e) => setAge(e.target.value)}
+                  placeholder="Age"
                 />
                 <label htmlFor="joincode">Code</label>
                 <input

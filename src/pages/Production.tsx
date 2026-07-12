@@ -37,7 +37,7 @@ export default function Production() {
       pb.collection('productions').getOne<ProductionRecord>(id, { expand: 'org' }),
       pb.collection('members').getFullList<MemberRecord>({
         filter: pb.filter('production = {:id}', { id }),
-        expand: 'user',
+        expand: 'user,guardians',
         sort: 'created',
       }),
     ])

@@ -5,7 +5,7 @@ import { useProduction } from './Production.tsx'
 import EventForm from '../components/EventForm.tsx'
 import { MANAGER_ROLES, ROLE_LABELS } from '../lib/types.ts'
 import type { ChannelRecord, ConflictRecord, EventRecord, MemberRecord, MemberRole } from '../lib/types.ts'
-import { DEFAULT_EVENT_KINDS, normalizePlaces, pbDate, productionPlaces, shareInvite } from '../lib/types.ts'
+import { DEFAULT_EVENT_KINDS, memberName, normalizePlaces, pbDate, productionPlaces, shareInvite } from '../lib/types.ts'
 import type { Place } from '../lib/types.ts'
 
 export default function AdminTab() {
@@ -517,6 +517,11 @@ function MembersSection() {
     }
   }
 
+  async function setNoPhotos(member: MemberRecord, noPhotos: boolean) {
+    await pb.collection('members').update(member.id, { noPhotos })
+    await reload()
+  }
+
   async function setPosition(member: MemberRecord, position: string) {
     await pb.collection('members').update(member.id, { position })
     await reload()
@@ -544,9 +549,18 @@ function MembersSection() {
                 m.expand?.user?.name
               ) : (
                 <>
-                  <em>{m.position || 'Role'}</em>{' '}
+                  <em>{memberName(m)}</em>{' '}
+                  {m.minor && <span className="pill">child</span>}{' '}
                   <span className="pill">{production.joinCode}-{m.roleCode}</span>
                   {m.multi && <span className="hint"> shared</span>}
+                  {m.minor && (
+                    <span className="hint">
+                      {' '}
+                      {m.guardians?.length
+                        ? `${m.guardians.length} guardian${m.guardians.length > 1 ? 's' : ''}`
+                        : 'no guardian yet — share the code with a parent'}
+                    </span>
+                  )}
                   <button
                     className="link"
                     onClick={() => shareInvite(`${production.joinCode}-${m.roleCode}`, production.title)}
@@ -585,6 +599,13 @@ function MembersSection() {
               />
               Manage
             </label>
+            <button
+              className="link"
+              title="Photo consent — tap to toggle"
+              onClick={() => setNoPhotos(m, !m.noPhotos)}
+            >
+              {m.noPhotos ? '🚫📷 no photos' : '📷 ok'}
+            </button>
             <button className="link" disabled={busyId === m.id} onClick={() => remove(m)}>
               remove
             </button>
@@ -609,6 +630,8 @@ function AddRoleForm({ onAdded }: { onAdded: () => Promise<void> }) {
   const [position, setPosition] = useState('')
   const [role, setRole] = useState<MemberRole>('performer')
   const [multi, setMulti] = useState(false)
+  const [minor, setMinor] = useState(false)
+  const [childName, setChildName] = useState('')
   const [busy, setBusy] = useState(false)
 
   function makeRoleCode(): string {
@@ -632,11 +655,15 @@ function AddRoleForm({ onAdded }: { onAdded: () => Promise<void> }) {
         role,
         position: position.trim(),
         roleCode: makeRoleCode(),
-        multi,
-        manager: MANAGER_ROLES.includes(role),
+        multi: minor ? false : multi,
+        minor,
+        displayName: minor ? childName.trim() : '',
+        manager: minor ? false : MANAGER_ROLES.includes(role),
       })
       setPosition('')
       setMulti(false)
+      setMinor(false)
+      setChildName('')
       await onAdded()
     } finally {
       setBusy(false)
@@ -662,9 +689,27 @@ function AddRoleForm({ onAdded }: { onAdded: () => Promise<void> }) {
         <input type="checkbox" checked={multi} onChange={(e) => setMulti(e.target.checked)} />
         Multiple people share this role (ensemble, crew) — everyone uses the same code
       </label>
-      <button type="submit" disabled={busy || !position.trim()}>
+      <label className="row">
+        <input type="checkbox" checked={minor} onChange={(e) => setMinor(e.target.checked)} />
+        This is a child (under 13) — a parent/guardian claims the code and manages everything
+      </label>
+      {minor && (
+        <input
+          aria-label="Child's name"
+          value={childName}
+          onChange={(e) => setChildName(e.target.value)}
+          placeholder="Child's first name + last initial — e.g. Emma R."
+        />
+      )}
+      <button type="submit" disabled={busy || !position.trim() || (minor && !childName.trim())}>
         Add role
       </button>
+      {minor && (
+        <p className="hint">
+          Children never get logins. Share the role code with their parent or guardian — both
+          parents can claim the same code, and each sees the full schedule and messages.
+        </p>
+      )}
     </form>
   )
 }

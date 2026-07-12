@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { pb } from '../lib/pb.ts'
 import { useAuth } from '../lib/auth.tsx'
 import { useProduction } from './Production.tsx'
-import { formatDay, formatWhen, mapsUrl, pbDate, placeLine, productionPlaces } from '../lib/types.ts'
+import { formatDay, formatWhen, mapsUrl, memberName, pbDate, placeLine, productionPlaces } from '../lib/types.ts'
 import { downloadEventIcs, googleCalendarUrl } from '../lib/calendar.ts'
 import EventForm from '../components/EventForm.tsx'
 import type { AckRecord, AttendanceRecord, ConflictRecord, EventRecord, MemberRecord } from '../lib/types.ts'
@@ -80,7 +80,7 @@ export default function ScheduleTab() {
   function calledMembers(event: EventRecord): MemberRecord[] {
     return members.filter(
       (m) =>
-        m.user &&
+        (m.user || m.minor) &&
         (event.called.length === 0 ||
           event.called.includes(m.id) ||
           (!!m.claimedFrom && event.called.includes(m.claimedFrom))),
@@ -102,6 +102,8 @@ export default function ScheduleTab() {
   }
 
   const places = productionPlaces(production)
+  // Children this user guards — their calls are your calls.
+  const myChildIds = members.filter((m) => m.guardians?.includes(user?.id ?? '')).map((m) => m.id)
   const now = new Date()
   const visible = events.filter((e) => showPast || pbDate(e.end || e.start) >= now)
 
@@ -110,7 +112,7 @@ export default function ScheduleTab() {
     const names = e.called
       .map((mid) => members.find((m) => m.id === mid))
       .filter(Boolean)
-      .map((m) => m!.expand?.user?.name || m!.position || 'someone')
+      .map((m) => memberName(m!))
     return names.join(', ')
   }
 
@@ -125,7 +127,8 @@ export default function ScheduleTab() {
               e.called.length === 0 ||
               (myMember != null &&
                 (e.called.includes(myMember.id) ||
-                  (!!myMember.claimedFrom && e.called.includes(myMember.claimedFrom))))
+                  (!!myMember.claimedFrom && e.called.includes(myMember.claimedFrom)))) ||
+              myChildIds.some((id) => e.called.includes(id))
             const myAck = acks.find((a) => a.event === e.id && a.user === user?.id)
             const ackCount = acks.filter((a) => a.event === e.id).length
             return (
@@ -236,7 +239,7 @@ export default function ScheduleTab() {
                       return (
                         <li key={m.id}>
                           <button className="chip" onClick={() => cycleRoll(e, m)}>
-                            {icon} {m.expand?.user?.name || m.position}
+                            {icon} {memberName(m)}
                           </button>
                           {row?.note && <span className="hint"> {row.note}</span>}
                         </li>

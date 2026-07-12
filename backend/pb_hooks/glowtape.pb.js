@@ -12,11 +12,20 @@
 // never used or seen. Idempotent: an existing email returns ok so the UI can
 // always follow with requestOTP.
 routerAdd("POST", "/api/glowtape/signup", (e) => {
-  const data = new DynamicModel({ email: "", name: "", code: "" });
+  const data = new DynamicModel({ email: "", name: "", code: "", age: 0 });
   e.bindBody(data);
   const email = data.email.trim().toLowerCase();
   if (!email.includes("@")) {
     throw new BadRequestError("Please enter a valid email address.");
+  }
+  const age = Math.floor(Number(data.age) || 0);
+  if (age < 1 || age > 120) {
+    throw new BadRequestError("Please enter your age.");
+  }
+  if (age < 13) {
+    throw new BadRequestError(
+      "Ask a parent or guardian to add you to your show — a grown-up in your production can set everything up, and they'll get your whole schedule.",
+    );
   }
 
   try {
@@ -61,6 +70,15 @@ routerAdd("POST", "/api/glowtape/signup", (e) => {
   record.set("name", data.name.trim());
   record.set("verified", true); // possession of the emailed OTP code proves the address
   record.set("emailVisibility", true); // castmates need it on the contact sheet
+  // Age band only — the age itself is deliberately NOT stored (issue #9).
+  if (age < 18) {
+    record.set("ageBand", "teen");
+    const roll = new Date();
+    roll.setFullYear(roll.getFullYear() + (18 - age));
+    record.set("teenUntil", roll.toISOString().replace("T", " "));
+  } else {
+    record.set("ageBand", "adult");
+  }
   record.setRandomPassword();
   e.app.save(record);
   return e.json(200, { ok: true, existing: false });
@@ -113,6 +131,33 @@ routerAdd(
         );
       } catch {
         throw new BadRequestError("That role code doesn't match anything. Double-check it with your stage manager.");
+      }
+      if (role.get("minor")) {
+        // Guardian claim: the child never gets a login — the claiming adult
+        // is added as a guardian (multiple guardians welcome; each claims
+        // with the same code) and gets their own member row so they see
+        // everything the child's membership generates.
+        const gs = lib.toIdArray(role.get("guardians"));
+        if (!gs.includes(e.auth.id)) {
+          gs.push(e.auth.id);
+          role.set("guardians", gs);
+          e.app.save(role);
+        }
+        if (!existing) {
+          const membersCol = e.app.findCollectionByNameOrId("members");
+          const g = new Record(membersCol);
+          g.set("production", production.id);
+          g.set("user", e.auth.id);
+          g.set("role", "guardian");
+          g.set("position", "Guardian of " + (role.get("displayName") || "a cast member"));
+          e.app.save(g);
+        }
+        return e.json(200, {
+          ok: true,
+          production: production.id,
+          already: false,
+          guardianOf: role.get("displayName"),
+        });
       }
       if (role.get("multi")) {
         // Shared role: the placeholder stays; each claimer gets their own row.

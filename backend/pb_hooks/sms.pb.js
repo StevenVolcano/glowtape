@@ -154,36 +154,46 @@ cronAdd("glowtape_sms_reminders", "*/10 * * * *", () => {
           !called.includes(String(m.get("claimedFrom") || ""))
         )
           continue;
-        let user;
-        try {
-          user = $app.findRecordById("users", m.get("user"));
-        } catch {
-          continue;
-        }
-        if (!user.get("smsOptIn") || !user.get("phoneVerified") || !user.get("phone")) continue;
 
-        try {
-          // unique index makes double-sends impossible even if two runs race
-          const col = $app.findCollectionByNameOrId("reminders_sent");
-          const marker = new Record(col);
-          marker.set("event", event.id);
-          marker.set("user", user.id);
-          marker.set("kind", w.kind);
-          $app.save(marker);
-        } catch {
-          continue; // already reminded
-        }
+        // The member's own user plus any guardians (child members have no
+        // user of their own; guardians get the reminder in their place).
+        const uids = [];
+        if (m.get("user")) uids.push(String(m.get("user")));
+        for (const g of lib.toIdArray(m.get("guardians"))) uids.push(g);
 
-        const when = lib.formatPacific(event.get("start"));
-        const loc = event.get("location") ? " at " + event.get("location") : "";
-        lib.sendSms(
-          $app,
-          user.get("phone"),
-          "Glow Tape: " +
-            event.get("title") +
-            " (" + production.get("title") + ") is " + w.word + " — " +
-            when + loc + ". Reply STOP to opt out.",
-        );
+        for (const uid of uids) {
+          let user;
+          try {
+            user = $app.findRecordById("users", uid);
+          } catch {
+            continue;
+          }
+          if (!user.get("smsOptIn") || !user.get("phoneVerified") || !user.get("phone")) continue;
+
+          try {
+            // unique index makes double-sends impossible even if two runs race
+            const col = $app.findCollectionByNameOrId("reminders_sent");
+            const marker = new Record(col);
+            marker.set("event", event.id);
+            marker.set("user", user.id);
+            marker.set("kind", w.kind);
+            $app.save(marker);
+          } catch {
+            continue; // already reminded
+          }
+
+          const forChild = !m.get("user") && m.get("displayName") ? "For " + m.get("displayName") + ": " : "";
+          const when = lib.formatPacific(event.get("start"));
+          const loc = event.get("location") ? " at " + event.get("location") : "";
+          lib.sendSms(
+            $app,
+            user.get("phone"),
+            "Glow Tape: " + forChild +
+              event.get("title") +
+              " (" + production.get("title") + ") is " + w.word + " — " +
+              when + loc + ". Reply STOP to opt out.",
+          );
+        }
       }
     }
   }

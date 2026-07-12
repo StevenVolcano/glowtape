@@ -97,12 +97,29 @@ routerAdd("GET", "/api/glowtape/cal/{token}/calls.ics", (e) => {
       { p: production.id, from: weekAgo },
     );
 
+    // Children this feed's user guards, in this production.
+    const childIds = [];
+    try {
+      const kids = e.app.findRecordsByFilter(
+        "members",
+        "production = {:p} && guardians.id ?= {:u}",
+        "",
+        100,
+        0,
+        { p: production.id, u: user.id },
+      );
+      for (const k of kids) childIds.push(k.id);
+    } catch {
+      /* none */
+    }
+
     for (const ev of events) {
       const called = lib.toIdArray(ev.get("called"));
       if (
         called.length > 0 &&
         !called.includes(m.id) &&
-        !called.includes(String(m.get("claimedFrom") || ""))
+        !called.includes(String(m.get("claimedFrom") || "")) &&
+        !childIds.some((id) => called.includes(id))
       )
         continue;
 

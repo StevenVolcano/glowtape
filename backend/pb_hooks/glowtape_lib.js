@@ -31,6 +31,17 @@ function recipients(app, productionId, calledMemberIds) {
     p: productionId,
   });
   const out = [];
+  const seen = new Set();
+  const push = (uid) => {
+    if (!uid || seen.has(uid)) return;
+    seen.add(uid);
+    try {
+      const u = app.findRecordById("users", uid);
+      out.push({ address: u.email(), name: u.get("name") });
+    } catch {
+      /* skip broken rows */
+    }
+  };
   for (const m of members) {
     if (
       calledIds.length > 0 &&
@@ -38,12 +49,9 @@ function recipients(app, productionId, calledMemberIds) {
       !calledIds.includes(String(m.get("claimedFrom") || ""))
     )
       continue;
-    try {
-      const u = app.findRecordById("users", m.get("user"));
-      out.push({ address: u.email(), name: u.get("name") });
-    } catch {
-      /* skip broken member rows */
-    }
+    push(m.get("user"));
+    // Guardian-managed child: every guardian hears everything (issue #9).
+    for (const g of toIdArray(m.get("guardians"))) push(g);
   }
   return out;
 }

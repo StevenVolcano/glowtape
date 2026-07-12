@@ -1,5 +1,6 @@
 import { useProduction } from './Production.tsx'
 import { MANAGER_ROLES, ROLE_LABELS } from '../lib/types.ts'
+import { memberName } from '../lib/types.ts'
 
 export default function PeopleTab() {
   const { members } = useProduction()
@@ -33,11 +34,26 @@ export default function PeopleTab() {
         <tbody>
           {sorted.map((m) => (
             <tr key={m.id}>
-              <td>{m.user ? m.expand?.user?.name : <em>not cast yet</em>}</td>
+              <td>
+                {m.minor ? (
+                  <>
+                    {memberName(m)} <em>(child)</em>
+                  </>
+                ) : m.user ? (
+                  m.expand?.user?.name
+                ) : (
+                  <em>not cast yet</em>
+                )}
+              </td>
               <td>{ROLE_LABELS[m.role]}</td>
               <td>{m.position}</td>
-              <td>{m.expand?.user?.email}</td>
-              <td>{m.expand?.user?.phone}</td>
+              <td>
+                {m.minor
+                  ? (m.expand?.guardians ?? []).map((g) => `${g.name} (${g.email})`).join(', ') ||
+                    '— via guardian —'
+                  : m.expand?.user?.email}
+              </td>
+              <td>{m.minor ? '' : m.expand?.user?.phone}</td>
             </tr>
           ))}
         </tbody>

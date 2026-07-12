@@ -1,4 +1,10 @@
-export type MemberRole = 'director' | 'asst_director' | 'stage_manager' | 'performer' | 'crew'
+export type MemberRole =
+  | 'director'
+  | 'asst_director'
+  | 'stage_manager'
+  | 'performer'
+  | 'crew'
+  | 'guardian'
 
 export const ROLE_LABELS: Record<MemberRole, string> = {
   director: 'Director',
@@ -6,6 +12,7 @@ export const ROLE_LABELS: Record<MemberRole, string> = {
   stage_manager: 'Stage Manager',
   performer: 'Performer',
   crew: 'Crew',
+  guardian: 'Parent / Guardian',
 }
 
 export const MANAGER_ROLES: MemberRole[] = ['director', 'asst_director', 'stage_manager']
@@ -121,7 +128,16 @@ export interface MemberRecord {
   manager: boolean // grants the Manage tab; synced server-side to productions.managers
   multi: boolean // shared role placeholder (Ensemble, Crew) — claimable by many
   claimedFrom: string // claimer rows point back at their shared placeholder
-  expand?: { user?: UserRecord }
+  minor: boolean // guardian-managed child: never has a login
+  displayName: string // child's shown name (first name + last initial)
+  guardians: string[] // guardian user ids — each sees everything this member sees
+  noPhotos: boolean // photo-consent flag (guardian/manager set)
+  expand?: { user?: UserRecord; guardians?: UserRecord[] }
+}
+
+export function memberName(m: MemberRecord): string {
+  if (m.user) return m.expand?.user?.name || '…'
+  return m.displayName || m.position || 'Role'
 }
 
 export interface EventRecord {

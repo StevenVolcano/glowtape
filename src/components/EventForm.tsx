@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { pb } from '../lib/pb.ts'
 import { useProduction } from '../pages/Production.tsx'
-import { DEFAULT_EVENT_KINDS, pbDate, productionPlaces } from '../lib/types.ts'
+import { DEFAULT_EVENT_KINDS, memberName, pbDate, productionPlaces } from '../lib/types.ts'
 import type { EventRecord } from '../lib/types.ts'
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -248,7 +248,7 @@ export default function EventForm({
                 className={`chip ${called.includes(m.id) ? 'chip-active' : ''}`}
                 onClick={() => toggleCalled(m.id)}
               >
-                {m.expand?.user?.name || m.position}
+                {memberName(m)}
               </button>
             ))}
           </div>

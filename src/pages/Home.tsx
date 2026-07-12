@@ -107,8 +107,8 @@ export default function Home() {
       {user && <PhoneSettings user={user} />}
 
       <p className="hint legal-links">
-        <a href="/help.html">Help &amp; FAQs</a> · <a href="/privacy.html">Privacy</a> ·{' '}
-        <a href="/terms.html">Terms</a>
+        <a href="/help.html">Help &amp; FAQs</a> · <a href="/youth-safety.html">Youth safety</a> ·{' '}
+        <a href="/privacy.html">Privacy</a> · <a href="/terms.html">Terms</a>
         <br />
         {copyrightLine()}
       </p>
