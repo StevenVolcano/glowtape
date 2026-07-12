@@ -3,6 +3,9 @@
 // Glow Tape server hooks: passwordless signup, join-by-code, default
 // channels, and email mirroring so people who never open the app still get
 // the schedule.
+//
+// NOTE: handlers run in isolated VMs — shared helpers must be require()d
+// INSIDE each handler from glowtape_lib.js, never referenced from file scope.
 
 // --- Signup: create an account from just email + name. -----------------------
 // The client then immediately requests an OTP code, so the random password is
@@ -105,52 +108,23 @@ onRecordAfterCreateSuccess((e) => {
 // Every schedule item and announcement goes out by email too. Nothing in
 // Glow Tape is app-only.
 
-function glowtapeRecipients(app, productionId, calledMemberIds) {
-  const members = app.findRecordsByFilter("members", "production = {:p}", "", 500, 0, { p: productionId });
-  const recipients = [];
-  for (const m of members) {
-    if (calledMemberIds && calledMemberIds.length > 0 && !calledMemberIds.includes(m.id)) {
-      continue;
-    }
-    try {
-      const u = app.findRecordById("users", m.get("user"));
-      recipients.push({ address: u.email(), name: u.get("name") });
-    } catch {
-      /* skip broken member rows */
-    }
-  }
-  return recipients;
-}
-
-function glowtapeSendMail(app, recipients, subject, html) {
-  if (recipients.length === 0) return;
-  const settings = app.settings();
-  const message = new MailerMessage({
-    from: { address: settings.meta.senderAddress, name: settings.meta.senderName },
-    bcc: recipients,
-    subject: subject,
-    html: html,
-  });
-  app.newMailClient().send(message);
-}
-
 onRecordAfterCreateSuccess((e) => {
+  const lib = require(`${__hooks}/glowtape_lib.js`);
   try {
     const production = e.app.findRecordById("productions", e.record.get("production"));
-    const recipients = glowtapeRecipients(e.app, production.id, e.record.get("called"));
-    const start = e.record.getDateTime("start");
+    const to = lib.recipients(e.app, production.id, e.record.get("called"));
     const lines = [
       `<h2>${e.record.get("title")}</h2>`,
       `<p><strong>${production.get("title")}</strong></p>`,
-      `<p>When: ${start}</p>`,
+      `<p>When: ${lib.formatPacific(e.record.get("start"))} (Pacific)</p>`,
       e.record.get("location") ? `<p>Where: ${e.record.get("location")}</p>` : "",
       e.record.get("calledNote") ? `<p>Called: ${e.record.get("calledNote")}</p>` : "",
       e.record.get("notes") ? `<p>${e.record.get("notes")}</p>` : "",
       `<p>Open Glow Tape to tap "Got it" so your stage manager knows you saw this.</p>`,
     ];
-    glowtapeSendMail(
+    lib.sendMail(
       e.app,
-      recipients,
+      to,
       `[${production.get("title")}] New on the schedule: ${e.record.get("title")}`,
       lines.join("\n"),
     );
@@ -161,12 +135,13 @@ onRecordAfterCreateSuccess((e) => {
 }, "events");
 
 onRecordAfterCreateSuccess((e) => {
+  const lib = require(`${__hooks}/glowtape_lib.js`);
   try {
     const production = e.app.findRecordById("productions", e.record.get("production"));
-    const recipients = glowtapeRecipients(e.app, production.id, null);
-    glowtapeSendMail(
+    const to = lib.recipients(e.app, production.id, null);
+    lib.sendMail(
       e.app,
-      recipients,
+      to,
       `[${production.get("title")}] ${e.record.get("title")}`,
       `<h2>${e.record.get("title")}</h2><p>${e.record.get("body") || ""}</p><p>— ${production.get("title")} on Glow Tape</p>`,
     );

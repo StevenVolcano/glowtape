@@ -5,27 +5,9 @@
 // Google Calendar / Apple Calendar / Outlook keeps their own calendar in
 // sync automatically (Google refreshes subscribed feeds slowly — hours, not
 // minutes; Apple is usually faster).
-
-function icsEscape(text) {
-  return String(text || "")
-    .replace(/\\/g, "\\\\")
-    .replace(/;/g, "\\;")
-    .replace(/,/g, "\\,")
-    .replace(/\r?\n/g, "\\n");
-}
-
-// "2026-07-15 19:00:00.000Z" -> "20260715T190000Z"
-function icsDate(value) {
-  const d = String(value);
-  return (
-    d.slice(0, 4) + d.slice(5, 7) + d.slice(8, 10) +
-    "T" + d.slice(11, 13) + d.slice(14, 16) + d.slice(17, 19) + "Z"
-  );
-}
-
-function icsDateFromMs(ms) {
-  return icsDate(new Date(ms).toISOString().replace("T", " "));
-}
+//
+// NOTE: handlers run in isolated VMs — shared helpers are require()d INSIDE
+// each handler from glowtape_lib.js.
 
 // Get (or lazily create) the signed-in user's feed URL.
 routerAdd(
@@ -47,6 +29,8 @@ routerAdd(
 );
 
 routerAdd("GET", "/api/glowtape/cal/{token}/calls.ics", (e) => {
+  const lib = require(`${__hooks}/glowtape_lib.js`);
+
   const token = e.request.pathValue("token");
   if (!token || token.length < 16) throw new NotFoundError();
 
@@ -61,14 +45,14 @@ routerAdd("GET", "/api/glowtape/cal/{token}/calls.ics", (e) => {
     u: user.id,
   });
 
-  const weekAgo = new Date(Date.now() - 7 * 86400e3).toISOString().replace("T", " ");
+  const weekAgo = lib.pbNow(-7 * 86400e3);
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
     "PRODID:-//Glow Tape//Calls//EN",
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
-    "X-WR-CALNAME:" + icsEscape((user.get("name") || "My") + " — theater calls"),
+    "X-WR-CALNAME:" + lib.icsEscape((user.get("name") || "My") + " — theater calls"),
   ];
 
   for (const m of memberships) {
@@ -88,25 +72,26 @@ routerAdd("GET", "/api/glowtape/cal/{token}/calls.ics", (e) => {
     );
 
     for (const ev of events) {
-      const called = ev.get("called") || [];
+      const called = lib.toIdArray(ev.get("called"));
       if (called.length > 0 && !called.includes(m.id)) continue;
 
       const start = String(ev.get("start"));
-      const end = ev.get("end")
-        ? String(ev.get("end"))
-        : null;
+      const end = ev.get("end") ? String(ev.get("end")) : null;
       const desc = [ev.get("calledNote"), ev.get("notes")].filter(Boolean).join("\n");
 
       lines.push("BEGIN:VEVENT");
       lines.push("UID:evt-" + ev.id + "@glowtape");
-      lines.push("DTSTAMP:" + icsDateFromMs(Date.now()));
-      lines.push("DTSTART:" + icsDate(start));
+      lines.push("DTSTAMP:" + lib.icsDateFromMs(Date.now()));
+      lines.push("DTSTART:" + lib.icsDate(start));
       lines.push(
-        "DTEND:" + (end ? icsDate(end) : icsDateFromMs(new Date(start.replace(" ", "T")).getTime() + 2 * 3600e3)),
+        "DTEND:" +
+          (end
+            ? lib.icsDate(end)
+            : lib.icsDateFromMs(new Date(start.replace(" ", "T")).getTime() + 2 * 3600e3)),
       );
-      lines.push("SUMMARY:" + icsEscape(ev.get("title") + " — " + production.get("title")));
-      if (ev.get("location")) lines.push("LOCATION:" + icsEscape(ev.get("location")));
-      if (desc) lines.push("DESCRIPTION:" + icsEscape(desc));
+      lines.push("SUMMARY:" + lib.icsEscape(ev.get("title") + " — " + production.get("title")));
+      if (ev.get("location")) lines.push("LOCATION:" + lib.icsEscape(ev.get("location")));
+      if (desc) lines.push("DESCRIPTION:" + lib.icsEscape(desc));
       lines.push("END:VEVENT");
     }
   }

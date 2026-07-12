@@ -62,6 +62,13 @@ Update it as the project evolves.
   hook runtime behavior as unverified.
 - PocketBase datetimes are `"YYYY-MM-DD HH:MM:SS.sssZ"` (space, not T) — always
   parse via `pbDate()` in `src/lib/types.ts`; Safari rejects the raw format.
+- **PocketBase hook handlers run in isolated VMs**: top-level functions in
+  `*.pb.js` files do NOT exist when handlers fire (ReferenceError at runtime,
+  works fine at load). All shared helpers live in
+  `backend/pb_hooks/glowtape_lib.js` and every handler must
+  `require(\`${__hooks}/glowtape_lib.js\`)` INSIDE its own body. Multi-relation
+  values from `record.get()` are VM-wrapped — copy via `lib.toIdArray()` before
+  using array methods.
 
 ## Development Workflow
 
