@@ -71,6 +71,15 @@ export interface ChannelRecord {
   production: string
   name: string
   audience: 'all' | 'cast' | 'crew' | 'team'
+  archived: boolean
+  defaultMuted: boolean
+}
+
+export interface ChannelPrefRecord {
+  id: string
+  channel: string
+  user: string
+  muted: boolean
 }
 
 export interface MessageRecord {

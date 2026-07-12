@@ -5,19 +5,22 @@ import { useProduction } from './Production.tsx'
 import type {
   AnnouncementAckRecord,
   AnnouncementRecord,
+  ChannelPrefRecord,
   ChannelRecord,
   MessageRecord,
 } from '../lib/types.ts'
 
 export default function MessagesTab() {
   const { production, myMember, isManager } = useProduction()
+  const { user } = useAuth()
   const [channels, setChannels] = useState<ChannelRecord[]>([])
+  const [prefs, setPrefs] = useState<ChannelPrefRecord[]>([])
   const [active, setActive] = useState<string | null>(null)
 
   useEffect(() => {
     pb.collection('channels')
       .getFullList<ChannelRecord>({
-        filter: pb.filter('production = {:p}', { p: production.id }),
+        filter: pb.filter('production = {:p} && archived != true', { p: production.id }),
         sort: 'created',
       })
       .then((list) => {
@@ -34,7 +37,37 @@ export default function MessagesTab() {
         setActive((prev) => prev ?? visible[0]?.id ?? null)
       })
       .catch(() => {})
-  }, [production.id, myMember?.role, isManager])
+
+    pb.collection('channel_prefs')
+      .getFullList<ChannelPrefRecord>({ filter: pb.filter('user = {:u}', { u: user!.id }) })
+      .then(setPrefs)
+      .catch(() => {})
+  }, [production.id, myMember?.role, isManager, user])
+
+  const prefFor = (channelId: string) => prefs.find((p) => p.channel === channelId)
+  const isMuted = (c: ChannelRecord) => {
+    const pref = prefFor(c.id)
+    return pref ? pref.muted : c.defaultMuted
+  }
+
+  async function toggleMute(c: ChannelRecord) {
+    const pref = prefFor(c.id)
+    if (pref) {
+      await pb.collection('channel_prefs').update(pref.id, { muted: !pref.muted })
+    } else {
+      await pb.collection('channel_prefs').create({
+        channel: c.id,
+        user: user!.id,
+        muted: !c.defaultMuted,
+      })
+    }
+    const fresh = await pb
+      .collection('channel_prefs')
+      .getFullList<ChannelPrefRecord>({ filter: pb.filter('user = {:u}', { u: user!.id }) })
+    setPrefs(fresh)
+  }
+
+  const activeChannel = channels.find((c) => c.id === active) ?? null
 
   return (
     <div>
@@ -51,9 +84,17 @@ export default function MessagesTab() {
               onClick={() => setActive(c.id)}
             >
               {c.name}
+              {isMuted(c) ? ' 🔕' : ''}
             </button>
           ))}
         </div>
+        {activeChannel && (
+          <button className="link" onClick={() => toggleMute(activeChannel)}>
+            {isMuted(activeChannel)
+              ? '🔕 This channel is muted — tap to turn notifications on'
+              : '🔔 Notifications on — tap to mute this channel'}
+          </button>
+        )}
         {active && <ChannelView channelId={active} />}
       </section>
     </div>

@@ -1,10 +1,10 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { pb } from '../lib/pb.ts'
 import { useAuth } from '../lib/auth.tsx'
 import { useProduction } from './Production.tsx'
 import EventForm from '../components/EventForm.tsx'
 import { MANAGER_ROLES, ROLE_LABELS } from '../lib/types.ts'
-import type { MemberRecord, MemberRole } from '../lib/types.ts'
+import type { ChannelRecord, MemberRecord, MemberRole } from '../lib/types.ts'
 
 export default function AdminTab() {
   return (
@@ -12,6 +12,7 @@ export default function AdminTab() {
       <JoinCodeSection />
       <NewEventSection />
       <NewAnnouncementSection />
+      <ChannelsSection />
       <MembersSection />
     </div>
   )
@@ -85,6 +86,108 @@ function NewAnnouncementSection() {
         </button>
         {done && <p className="acked">{done}</p>}
       </form>
+    </section>
+  )
+}
+
+function ChannelsSection() {
+  const { production } = useProduction()
+  const [channels, setChannels] = useState<ChannelRecord[]>([])
+  const [name, setName] = useState('')
+  const [audience, setAudience] = useState<'all' | 'cast' | 'crew' | 'team'>('all')
+  const [busy, setBusy] = useState(false)
+
+  const AUDIENCE_LABELS = {
+    all: 'Everyone',
+    cast: 'Cast',
+    crew: 'Crew',
+    team: 'Production team',
+  } as const
+
+  async function load() {
+    const list = await pb.collection('channels').getFullList<ChannelRecord>({
+      filter: pb.filter('production = {:p}', { p: production.id }),
+      sort: 'created',
+    })
+    setChannels(list)
+  }
+
+  useEffect(() => {
+    load().catch(() => {})
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [production.id])
+
+  async function create(e: FormEvent) {
+    e.preventDefault()
+    setBusy(true)
+    try {
+      await pb.collection('channels').create({ production: production.id, name, audience })
+      setName('')
+      await load()
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function rename(c: ChannelRecord, newName: string) {
+    if (!newName.trim() || newName === c.name) return
+    await pb.collection('channels').update(c.id, { name: newName.trim() })
+    await load()
+  }
+
+  async function setArchived(c: ChannelRecord, archived: boolean) {
+    await pb.collection('channels').update(c.id, { archived })
+    await load()
+  }
+
+  return (
+    <section>
+      <h2>Channels</h2>
+      <ul className="plain-list">
+        {channels.map((c) => (
+          <li key={c.id} className="member-row">
+            <input
+              aria-label={`Rename ${c.name}`}
+              defaultValue={c.name}
+              onBlur={(e) => rename(c, e.target.value)}
+            />
+            <span className="hint">{AUDIENCE_LABELS[c.audience]}</span>
+            {c.archived ? (
+              <button className="link" onClick={() => setArchived(c, false)}>
+                restore
+              </button>
+            ) : (
+              <button className="link" onClick={() => setArchived(c, true)}>
+                archive
+              </button>
+            )}
+          </li>
+        ))}
+      </ul>
+      <form onSubmit={create} className="row">
+        <input
+          aria-label="New channel name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="New channel — e.g. Costumes"
+        />
+        <select
+          aria-label="Who can see it"
+          value={audience}
+          onChange={(e) => setAudience(e.target.value as typeof audience)}
+        >
+          <option value="all">Everyone</option>
+          <option value="cast">Cast</option>
+          <option value="crew">Crew</option>
+          <option value="team">Production team</option>
+        </select>
+        <button type="submit" disabled={busy || !name.trim()}>
+          Add
+        </button>
+      </form>
+      <p className="hint">
+        Archiving hides a channel without deleting its messages; restore it any time.
+      </p>
     </section>
   )
 }

@@ -88,17 +88,20 @@ onRecordAfterCreateSuccess((e) => {
   }
 
   const channels = e.app.findCollectionByNameOrId("channels");
+  // name, audience, defaultMuted (Off Topic starts muted; opt in, not out)
   const defaults = [
-    ["All Call", "all"],
-    ["Cast", "cast"],
-    ["Crew", "crew"],
-    ["Production Team", "team"],
+    ["All Call", "all", false],
+    ["Cast", "cast", false],
+    ["Crew", "crew", false],
+    ["Production Team", "team", false],
+    ["Off Topic", "all", true],
   ];
-  for (const [name, audience] of defaults) {
+  for (const [name, audience, defaultMuted] of defaults) {
     const c = new Record(channels);
     c.set("production", e.record.id);
     c.set("name", name);
     c.set("audience", audience);
+    c.set("defaultMuted", defaultMuted);
     e.app.save(c);
   }
   e.next();
