@@ -556,3 +556,31 @@ form.stack,
   width: 1.3rem;
   min-height: 1.3rem;
 }
+
+.dept-heading {
+  font-size: 1rem;
+  margin: 1rem 0 0.3rem;
+  color: var(--accent);
+}
+
+.task-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.task-main {
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.task-main input {
+  width: 1.4rem;
+  min-height: 1.4rem;
+}
+
+.task-done {
+  opacity: 0.55;
+  text-decoration: line-through;
+}

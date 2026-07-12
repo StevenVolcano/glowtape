@@ -154,6 +154,16 @@ export interface EventRecord {
   kind: string
 }
 
+export interface TaskRecord {
+  id: string
+  production: string
+  title: string
+  department: string
+  assignee: string
+  due: string
+  done: boolean
+}
+
 export interface AttendanceRecord {
   id: string
   event: string

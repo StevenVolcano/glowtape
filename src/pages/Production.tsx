@@ -6,6 +6,7 @@ import type { MemberRecord, ProductionRecord } from '../lib/types.ts'
 import ScheduleTab from './ScheduleTab.tsx'
 import MessagesTab from './MessagesTab.tsx'
 import PeopleTab from './PeopleTab.tsx'
+import TasksTab from './TasksTab.tsx'
 import AdminTab from './AdminTab.tsx'
 
 export interface ProductionContextValue {
@@ -86,6 +87,7 @@ export default function Production() {
         <nav className="tabs" aria-label="Production sections">
           <NavLink to={`${base}/schedule`}>Schedule</NavLink>
           <NavLink to={`${base}/messages`}>Messages</NavLink>
+          <NavLink to={`${base}/todo`}>To-Do</NavLink>
           <NavLink to={`${base}/people`}>People</NavLink>
           {isManager && <NavLink to={`${base}/admin`}>Manage</NavLink>}
         </nav>
@@ -93,6 +95,7 @@ export default function Production() {
         <Routes>
           <Route path="schedule" element={<ScheduleTab />} />
           <Route path="messages" element={<MessagesTab />} />
+          <Route path="todo" element={<TasksTab />} />
           <Route path="people" element={<PeopleTab />} />
           {isManager && <Route path="admin" element={<AdminTab />} />}
           <Route path="*" element={<Navigate to={`${base}/schedule`} replace />} />
