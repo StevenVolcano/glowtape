@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { pb } from '../lib/pb.ts'
 import { useAuth } from '../lib/auth.tsx'
+import CommunityBoard from '../components/CommunityBoard.tsx'
 import PhoneSettings from '../components/PhoneSettings.tsx'
 import { copyrightLine } from '../lib/types.ts'
 import type { ProductionRecord } from '../lib/types.ts'
@@ -88,6 +89,8 @@ export default function Home() {
         </form>
         {error && <p className="error">{error}</p>}
       </section>
+
+      <CommunityBoard />
 
       {user && <PhoneSettings user={user} />}
 
