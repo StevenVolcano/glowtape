@@ -75,8 +75,9 @@ routerAdd(
   "/api/glowtape/bios/request",
   (e) => {
     const lib = require(`${__hooks}/glowtape_lib.js`);
-    const data = new DynamicModel({ production: "", due: "" });
+    const data = new DynamicModel({ production: "", due: "", audience: "" });
     e.bindBody(data);
+    const audience = data.audience || "everyone"; // performers | team | everyone
 
     let production;
     try {
@@ -104,10 +105,13 @@ routerAdd(
 
     const col = e.app.findCollectionByNameOrId("tasks");
     let created = 0;
+    const STAFF = ["director", "asst_director", "stage_manager"];
     for (const m of members) {
       if (m.get("role") === "guardian") continue; // guardians write the child's, not their own
       if (m.get("multi") && !m.get("user")) continue; // shared-role template
       if (!m.get("user") && !m.get("minor")) continue; // uncast role, nobody to ask
+      if (audience === "performers" && m.get("role") !== "performer") continue;
+      if (audience === "team" && !STAFF.includes(m.get("role")) && !m.get("manager")) continue;
       if (String(m.get("bio") || "").trim()) continue; // already written
       if (alreadyAsked.has(m.id)) continue; // already asked
 

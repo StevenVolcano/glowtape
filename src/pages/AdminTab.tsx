@@ -391,13 +391,19 @@ function PresetsSection() {
 function BiosSection() {
   const { production, members } = useProduction()
   const [due, setDue] = useState('')
+  const [audience, setAudience] = useState<'performers' | 'team' | 'everyone'>('performers')
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
 
-  const withBio = members.filter((m) => (m.bio ?? '').trim()).length
-  const eligible = members.filter(
-    (m) => m.role !== 'guardian' && !(m.multi && !m.user) && (m.user || m.minor),
-  ).length
+  const inAudience = (m: MemberRecord) => {
+    if (m.role === 'guardian' || (m.multi && !m.user) || (!m.user && !m.minor)) return false
+    if (audience === 'performers') return m.role === 'performer'
+    if (audience === 'team') return MANAGER_ROLES.includes(m.role) || m.manager
+    return true
+  }
+  const pool = members.filter(inAudience)
+  const withBio = pool.filter((m) => (m.bio ?? '').trim()).length
+  const eligible = pool.length
 
   async function request() {
     setBusy(true)
@@ -405,7 +411,7 @@ function BiosSection() {
     try {
       const res = await pb.send('/api/glowtape/bios/request', {
         method: 'POST',
-        body: { production: production.id, due },
+        body: { production: production.id, due, audience },
       })
       setMessage(
         res.created > 0
@@ -429,11 +435,22 @@ function BiosSection() {
       </p>
       <div className="row">
         <label>
+          Who writes one?
+          <select
+            value={audience}
+            onChange={(e) => setAudience(e.target.value as typeof audience)}
+          >
+            <option value="performers">Performers only</option>
+            <option value="team">Production team</option>
+            <option value="everyone">Everyone</option>
+          </select>
+        </label>
+        <label>
           Due (optional)
           <input type="date" value={due} onChange={(e) => setDue(e.target.value)} />
         </label>
         <button onClick={request} disabled={busy}>
-          {busy ? 'Working…' : 'Request bios from the cast'}
+          {busy ? 'Working…' : 'Request bios'}
         </button>
       </div>
       {message && <p className="acked">{message}</p>}
