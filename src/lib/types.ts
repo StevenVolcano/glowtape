@@ -51,9 +51,10 @@ export function copyrightLine(): string {
 export interface MemberRecord {
   id: string
   production: string
-  user: string
+  user: string // '' = pre-cast placeholder role
   role: MemberRole
   position: string
+  roleCode: string
   expand?: { user?: UserRecord }
 }
 

@@ -4,13 +4,14 @@ import { useAuth } from '../lib/auth.tsx'
 import { useProduction } from './Production.tsx'
 import EventForm from '../components/EventForm.tsx'
 import { MANAGER_ROLES, ROLE_LABELS } from '../lib/types.ts'
-import type { ChannelRecord, EventRecord, MemberRecord, MemberRole } from '../lib/types.ts'
+import type { ChannelRecord, ConflictRecord, EventRecord, MemberRecord, MemberRole } from '../lib/types.ts'
 import { DEFAULT_EVENT_KINDS, pbDate } from '../lib/types.ts'
 
 export default function AdminTab() {
   return (
     <div>
       <JoinCodeSection />
+      <ConflictAlertsSection />
       <NewEventSection />
       <ScheduleTableSection />
       <PresetsSection />
@@ -440,7 +441,7 @@ function MembersSection() {
   // API rules (which check production.managers) stay correct.
   async function syncManagers(updated: MemberRecord[]) {
     const managerUserIds = updated
-      .filter((m) => MANAGER_ROLES.includes(m.role))
+      .filter((m) => MANAGER_ROLES.includes(m.role) && m.user)
       .map((m) => m.user)
     const next = Array.from(new Set(managerUserIds))
     const current = [...production.managers].sort()
@@ -484,7 +485,16 @@ function MembersSection() {
       <ul className="plain-list">
         {members.map((m) => (
           <li key={m.id} className="member-row">
-            <strong>{m.expand?.user?.name}</strong>
+            <strong>
+              {m.user ? (
+                m.expand?.user?.name
+              ) : (
+                <>
+                  <em>{m.position || 'Role'}</em>{' '}
+                  <span className="pill">{production.joinCode}-{m.roleCode}</span>
+                </>
+              )}
+            </strong>
             <select
               aria-label={`Role for ${m.expand?.user?.name}`}
               value={m.role}
@@ -511,9 +521,135 @@ function MembersSection() {
           </li>
         ))}
       </ul>
+      <AddRoleForm onAdded={reload} />
       <p className="hint">
         Directors, assistant directors, and stage managers can manage the production (this tab).
+        Roles added before casting get a claim code — hand it to whoever is cast, they join with
+        it, and their whole schedule is waiting.
       </p>
+    </section>
+  )
+}
+
+// Pre-cast roles: exist on the schedule before auditions; claimed later by code.
+function AddRoleForm({ onAdded }: { onAdded: () => Promise<void> }) {
+  const { production, members } = useProduction()
+  const [position, setPosition] = useState('')
+  const [role, setRole] = useState<MemberRole>('performer')
+  const [busy, setBusy] = useState(false)
+
+  function makeRoleCode(): string {
+    const alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
+    const taken = new Set(members.map((m) => m.roleCode).filter(Boolean))
+    for (let i = 0; i < 200; i++) {
+      const code =
+        alphabet[Math.floor(Math.random() * alphabet.length)] +
+        alphabet[Math.floor(Math.random() * alphabet.length)]
+      if (!taken.has(code)) return code
+    }
+    return ''
+  }
+
+  async function add(e: FormEvent) {
+    e.preventDefault()
+    setBusy(true)
+    try {
+      await pb.collection('members').create({
+        production: production.id,
+        role,
+        position: position.trim(),
+        roleCode: makeRoleCode(),
+      })
+      setPosition('')
+      await onAdded()
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <form onSubmit={add} className="row">
+      <input
+        aria-label="Role or position name"
+        value={position}
+        onChange={(e) => setPosition(e.target.value)}
+        placeholder="Add a role before casting — e.g. Ophelia"
+      />
+      <select aria-label="Role type" value={role} onChange={(e) => setRole(e.target.value as MemberRole)}>
+        {(Object.keys(ROLE_LABELS) as MemberRole[]).map((r) => (
+          <option key={r} value={r}>
+            {ROLE_LABELS[r]}
+          </option>
+        ))}
+      </select>
+      <button type="submit" disabled={busy || !position.trim()}>
+        Add role
+      </button>
+    </form>
+  )
+}
+
+// Auto to-do: called people whose conflicts collide with upcoming events.
+function ConflictAlertsSection() {
+  const { production, members } = useProduction()
+  const [alerts, setAlerts] = useState<string[]>([])
+
+  useEffect(() => {
+    async function compute() {
+      const [events, conflicts] = await Promise.all([
+        pb.collection('events').getFullList<EventRecord>({
+          filter: pb.filter("production = {:p} && status != 'cancelled'", { p: production.id }),
+          sort: 'start',
+        }),
+        pb.collection('conflicts').getFullList<ConflictRecord>({
+          filter: pb.filter('production = {:p}', { p: production.id }),
+          expand: 'user',
+        }),
+      ])
+      const now = Date.now() - 3600e3
+      const out: string[] = []
+      for (const ev of events) {
+        const evDate = pbDate(ev.start)
+        if (evDate.getTime() < now) continue
+        const evDay = `${evDate.getFullYear()}-${pad2(evDate.getMonth() + 1)}-${pad2(evDate.getDate())}`
+        const calledUsers =
+          ev.called.length === 0
+            ? members.filter((m) => m.user).map((m) => m.user)
+            : members.filter((m) => ev.called.includes(m.id) && m.user).map((m) => m.user)
+        for (const c of conflicts) {
+          if (!calledUsers.includes(c.user)) continue
+          const from = String(c.start).slice(0, 10)
+          const to = String(c.end || c.start).slice(0, 10)
+          if (evDay >= from && evDay <= to) {
+            const who = c.expand?.user?.name || 'Someone'
+            out.push(
+              `${who} has a conflict${c.note ? ` (${c.note})` : ''} but is called to “${ev.title}” on ${evDay}`,
+            )
+          }
+        }
+      }
+      setAlerts(out)
+    }
+    compute().catch(() => {})
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [production.id, members])
+
+  if (alerts.length === 0) return null
+
+  return (
+    <section>
+      <h2>⚠️ To sort out</h2>
+      <p className="hint">
+        People who are called to an event that lands on one of their conflicts. Move the event in
+        “Fix up the schedule,” adjust who's called, or talk it through with them.
+      </p>
+      <ul className="plain-list">
+        {alerts.map((a, i) => (
+          <li key={i} className="conflict-alert">
+            {a}
+          </li>
+        ))}
+      </ul>
     </section>
   )
 }

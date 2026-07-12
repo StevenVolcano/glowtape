@@ -32,7 +32,7 @@ export default function PeopleTab() {
         <tbody>
           {sorted.map((m) => (
             <tr key={m.id}>
-              <td>{m.expand?.user?.name}</td>
+              <td>{m.user ? m.expand?.user?.name : <em>not cast yet</em>}</td>
               <td>{ROLE_LABELS[m.role]}</td>
               <td>{m.position}</td>
               <td>{m.expand?.user?.email}</td>

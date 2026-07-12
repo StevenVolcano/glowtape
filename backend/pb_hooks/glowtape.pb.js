@@ -44,27 +44,70 @@ routerAdd(
   (e) => {
     const data = new DynamicModel({ code: "" });
     e.bindBody(data);
-    const code = data.code.trim().toUpperCase();
+    // Accept "ABC123", "ABC123XY", or "ABC123-XY" (role claim codes are the
+    // production code plus a 2-character role suffix).
+    const code = data.code.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
     if (code.length < 4) {
       throw new BadRequestError("That join code doesn't look right.");
     }
+    const prodCode = code.slice(0, 6);
+    const roleSuffix = code.length >= 8 ? code.slice(6, 8) : "";
 
     let production;
     try {
-      production = e.app.findFirstRecordByFilter("productions", "joinCode = {:code}", { code });
+      production = e.app.findFirstRecordByFilter("productions", "joinCode = {:code}", {
+        code: prodCode,
+      });
     } catch {
       throw new BadRequestError("No production found for that code. Double-check it with your stage manager.");
     }
 
+    let existing = null;
     try {
-      e.app.findFirstRecordByFilter(
+      existing = e.app.findFirstRecordByFilter(
         "members",
         "production = {:p} && user = {:u}",
         { p: production.id, u: e.auth.id },
       );
-      return e.json(200, { ok: true, production: production.id, already: true });
     } catch {
-      // not a member yet -> create
+      // not a member yet
+    }
+
+    if (roleSuffix) {
+      // Claim a pre-cast role.
+      let role;
+      try {
+        role = e.app.findFirstRecordByFilter(
+          "members",
+          "production = {:p} && roleCode = {:rc}",
+          { p: production.id, rc: roleSuffix },
+        );
+      } catch {
+        throw new BadRequestError("That role code doesn't match anything. Double-check it with your stage manager.");
+      }
+      if (role.get("user") && role.get("user") !== e.auth.id) {
+        throw new BadRequestError("That role code was already used. Check with your stage manager.");
+      }
+      if (role.get("user") === e.auth.id) {
+        return e.json(200, { ok: true, production: production.id, already: true });
+      }
+      if (existing) {
+        // They joined generically earlier; fold that row into the role
+        // unless it already carries its own assignment.
+        if (existing.get("position")) {
+          throw new BadRequestError(
+            "You're already in this production. Ask your stage manager to assign the role in Manage instead.",
+          );
+        }
+        e.app.delete(existing);
+      }
+      role.set("user", e.auth.id);
+      e.app.save(role);
+      return e.json(200, { ok: true, production: production.id, already: false, claimed: role.get("position") });
+    }
+
+    if (existing) {
+      return e.json(200, { ok: true, production: production.id, already: true });
     }
 
     const members = e.app.findCollectionByNameOrId("members");
