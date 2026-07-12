@@ -4,6 +4,7 @@ import { useAuth } from '../lib/auth.tsx'
 import { useProduction } from './Production.tsx'
 import { formatDay, formatWhen, pbDate } from '../lib/types.ts'
 import { downloadEventIcs, googleCalendarUrl } from '../lib/calendar.ts'
+import EventForm from '../components/EventForm.tsx'
 import type { AckRecord, ConflictRecord, EventRecord } from '../lib/types.ts'
 
 export default function ScheduleTab() {
@@ -13,6 +14,7 @@ export default function ScheduleTab() {
   const [acks, setAcks] = useState<AckRecord[]>([])
   const [conflicts, setConflicts] = useState<ConflictRecord[]>([])
   const [showPast, setShowPast] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
 
   async function load() {
     const [ev, ak, cf] = await Promise.all([
@@ -44,6 +46,17 @@ export default function ScheduleTab() {
     await load()
   }
 
+  async function cancelEvent(event: EventRecord) {
+    if (!window.confirm(`Cancel \"${event.title}\"? Everyone called will be emailed.`)) return
+    await pb.collection('events').update(event.id, { status: 'cancelled' })
+    await load()
+  }
+
+  async function restoreEvent(event: EventRecord) {
+    await pb.collection('events').update(event.id, { status: 'scheduled' })
+    await load()
+  }
+
   const now = new Date()
   const visible = events.filter((e) => showPast || pbDate(e.end || e.start) >= now)
 
@@ -67,9 +80,15 @@ export default function ScheduleTab() {
             const myAck = acks.find((a) => a.event === e.id && a.user === user?.id)
             const ackCount = acks.filter((a) => a.event === e.id).length
             return (
-              <li key={e.id} className={`card event ${iAmCalled ? 'called' : 'not-called'}`}>
+              <li
+                key={e.id}
+                className={`card event ${iAmCalled ? 'called' : 'not-called'} ${
+                  e.status === 'cancelled' ? 'cancelled' : ''
+                }`}
+              >
                 <div className="event-head">
                   <strong>{e.title}</strong>
+                  {e.status === 'cancelled' && <span className="pill pill-cancel">Cancelled</span>}
                   <span>{formatWhen(e.start, e.end)}</span>
                 </div>
                 {e.location && <div className="event-line">📍 {e.location}</div>}
@@ -79,11 +98,13 @@ export default function ScheduleTab() {
                 </div>
                 {e.notes && <div className="event-line">{e.notes}</div>}
                 {iAmCalled &&
+                  e.status !== 'cancelled' &&
                   (myAck ? (
                     <div className="acked">✓ You got it</div>
                   ) : (
                     <button onClick={() => gotIt(e)}>Got it 👍</button>
                   ))}
+                {e.status !== 'cancelled' && (
                 <div className="row cal-links">
                   <a
                     className="link"
@@ -97,10 +118,41 @@ export default function ScheduleTab() {
                     + Apple / other calendar
                   </button>
                 </div>
-                {isManager && (
+                )}
+                {isManager && e.status !== 'cancelled' && (
                   <div className="hint">
                     {ackCount} {ackCount === 1 ? 'person has' : 'people have'} tapped “Got it”
                   </div>
+                )}
+                {isManager && (
+                  <div className="row">
+                    {e.status !== 'cancelled' ? (
+                      <>
+                        <button
+                          className="link"
+                          onClick={() => setEditingId(editingId === e.id ? null : e.id)}
+                        >
+                          {editingId === e.id ? 'Close editor' : 'Edit'}
+                        </button>
+                        <button className="link" onClick={() => cancelEvent(e)}>
+                          Cancel event
+                        </button>
+                      </>
+                    ) : (
+                      <button className="link" onClick={() => restoreEvent(e)}>
+                        Restore
+                      </button>
+                    )}
+                  </div>
+                )}
+                {isManager && editingId === e.id && e.status !== 'cancelled' && (
+                  <EventForm
+                    event={e}
+                    onDone={async () => {
+                      setEditingId(null)
+                      await load()
+                    }}
+                  />
                 )}
               </li>
             )

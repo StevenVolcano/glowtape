@@ -447,3 +447,15 @@ form.stack,
 .legal-links a {
   color: var(--muted);
 }
+
+.event.cancelled {
+  opacity: 0.65;
+}
+
+.event.cancelled .event-head strong {
+  text-decoration: line-through;
+}
+
+.pill-cancel {
+  background: var(--error);
+}

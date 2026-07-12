@@ -123,7 +123,7 @@ cronAdd("glowtape_sms_reminders", "*/10 * * * *", () => {
   for (const w of windows) {
     const events = $app.findRecordsByFilter(
       "events",
-      "start >= {:from} && start <= {:to}",
+      "start >= {:from} && start <= {:to} && status != 'cancelled'",
       "start",
       200,
       0,

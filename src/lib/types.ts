@@ -47,6 +47,7 @@ export interface EventRecord {
   notes: string
   called: string[]
   calledNote: string
+  status: '' | 'scheduled' | 'cancelled'
 }
 
 export interface AckRecord {

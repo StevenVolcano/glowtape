@@ -89,7 +89,14 @@ routerAdd("GET", "/api/glowtape/cal/{token}/calls.ics", (e) => {
             ? lib.icsDate(end)
             : lib.icsDateFromMs(new Date(start.replace(" ", "T")).getTime() + 2 * 3600e3)),
       );
-      lines.push("SUMMARY:" + lib.icsEscape(ev.get("title") + " — " + production.get("title")));
+      const cancelled = ev.get("status") === "cancelled";
+      if (cancelled) lines.push("STATUS:CANCELLED");
+      lines.push(
+        "SUMMARY:" +
+          lib.icsEscape(
+            (cancelled ? "CANCELLED — " : "") + ev.get("title") + " — " + production.get("title"),
+          ),
+      );
       if (ev.get("location")) lines.push("LOCATION:" + lib.icsEscape(ev.get("location")));
       if (desc) lines.push("DESCRIPTION:" + lib.icsEscape(desc));
       lines.push("END:VEVENT");

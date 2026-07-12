@@ -105,34 +105,9 @@ onRecordAfterCreateSuccess((e) => {
 }, "productions");
 
 // --- Email mirroring. ---------------------------------------------------------
-// Every schedule item and announcement goes out by email too. Nothing in
-// Glow Tape is app-only.
-
-onRecordAfterCreateSuccess((e) => {
-  const lib = require(`${__hooks}/glowtape_lib.js`);
-  try {
-    const production = e.app.findRecordById("productions", e.record.get("production"));
-    const to = lib.recipients(e.app, production.id, e.record.get("called"));
-    const lines = [
-      `<h2>${e.record.get("title")}</h2>`,
-      `<p><strong>${production.get("title")}</strong></p>`,
-      `<p>When: ${lib.formatPacific(e.record.get("start"))} (Pacific)</p>`,
-      e.record.get("location") ? `<p>Where: ${e.record.get("location")}</p>` : "",
-      e.record.get("calledNote") ? `<p>Called: ${e.record.get("calledNote")}</p>` : "",
-      e.record.get("notes") ? `<p>${e.record.get("notes")}</p>` : "",
-      `<p>Open Glow Tape to tap "Got it" so your stage manager knows you saw this.</p>`,
-    ];
-    lib.sendMail(
-      e.app,
-      to,
-      `[${production.get("title")}] New on the schedule: ${e.record.get("title")}`,
-      lines.join("\n"),
-    );
-  } catch (err) {
-    e.app.logger().error("glowtape: event mail failed", "error", String(err));
-  }
-  e.next();
-}, "events");
+// Announcements go out by email too. (Event mail lives in events.pb.js —
+// creation happens via the /api/glowtape/events route so bulk scheduling can
+// send a single summary email.)
 
 onRecordAfterCreateSuccess((e) => {
   const lib = require(`${__hooks}/glowtape_lib.js`);
