@@ -13,7 +13,7 @@ export default function SignIn() {
   const [step, setStep] = useState<Step>('enter')
   const [email, setEmail] = useState('')
   const [name, setName] = useState('')
-  const [joinCode, setJoinCode] = useState('')
+  const [joinCode, setJoinCode] = useState(localStorage.getItem('gt-pending-code') ?? '')
   const [phone, setPhone] = useState('')
   const [code, setCode] = useState('')
   const [otpId, setOtpId] = useState('')

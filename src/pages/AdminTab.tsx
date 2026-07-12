@@ -5,7 +5,7 @@ import { useProduction } from './Production.tsx'
 import EventForm from '../components/EventForm.tsx'
 import { MANAGER_ROLES, ROLE_LABELS } from '../lib/types.ts'
 import type { ChannelRecord, ConflictRecord, EventRecord, MemberRecord, MemberRole } from '../lib/types.ts'
-import { DEFAULT_EVENT_KINDS, pbDate } from '../lib/types.ts'
+import { DEFAULT_EVENT_KINDS, pbDate, shareInvite } from '../lib/types.ts'
 
 export default function AdminTab() {
   return (
@@ -24,14 +24,27 @@ export default function AdminTab() {
 
 function JoinCodeSection() {
   const { production } = useProduction()
+  const [feedback, setFeedback] = useState('')
+
+  async function share(code: string) {
+    const result = await shareInvite(code, production.title)
+    if (result === 'copied') setFeedback('Link copied — paste it into a text or email.')
+    if (result === 'shared') setFeedback('Shared!')
+    setTimeout(() => setFeedback(''), 3000)
+  }
+
   return (
     <section>
       <h2>Invite people</h2>
       <p className="hint">
-        Share this code at the read-through. Anyone can sign in at this site and join with it —
-        no invitation email required.
+        Share this code at the read-through, or send the invite link — opening it fills
+        everything in automatically.
       </p>
       <div className="join-code">{production.joinCode}</div>
+      <div className="row">
+        <button onClick={() => share(production.joinCode)}>📤 Share invite link</button>
+        {feedback && <span className="acked">{feedback}</span>}
+      </div>
       <p className="hint">
         Handing out paper at the read-through?{' '}
         <a href="/handout.html" target="_blank" rel="noreferrer">
@@ -493,6 +506,12 @@ function MembersSection() {
                   <em>{m.position || 'Role'}</em>{' '}
                   <span className="pill">{production.joinCode}-{m.roleCode}</span>
                   {m.multi && <span className="hint"> shared</span>}
+                  <button
+                    className="link"
+                    onClick={() => shareInvite(`${production.joinCode}-${m.roleCode}`, production.title)}
+                  >
+                    📤 share
+                  </button>
                 </>
               )}
             </strong>

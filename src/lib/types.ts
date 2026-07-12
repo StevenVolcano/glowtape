@@ -43,6 +43,21 @@ export const DEFAULT_EVENT_KINDS = [
   'Work Party',
 ]
 
+// Native share sheet when available (mobile), clipboard otherwise.
+export async function shareInvite(code: string, title: string): Promise<'shared' | 'copied' | 'cancelled'> {
+  const url = `${window.location.origin}/?code=${encodeURIComponent(code)}`
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: 'Glow Tape', text: `Join ${title} on Glow Tape`, url })
+      return 'shared'
+    } catch {
+      return 'cancelled'
+    }
+  }
+  await navigator.clipboard.writeText(url)
+  return 'copied'
+}
+
 export function copyrightLine(): string {
   const y = new Date().getFullYear()
   return `© ${y > 2026 ? '2026–' + y : '2026'} Zucchini Volcano LLC`
