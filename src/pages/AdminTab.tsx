@@ -5,7 +5,8 @@ import { useProduction } from './Production.tsx'
 import EventForm from '../components/EventForm.tsx'
 import { MANAGER_ROLES, ROLE_LABELS } from '../lib/types.ts'
 import type { ChannelRecord, ConflictRecord, EventRecord, MemberRecord, MemberRole } from '../lib/types.ts'
-import { DEFAULT_EVENT_KINDS, pbDate, shareInvite } from '../lib/types.ts'
+import { DEFAULT_EVENT_KINDS, normalizePlaces, pbDate, productionPlaces, shareInvite } from '../lib/types.ts'
+import type { Place } from '../lib/types.ts'
 
 export default function AdminTab() {
   return (
@@ -150,7 +151,7 @@ function ScheduleTableSection() {
   const [message, setMessage] = useState('')
 
   const kinds = production.eventKinds?.length ? production.eventKinds : DEFAULT_EVENT_KINDS
-  const locations = production.locations ?? []
+  const locations = productionPlaces(production).map((pl) => pl.name)
 
   async function load() {
     const list = await pb.collection('events').getFullList<EventRecord>({
@@ -293,12 +294,20 @@ function ScheduleTableSection() {
   )
 }
 
-// Per-production preset lists used by the event forms.
+// Per-production preset lists used by the event forms. Places carry
+// addresses so calendar entries and map links know where to point;
+// company-wide places live on the org (dashboard-managed) and are inherited.
 function PresetsSection() {
   const { production, reload } = useProduction()
   const [kinds, setKinds] = useState((production.eventKinds ?? []).join(', '))
-  const [locations, setLocations] = useState((production.locations ?? []).join(', '))
+  const [places, setPlaces] = useState<Place[]>(normalizePlaces(production.locations))
   const [saved, setSaved] = useState('')
+
+  const orgPlaces = normalizePlaces(production.expand?.org?.locations)
+
+  function setPlace(i: number, field: keyof Place, value: string) {
+    setPlaces((prev) => prev.map((pl, idx) => (idx === i ? { ...pl, [field]: value } : pl)))
+  }
 
   async function save() {
     const toList = (s: string) =>
@@ -308,7 +317,7 @@ function PresetsSection() {
         .filter(Boolean)
     await pb.collection('productions').update(production.id, {
       eventKinds: toList(kinds),
-      locations: toList(locations),
+      locations: places.filter((pl) => pl.name.trim()),
     })
     setSaved('Saved.')
     setTimeout(() => setSaved(''), 2000)
@@ -327,14 +336,45 @@ function PresetsSection() {
             placeholder={DEFAULT_EVENT_KINDS.join(', ')}
           />
         </label>
-        <label>
-          Rehearsal locations (comma-separated — they'll be suggested on every event)
-          <input
-            value={locations}
-            onChange={(e) => setLocations(e.target.value)}
-            placeholder="Driftwood Playhouse, Elks Hall basement"
-          />
-        </label>
+        <div>
+          <label>Rehearsal places (with an address, calendar entries open in map apps)</label>
+          {places.map((pl, i) => (
+            <div className="row" key={i}>
+              <input
+                aria-label="Place name"
+                value={pl.name}
+                onChange={(e) => setPlace(i, 'name', e.target.value)}
+                placeholder="Driftwood Playhouse"
+              />
+              <input
+                aria-label="Address"
+                value={pl.address}
+                onChange={(e) => setPlace(i, 'address', e.target.value)}
+                placeholder="120 E 3rd St, Aberdeen, WA"
+              />
+              <button
+                type="button"
+                className="link"
+                onClick={() => setPlaces((prev) => prev.filter((_, idx) => idx !== i))}
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            className="link"
+            onClick={() => setPlaces((prev) => [...prev, { name: '', address: '' }])}
+          >
+            + Add place
+          </button>
+          {orgPlaces.length > 0 && (
+            <p className="hint">
+              Also inherited from {production.expand?.org?.name}:{' '}
+              {orgPlaces.map((pl) => pl.name).join(', ')}
+            </p>
+          )}
+        </div>
         <div className="row">
           <button onClick={save}>Save presets</button>
           {saved && <span className="acked">{saved}</span>}

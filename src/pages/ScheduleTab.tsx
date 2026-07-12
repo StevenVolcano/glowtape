@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { pb } from '../lib/pb.ts'
 import { useAuth } from '../lib/auth.tsx'
 import { useProduction } from './Production.tsx'
-import { formatDay, formatWhen, pbDate } from '../lib/types.ts'
+import { formatDay, formatWhen, mapsUrl, pbDate, placeLine, productionPlaces } from '../lib/types.ts'
 import { downloadEventIcs, googleCalendarUrl } from '../lib/calendar.ts'
 import EventForm from '../components/EventForm.tsx'
 import type { AckRecord, AttendanceRecord, ConflictRecord, EventRecord, MemberRecord } from '../lib/types.ts'
@@ -101,6 +101,7 @@ export default function ScheduleTab() {
     await load()
   }
 
+  const places = productionPlaces(production)
   const now = new Date()
   const visible = events.filter((e) => showPast || pbDate(e.end || e.start) >= now)
 
@@ -140,7 +141,13 @@ export default function ScheduleTab() {
                   {e.status === 'cancelled' && <span className="pill pill-cancel">Cancelled</span>}
                   <span>{formatWhen(e.start, e.end)}</span>
                 </div>
-                {e.location && <div className="event-line">📍 {e.location}</div>}
+                {e.location && (
+                  <div className="event-line">
+                    <a href={mapsUrl(places, e.location)} target="_blank" rel="noreferrer">
+                      📍 {e.location}
+                    </a>
+                  </div>
+                )}
                 <div className="event-line">
                   <strong>Called:</strong> {calledLabel(e)}
                   {e.calledNote && <em> — {e.calledNote}</em>}
@@ -157,13 +164,16 @@ export default function ScheduleTab() {
                 <div className="row cal-links">
                   <a
                     className="link"
-                    href={googleCalendarUrl(e, production.title)}
+                    href={googleCalendarUrl(e, production.title, placeLine(places, e.location))}
                     target="_blank"
                     rel="noreferrer"
                   >
                     + Google Calendar
                   </a>
-                  <button className="link" onClick={() => downloadEventIcs(e, production.title)}>
+                  <button
+                    className="link"
+                    onClick={() => downloadEventIcs(e, production.title, placeLine(places, e.location))}
+                  >
                     + Apple / other calendar
                   </button>
                 </div>

@@ -34,7 +34,7 @@ export default function Production() {
   async function reload() {
     if (!id) return
     const [p, m] = await Promise.all([
-      pb.collection('productions').getOne<ProductionRecord>(id),
+      pb.collection('productions').getOne<ProductionRecord>(id, { expand: 'org' }),
       pb.collection('members').getFullList<MemberRecord>({
         filter: pb.filter('production = {:id}', { id }),
         expand: 'user',

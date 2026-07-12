@@ -27,7 +27,55 @@ export interface ProductionRecord {
   joinCode: string
   managers: string[]
   eventKinds: string[] | null
-  locations: string[] | null
+  locations: unknown[] | null // strings or {name, address} objects
+  expand?: { org?: OrgRecord }
+}
+
+export interface OrgRecord {
+  id: string
+  name: string
+  locations: unknown[] | null
+}
+
+export interface Place {
+  name: string
+  address: string
+}
+
+export function normalizePlaces(list: unknown): Place[] {
+  if (!Array.isArray(list)) return []
+  return list
+    .map((x) =>
+      typeof x === 'string'
+        ? { name: x, address: '' }
+        : {
+            name: String((x as Place)?.name ?? ''),
+            address: String((x as Place)?.address ?? ''),
+          },
+    )
+    .filter((p) => p.name)
+}
+
+// Production's own places first, then the company's, deduped by name.
+export function productionPlaces(p: ProductionRecord): Place[] {
+  const merged = [...normalizePlaces(p.locations), ...normalizePlaces(p.expand?.org?.locations)]
+  const seen = new Set<string>()
+  return merged.filter((pl) => {
+    const key = pl.name.toLowerCase()
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
+export function placeLine(places: Place[], name: string): string {
+  if (!name) return ''
+  const hit = places.find((pl) => pl.name.toLowerCase() === name.toLowerCase())
+  return hit?.address ? `${hit.name}, ${hit.address}` : name
+}
+
+export function mapsUrl(places: Place[], name: string): string {
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(placeLine(places, name))}`
 }
 
 export const DEFAULT_EVENT_KINDS = [

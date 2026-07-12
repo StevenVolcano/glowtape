@@ -12,13 +12,18 @@ function endOrDefault(event: EventRecord): string {
   return end.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '')
 }
 
-export function googleCalendarUrl(event: EventRecord, productionTitle: string): string {
+export function googleCalendarUrl(
+  event: EventRecord,
+  productionTitle: string,
+  locationLine?: string,
+): string {
   const params = new URLSearchParams({
     action: 'TEMPLATE',
     text: `${event.title} — ${productionTitle}`,
     dates: `${calStamp(event.start)}/${endOrDefault(event)}`,
   })
-  if (event.location) params.set('location', event.location)
+  const loc = locationLine || event.location
+  if (loc) params.set('location', loc)
   const details = [event.calledNote, event.notes].filter(Boolean).join('\n')
   if (details) params.set('details', details)
   return `https://calendar.google.com/calendar/render?${params.toString()}`
@@ -30,8 +35,13 @@ function icsEscape(text: string): string {
 
 // Download a single-event .ics — iPhones open it straight into Calendar,
 // desktops hand it to the default calendar app.
-export function downloadEventIcs(event: EventRecord, productionTitle: string): void {
+export function downloadEventIcs(
+  event: EventRecord,
+  productionTitle: string,
+  locationLine?: string,
+): void {
   const details = [event.calledNote, event.notes].filter(Boolean).join('\n')
+  const loc = locationLine || event.location
   const lines = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
@@ -42,7 +52,7 @@ export function downloadEventIcs(event: EventRecord, productionTitle: string): v
     `DTSTART:${calStamp(event.start)}`,
     `DTEND:${endOrDefault(event)}`,
     `SUMMARY:${icsEscape(`${event.title} — ${productionTitle}`)}`,
-    ...(event.location ? [`LOCATION:${icsEscape(event.location)}`] : []),
+    ...(loc ? [`LOCATION:${icsEscape(loc)}`] : []),
     ...(details ? [`DESCRIPTION:${icsEscape(details)}`] : []),
     'END:VEVENT',
     'END:VCALENDAR',

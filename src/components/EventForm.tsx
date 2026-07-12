@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { pb } from '../lib/pb.ts'
 import { useProduction } from '../pages/Production.tsx'
-import { DEFAULT_EVENT_KINDS, pbDate } from '../lib/types.ts'
+import { DEFAULT_EVENT_KINDS, pbDate, productionPlaces } from '../lib/types.ts'
 import type { EventRecord } from '../lib/types.ts'
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -24,7 +24,7 @@ export default function EventForm({
   const editing = !!event
 
   const kinds = production.eventKinds?.length ? production.eventKinds : DEFAULT_EVENT_KINDS
-  const locations = production.locations ?? []
+  const locations = productionPlaces(production).map((pl) => pl.name)
 
   const [title, setTitle] = useState(event?.title ?? '')
   const [kind, setKind] = useState(event?.kind ?? '')

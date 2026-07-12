@@ -62,6 +62,32 @@ routerAdd("GET", "/api/glowtape/cal/{token}/calls.ics", (e) => {
     } catch {
       continue;
     }
+
+    // name -> address map from production + org preset places
+    const placeAddr = {};
+    const collect = (rawJson) => {
+      try {
+        const list = JSON.parse(String(rawJson || "[]"));
+        if (Array.isArray(list)) {
+          for (const it of list) {
+            if (it && typeof it === "object" && it.name && it.address) {
+              const key = String(it.name).toLowerCase();
+              if (!(key in placeAddr)) placeAddr[key] = String(it.address);
+            }
+          }
+        }
+      } catch {
+        /* older string-list shape or empty */
+      }
+    };
+    collect(production.get("locations"));
+    try {
+      const org = e.app.findRecordById("orgs", production.get("org"));
+      collect(org.get("locations"));
+    } catch {
+      /* no org */
+    }
+
     const events = e.app.findRecordsByFilter(
       "events",
       "production = {:p} && start >= {:from}",
@@ -102,7 +128,11 @@ routerAdd("GET", "/api/glowtape/cal/{token}/calls.ics", (e) => {
             (cancelled ? "CANCELLED — " : "") + ev.get("title") + " — " + production.get("title"),
           ),
       );
-      if (ev.get("location")) lines.push("LOCATION:" + lib.icsEscape(ev.get("location")));
+      if (ev.get("location")) {
+        const locName = String(ev.get("location"));
+        const addr = placeAddr[locName.toLowerCase()];
+        lines.push("LOCATION:" + lib.icsEscape(addr ? locName + ", " + addr : locName));
+      }
       if (desc) lines.push("DESCRIPTION:" + lib.icsEscape(desc));
       lines.push("END:VEVENT");
     }
