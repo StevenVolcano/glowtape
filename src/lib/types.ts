@@ -118,6 +118,7 @@ export interface MemberRecord {
   role: MemberRole
   position: string
   roleCode: string
+  manager: boolean // grants the Manage tab; synced server-side to productions.managers
   multi: boolean // shared role placeholder (Ensemble, Crew) — claimable by many
   claimedFrom: string // claimer rows point back at their shared placeholder
   expand?: { user?: UserRecord }

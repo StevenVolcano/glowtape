@@ -545,3 +545,14 @@ form.stack,
   border-radius: 10px;
   padding: 0.5rem 0.75rem;
 }
+
+.manage-toggle {
+  gap: 0.35rem;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.manage-toggle input {
+  width: 1.3rem;
+  min-height: 1.3rem;
+}

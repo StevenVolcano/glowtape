@@ -270,9 +270,39 @@ function managerContacts(app, production) {
   return out;
 }
 
+// Recompute a production's denormalized managers list from member flags.
+function syncProductionManagers(app, productionId) {
+  try {
+    const production = app.findRecordById("productions", productionId);
+    const rows = app.findRecordsByFilter(
+      "members",
+      "production = {:p} && manager = true",
+      "",
+      500,
+      0,
+      { p: productionId },
+    );
+    const next = [];
+    for (const r of rows) {
+      const uid = r.get("user");
+      if (uid && !next.includes(uid)) next.push(uid);
+    }
+    const current = toIdArray(production.get("managers"));
+    const same =
+      next.length === current.length && next.every((id) => current.includes(id));
+    if (!same) {
+      production.set("managers", next);
+      app.save(production);
+    }
+  } catch (err) {
+    app.logger().error("glowtape: manager sync failed", "error", String(err));
+  }
+}
+
 module.exports = {
   pbNow,
   managerContacts,
+  syncProductionManagers,
   toIdArray,
   recipients,
   sendMail,

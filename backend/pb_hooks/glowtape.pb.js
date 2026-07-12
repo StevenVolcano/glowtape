@@ -138,6 +138,7 @@ routerAdd(
         claim.set("user", e.auth.id);
         claim.set("role", role.get("role"));
         claim.set("position", role.get("position"));
+        claim.set("manager", !!role.get("manager"));
         claim.set("claimedFrom", role.id);
         e.app.save(claim);
         return e.json(200, { ok: true, production: production.id, already: false, claimed: role.get("position") });

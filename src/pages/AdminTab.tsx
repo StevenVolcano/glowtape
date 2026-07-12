@@ -490,25 +490,27 @@ function MembersSection() {
   const { production, members, reload } = useProduction()
   const [busyId, setBusyId] = useState('')
 
-  // Keep the denormalized managers list in sync with member roles so the
-  // API rules (which check production.managers) stay correct.
-  async function syncManagers(updated: MemberRecord[]) {
-    const managerUserIds = updated
-      .filter((m) => MANAGER_ROLES.includes(m.role) && m.user)
-      .map((m) => m.user)
-    const next = Array.from(new Set(managerUserIds))
-    const current = [...production.managers].sort()
-    if (JSON.stringify(next.slice().sort()) !== JSON.stringify(current)) {
-      await pb.collection('productions').update(production.id, { managers: next })
-    }
-  }
-
+  // The server keeps productions.managers in sync with member `manager`
+  // flags; promoting to a manager role auto-checks the flag, demoting
+  // auto-unchecks it, and the checkbox handles everyone else (producer,
+  // choreographer, ...).
   async function setRole(member: MemberRecord, role: MemberRole) {
     setBusyId(member.id)
     try {
-      await pb.collection('members').update(member.id, { role })
-      const updated = members.map((m) => (m.id === member.id ? { ...m, role } : m))
-      await syncManagers(updated)
+      await pb.collection('members').update(member.id, {
+        role,
+        manager: MANAGER_ROLES.includes(role),
+      })
+      await reload()
+    } finally {
+      setBusyId('')
+    }
+  }
+
+  async function setManager(member: MemberRecord, manager: boolean) {
+    setBusyId(member.id)
+    try {
+      await pb.collection('members').update(member.id, { manager })
       await reload()
     } finally {
       setBusyId('')
@@ -525,7 +527,6 @@ function MembersSection() {
     setBusyId(member.id)
     try {
       await pb.collection('members').delete(member.id)
-      await syncManagers(members.filter((m) => m.id !== member.id))
       await reload()
     } finally {
       setBusyId('')
@@ -575,6 +576,15 @@ function MembersSection() {
                 if (e.target.value !== m.position) setPosition(m, e.target.value)
               }}
             />
+            <label className="row manage-toggle">
+              <input
+                type="checkbox"
+                checked={m.manager}
+                disabled={busyId === m.id}
+                onChange={(e) => setManager(m, e.target.checked)}
+              />
+              Manage
+            </label>
             <button className="link" disabled={busyId === m.id} onClick={() => remove(m)}>
               remove
             </button>
@@ -583,9 +593,11 @@ function MembersSection() {
       </ul>
       <AddRoleForm onAdded={reload} />
       <p className="hint">
-        Directors, assistant directors, and stage managers can manage the production (this tab).
-        Roles added before casting get a claim code — hand it to whoever is cast, they join with
-        it, and their whole schedule is waiting.
+        The <strong>Manage</strong> checkbox grants this tab — it checks itself for directors,
+        assistant directors, and stage managers, and you can grant it to anyone else (producer,
+        choreographer). Roles added before casting get a claim code — hand it to whoever is
+        cast, they join with it, and their whole schedule (and Manage access, if it's a staff
+        role) is waiting.
       </p>
     </section>
   )
@@ -621,6 +633,7 @@ function AddRoleForm({ onAdded }: { onAdded: () => Promise<void> }) {
         position: position.trim(),
         roleCode: makeRoleCode(),
         multi,
+        manager: MANAGER_ROLES.includes(role),
       })
       setPosition('')
       setMulti(false)
