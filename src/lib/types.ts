@@ -26,6 +26,26 @@ export interface ProductionRecord {
   status: 'planning' | 'rehearsal' | 'performance' | 'closed'
   joinCode: string
   managers: string[]
+  eventKinds: string[] | null
+  locations: string[] | null
+}
+
+export const DEFAULT_EVENT_KINDS = [
+  'Rehearsal',
+  'Table Read',
+  'Blocking',
+  'Music',
+  'Choreography',
+  'Run-Through',
+  'Tech',
+  'Dress',
+  'Performance',
+  'Work Party',
+]
+
+export function copyrightLine(): string {
+  const y = new Date().getFullYear()
+  return `© ${y > 2026 ? '2026–' + y : '2026'} Zucchini Volcano LLC`
 }
 
 export interface MemberRecord {
@@ -48,6 +68,7 @@ export interface EventRecord {
   called: string[]
   calledNote: string
   status: '' | 'scheduled' | 'cancelled'
+  kind: string
 }
 
 export interface AckRecord {

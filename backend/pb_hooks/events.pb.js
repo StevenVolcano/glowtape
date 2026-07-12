@@ -21,6 +21,7 @@ routerAdd(
     const data = new DynamicModel({
       production: "",
       title: "",
+      kind: "",
       location: "",
       notes: "",
       calledNote: "",
@@ -51,6 +52,7 @@ routerAdd(
       const rec = new Record(collection);
       rec.set("production", production.id);
       rec.set("title", data.title.trim());
+      rec.set("kind", data.kind || "");
       rec.set("start", occ.start);
       rec.set("end", occ.end || "");
       rec.set("location", data.location);
@@ -116,25 +118,15 @@ onRecordAfterUpdateSuccess((e) => {
   const lib = require(`${__hooks}/glowtape_lib.js`);
   try {
     const original = e.record.original();
-    const production = e.app.findRecordById("productions", e.record.get("production"));
-    const to = lib.recipients(e.app, production.id, e.record.get("called"));
-
     const becameCancelled =
       e.record.get("status") === "cancelled" && original.get("status") !== "cancelled";
-    const timePlaceChanged =
-      String(e.record.get("start")) !== String(original.get("start")) ||
-      String(e.record.get("end")) !== String(original.get("end")) ||
-      e.record.get("location") !== original.get("location");
-
-    const wipe = (collectionName) => {
-      const rows = e.app.findRecordsByFilter(collectionName, "event = {:ev}", "", 500, 0, {
+    if (becameCancelled) {
+      const production = e.app.findRecordById("productions", e.record.get("production"));
+      const to = lib.recipients(e.app, production.id, e.record.get("called"));
+      const rows = e.app.findRecordsByFilter("reminders_sent", "event = {:ev}", "", 500, 0, {
         ev: e.record.id,
       });
       for (const r of rows) e.app.delete(r);
-    };
-
-    if (becameCancelled) {
-      wipe("reminders_sent"); // no reminders for a cancelled event
       lib.sendMail(
         e.app,
         to,
@@ -148,25 +140,106 @@ onRecordAfterUpdateSuccess((e) => {
           `<p>No need to do anything — just don't show up. 🙂</p>`,
         ].join("\n"),
       );
-    } else if (timePlaceChanged && e.record.get("status") !== "cancelled") {
-      wipe("acks"); // everyone must re-acknowledge a moved event
-      wipe("reminders_sent"); // reminders re-arm for the new time
-      lib.sendMail(
-        e.app,
-        to,
-        `[${production.get("title")}] Schedule change: ${e.record.get("title")}`,
-        [
-          `<h2>Changed: ${e.record.get("title")}</h2>`,
-          `<p><strong>${production.get("title")}</strong></p>`,
-          `<p>Now: ${lib.formatPacific(e.record.get("start"))} (Pacific)</p>`,
-          e.record.get("location") ? `<p>Where: ${e.record.get("location")}</p>` : "",
-          e.record.get("calledNote") ? `<p>Called: ${e.record.get("calledNote")}</p>` : "",
-          `<p>Your earlier "Got it" was reset — open Glow Tape and tap it again so your stage manager knows you saw the change.</p>`,
-        ].join("\n"),
-      );
     }
   } catch (err) {
-    e.app.logger().error("glowtape: event change mail failed", "error", String(err));
+    e.app.logger().error("glowtape: event cancel mail failed", "error", String(err));
   }
   e.next();
 }, "events");
+
+// --- edits: single or many, ONE email ------------------------------------------
+// The app edits events through this route (never the raw record API) so a
+// pass over several events sends a single digest. Date/time/place changes
+// reset acks and re-arm reminders per event; others stay quiet.
+
+routerAdd(
+  "POST",
+  "/api/glowtape/events/update",
+  (e) => {
+    const lib = require(`${__hooks}/glowtape_lib.js`);
+    const body = e.requestInfo().body || {};
+    const items = body.events || [];
+    if (items.length === 0) throw new BadRequestError("Nothing to save.");
+    if (items.length > 100) throw new BadRequestError("Too many events in one save.");
+
+    const changed = [];
+    let production = null;
+    let everyoneNotified = false;
+    const notifyMemberIds = [];
+
+    for (const item of items) {
+      const rec = e.app.findRecordById("events", String(item.id));
+      if (!production) {
+        production = e.app.findRecordById("productions", rec.get("production"));
+        if (!lib.toIdArray(production.get("managers")).includes(e.auth.id)) {
+          throw new BadRequestError("Only the production team can edit the schedule.");
+        }
+      } else if (rec.get("production") !== production.id) {
+        throw new BadRequestError("All events must belong to the same production.");
+      }
+
+      const beforeStart = String(rec.get("start"));
+      const beforeEnd = String(rec.get("end"));
+      const beforeLocation = rec.get("location");
+
+      for (const f of ["title", "kind", "location", "notes", "calledNote"]) {
+        if (item[f] !== undefined) rec.set(f, item[f]);
+      }
+      if (item.start !== undefined) rec.set("start", item.start);
+      if (item.end !== undefined) rec.set("end", item.end);
+      if (item.called !== undefined) rec.set("called", lib.toIdArray(item.called));
+      e.app.save(rec);
+
+      const significant =
+        rec.get("status") !== "cancelled" &&
+        (String(rec.get("start")) !== beforeStart ||
+          String(rec.get("end")) !== beforeEnd ||
+          rec.get("location") !== beforeLocation);
+
+      if (significant) {
+        for (const col of ["acks", "reminders_sent"]) {
+          const rows = e.app.findRecordsByFilter(col, "event = {:ev}", "", 500, 0, { ev: rec.id });
+          for (const r of rows) e.app.delete(r);
+        }
+        changed.push(rec);
+        const called = lib.toIdArray(rec.get("called"));
+        if (called.length === 0) everyoneNotified = true;
+        else notifyMemberIds.push(...called);
+      }
+    }
+
+    if (changed.length > 0 && production) {
+      try {
+        const to = lib.recipients(
+          e.app,
+          production.id,
+          everyoneNotified ? null : notifyMemberIds,
+        );
+        const lineFor = (ev) =>
+          `<li><strong>${ev.get("kind") ? ev.get("kind") + ": " : ""}${ev.get("title")}</strong> — now ${lib.formatPacific(ev.get("start"))}${
+            ev.get("location") ? " at " + ev.get("location") : ""
+          }</li>`;
+        const subject =
+          changed.length === 1
+            ? `[${production.get("title")}] Schedule change: ${changed[0].get("title")}`
+            : `[${production.get("title")}] ${changed.length} schedule changes`;
+        lib.sendMail(
+          e.app,
+          to,
+          subject,
+          [
+            `<h2>${changed.length === 1 ? "Schedule change" : changed.length + " schedule changes"}</h2>`,
+            `<p><strong>${production.get("title")}</strong> — all times Pacific</p>`,
+            `<ul>${changed.map(lineFor).join("\n")}</ul>`,
+            `<p>Your earlier "Got it" on these was reset — open Glow Tape and tap again so your stage manager knows you saw the changes.</p>`,
+          ].join("\n"),
+        );
+      } catch (err) {
+        e.app.logger().error("glowtape: event change mail failed", "error", String(err));
+      }
+    }
+
+    return e.json(200, { ok: true, saved: items.length, notified: changed.length });
+  },
+  $apis.requireAuth(),
+);

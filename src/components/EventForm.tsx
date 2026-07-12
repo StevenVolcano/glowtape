@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { pb } from '../lib/pb.ts'
 import { useProduction } from '../pages/Production.tsx'
-import { pbDate } from '../lib/types.ts'
+import { DEFAULT_EVENT_KINDS, pbDate } from '../lib/types.ts'
 import type { EventRecord } from '../lib/types.ts'
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -23,7 +23,11 @@ export default function EventForm({
   const { production, members } = useProduction()
   const editing = !!event
 
+  const kinds = production.eventKinds?.length ? production.eventKinds : DEFAULT_EVENT_KINDS
+  const locations = production.locations ?? []
+
   const [title, setTitle] = useState(event?.title ?? '')
+  const [kind, setKind] = useState(event?.kind ?? '')
   const [date, setDate] = useState(event ? localDate(pbDate(event.start)) : '')
   const [startTime, setStartTime] = useState(event ? localTime(pbDate(event.start)) : '19:00')
   const [endTime, setEndTime] = useState(event?.end ? localTime(pbDate(event.end)) : '')
@@ -67,20 +71,41 @@ export default function EventForm({
 
   async function submit(e: FormEvent) {
     e.preventDefault()
-    setBusy(true)
     setError('')
     setDone('')
+    if (!title.trim()) {
+      setError('Give the event a title — e.g. "Act I blocking". (Picking a type fills it in.)')
+      return
+    }
+    if (!date) {
+      setError('Pick a date.')
+      return
+    }
+    if (!editing && repeatWeekly && !repeatUntil) {
+      setError('Repeating weekly needs an "until" date — or un-check Repeats weekly.')
+      return
+    }
+    setBusy(true)
     try {
       const calledIds = everyone ? [] : called
       if (editing && event) {
-        await pb.collection('events').update(event.id, {
-          title,
-          location,
-          notes,
-          calledNote,
-          called: calledIds,
-          start: new Date(`${date}T${startTime}`).toISOString(),
-          end: endTime ? new Date(`${date}T${endTime}`).toISOString() : '',
+        await pb.send('/api/glowtape/events/update', {
+          method: 'POST',
+          body: {
+            events: [
+              {
+                id: event.id,
+                title,
+                kind,
+                location,
+                notes,
+                calledNote,
+                called: calledIds,
+                start: new Date(`${date}T${startTime}`).toISOString(),
+                end: endTime ? new Date(`${date}T${endTime}`).toISOString() : '',
+              },
+            ],
+          },
         })
       } else {
         const res = await pb.send('/api/glowtape/events', {
@@ -88,6 +113,7 @@ export default function EventForm({
           body: {
             production: production.id,
             title,
+            kind,
             location,
             notes,
             calledNote,
@@ -117,12 +143,28 @@ export default function EventForm({
 
   return (
     <form onSubmit={submit} className="stack">
-      <input
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        placeholder="Title — e.g. Act II run-through"
-        required
-      />
+      <div className="row">
+        <select
+          aria-label="Event type"
+          value={kind}
+          onChange={(e) => {
+            setKind(e.target.value)
+            if (!title.trim() && e.target.value) setTitle(e.target.value)
+          }}
+        >
+          <option value="">Type (optional)</option>
+          {kinds.map((k) => (
+            <option key={k} value={k}>
+              {k}
+            </option>
+          ))}
+        </select>
+        <input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Title — e.g. Act II run-through"
+        />
+      </div>
       <div className="row">
         <label>
           Date
@@ -180,7 +222,17 @@ export default function EventForm({
         </>
       )}
 
-      <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Location" />
+      <input
+        list="gt-locations"
+        value={location}
+        onChange={(e) => setLocation(e.target.value)}
+        placeholder="Location"
+      />
+      <datalist id="gt-locations">
+        {locations.map((l) => (
+          <option key={l} value={l} />
+        ))}
+      </datalist>
       <input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notes (optional)" />
       <label className="row">
         <input type="checkbox" checked={everyone} onChange={(e) => setEveryone(e.target.checked)} />
@@ -208,7 +260,7 @@ export default function EventForm({
         </>
       )}
 
-      <button type="submit" disabled={busy || !title || !date}>
+      <button type="submit" disabled={busy}>
         {busy ? 'Working…' : editing ? 'Save changes' : 'Add to schedule'}
       </button>
       {editing && (

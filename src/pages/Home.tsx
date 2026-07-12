@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { pb } from '../lib/pb.ts'
 import { useAuth } from '../lib/auth.tsx'
 import PhoneSettings from '../components/PhoneSettings.tsx'
+import { copyrightLine } from '../lib/types.ts'
 import type { ProductionRecord } from '../lib/types.ts'
 
 export default function Home() {
@@ -93,6 +94,8 @@ export default function Home() {
       <p className="hint legal-links">
         <a href="/help.html">Help &amp; FAQs</a> · <a href="/privacy.html">Privacy</a> ·{' '}
         <a href="/terms.html">Terms</a>
+        <br />
+        {copyrightLine()}
       </p>
     </main>
   )

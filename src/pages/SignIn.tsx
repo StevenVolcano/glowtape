@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { pb } from '../lib/pb.ts'
+import { copyrightLine } from '../lib/types.ts'
 
 type Method = 'email' | 'phone'
 type Step = 'enter' | 'code'
@@ -180,6 +181,8 @@ export default function SignIn() {
         <p className="hint legal-links">
           <a href="/help.html">Help</a> · <a href="/privacy.html">Privacy</a> ·{' '}
           <a href="/terms.html">Terms</a> · Free for Grays Harbor theater
+          <br />
+          {copyrightLine()}
         </p>
       </div>
     </main>

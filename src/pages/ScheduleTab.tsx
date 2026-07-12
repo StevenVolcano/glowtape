@@ -88,6 +88,7 @@ export default function ScheduleTab() {
               >
                 <div className="event-head">
                   <strong>{e.title}</strong>
+                  {e.kind && e.kind !== e.title && <span className="pill">{e.kind}</span>}
                   {e.status === 'cancelled' && <span className="pill pill-cancel">Cancelled</span>}
                   <span>{formatWhen(e.start, e.end)}</span>
                 </div>

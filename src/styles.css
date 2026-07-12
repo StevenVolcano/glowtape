@@ -505,3 +505,36 @@ form.stack,
   cursor: pointer;
   font-size: 1.2rem;
 }
+
+.edit-table {
+  overflow-x: auto;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0.5rem;
+}
+
+.edit-table table {
+  border-collapse: collapse;
+}
+
+.edit-table th {
+  text-align: left;
+  font-size: 0.85rem;
+  color: var(--muted);
+  padding: 0.25rem 0.4rem;
+}
+
+.edit-table td {
+  padding: 0.2rem 0.3rem;
+}
+
+.edit-table input,
+.edit-table select {
+  min-width: 7.5rem;
+  min-height: 40px;
+}
+
+.edit-table td:nth-child(2) input {
+  min-width: 11rem;
+}
