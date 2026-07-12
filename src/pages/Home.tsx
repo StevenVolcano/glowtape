@@ -22,7 +22,19 @@ export default function Home() {
   }
 
   useEffect(() => {
-    load().catch(() => setLoaded(true))
+    async function boot() {
+      const pending = localStorage.getItem('gt-pending-code')
+      if (pending) {
+        localStorage.removeItem('gt-pending-code')
+        try {
+          await pb.send('/api/glowtape/join', { method: 'POST', body: { code: pending } })
+        } catch {
+          // a community access code isn't a production code — that's fine
+        }
+      }
+      await load()
+    }
+    boot().catch(() => setLoaded(true))
   }, [])
 
   async function join(e: FormEvent) {

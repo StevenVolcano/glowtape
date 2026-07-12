@@ -12,7 +12,7 @@
 // never used or seen. Idempotent: an existing email returns ok so the UI can
 // always follow with requestOTP.
 routerAdd("POST", "/api/glowtape/signup", (e) => {
-  const data = new DynamicModel({ email: "", name: "" });
+  const data = new DynamicModel({ email: "", name: "", code: "" });
   e.bindBody(data);
   const email = data.email.trim().toLowerCase();
   if (!email.includes("@")) {
@@ -23,7 +23,36 @@ routerAdd("POST", "/api/glowtape/signup", (e) => {
     e.app.findAuthRecordByEmail("users", email);
     return e.json(200, { ok: true, existing: true });
   } catch {
-    // not found -> create
+    // not found -> create, but only with a valid code
+  }
+
+  const code = data.code.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+  let codeOk = false;
+  if (code.length >= 4) {
+    // Operator-issued community code?
+    try {
+      const ac = e.app.findFirstRecordByFilter("access_codes", "code = {:c} && active = true", {
+        c: code,
+      });
+      const exp = String(ac.get("expires") || "");
+      codeOk = !exp || exp > new Date().toISOString().replace("T", " ");
+    } catch {
+      /* not a community code */
+    }
+    // Production join code or role claim code?
+    if (!codeOk && code.length >= 6) {
+      try {
+        e.app.findFirstRecordByFilter("productions", "joinCode = {:c}", { c: code.slice(0, 6) });
+        codeOk = true;
+      } catch {
+        /* not a production code either */
+      }
+    }
+  }
+  if (!codeOk) {
+    throw new BadRequestError(
+      "Glow Tape is invite-based: creating an account needs a current code from your production or the community organizer.",
+    );
   }
 
   const users = e.app.findCollectionByNameOrId("users");

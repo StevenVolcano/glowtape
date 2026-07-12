@@ -74,6 +74,14 @@ export interface EventRecord {
   kind: string
 }
 
+export interface AttendanceRecord {
+  id: string
+  event: string
+  member: string
+  status: 'present' | 'late' | 'absent'
+  note: string
+}
+
 export interface AckRecord {
   id: string
   event: string

@@ -253,8 +253,26 @@ function icsDateFromMs(ms) {
   return icsDate(new Date(ms).toISOString().replace("T", " "));
 }
 
+// Emails + opted-in phones for a production's managers (for day-of alerts).
+function managerContacts(app, production) {
+  const out = { emails: [], phones: [] };
+  for (const uid of toIdArray(production.get("managers"))) {
+    try {
+      const u = app.findRecordById("users", uid);
+      out.emails.push({ address: u.email(), name: u.get("name") });
+      if (u.get("smsOptIn") && u.get("phoneVerified") && u.get("phone")) {
+        out.phones.push(u.get("phone"));
+      }
+    } catch {
+      /* skip */
+    }
+  }
+  return out;
+}
+
 module.exports = {
   pbNow,
+  managerContacts,
   toIdArray,
   recipients,
   sendMail,

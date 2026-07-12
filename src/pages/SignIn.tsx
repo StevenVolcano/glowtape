@@ -13,6 +13,7 @@ export default function SignIn() {
   const [step, setStep] = useState<Step>('enter')
   const [email, setEmail] = useState('')
   const [name, setName] = useState('')
+  const [joinCode, setJoinCode] = useState('')
   const [phone, setPhone] = useState('')
   const [code, setCode] = useState('')
   const [otpId, setOtpId] = useState('')
@@ -32,7 +33,11 @@ export default function SignIn() {
     setError('')
     try {
       if (method === 'email') {
-        await pb.send('/api/glowtape/signup', { method: 'POST', body: { email, name } })
+        await pb.send('/api/glowtape/signup', {
+          method: 'POST',
+          body: { email, name, code: joinCode },
+        })
+        if (joinCode.trim()) localStorage.setItem('gt-pending-code', joinCode.trim())
         const result = await pb.collection('users').requestOTP(email.trim().toLowerCase())
         setOtpId(result.otpId)
       } else {
@@ -125,6 +130,18 @@ export default function SignIn() {
                   placeholder="you@example.com"
                   required
                 />
+                <label htmlFor="joincode">Code</label>
+                <input
+                  id="joincode"
+                  type="text"
+                  value={joinCode}
+                  onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                  placeholder="From your production or the organizer"
+                />
+                <p className="hint">
+                  New accounts need a code — a production join code, a role code, or a community
+                  code. Already have an account? Leave it blank.
+                </p>
               </>
             ) : (
               <>

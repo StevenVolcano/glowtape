@@ -5,7 +5,7 @@ import { useProduction } from './Production.tsx'
 import { formatDay, formatWhen, pbDate } from '../lib/types.ts'
 import { downloadEventIcs, googleCalendarUrl } from '../lib/calendar.ts'
 import EventForm from '../components/EventForm.tsx'
-import type { AckRecord, ConflictRecord, EventRecord } from '../lib/types.ts'
+import type { AckRecord, AttendanceRecord, ConflictRecord, EventRecord, MemberRecord } from '../lib/types.ts'
 
 export default function ScheduleTab() {
   const { production, members, myMember, isManager } = useProduction()
@@ -13,11 +13,13 @@ export default function ScheduleTab() {
   const [events, setEvents] = useState<EventRecord[]>([])
   const [acks, setAcks] = useState<AckRecord[]>([])
   const [conflicts, setConflicts] = useState<ConflictRecord[]>([])
+  const [attendance, setAttendance] = useState<AttendanceRecord[]>([])
   const [showPast, setShowPast] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [rollFor, setRollFor] = useState<string | null>(null)
 
   async function load() {
-    const [ev, ak, cf] = await Promise.all([
+    const [ev, ak, cf, at] = await Promise.all([
       pb.collection('events').getFullList<EventRecord>({
         filter: pb.filter('production = {:p}', { p: production.id }),
         sort: 'start',
@@ -30,10 +32,14 @@ export default function ScheduleTab() {
         expand: 'user',
         sort: 'start',
       }),
+      pb.collection('attendance').getFullList<AttendanceRecord>({
+        filter: pb.filter('event.production = {:p}', { p: production.id }),
+      }),
     ])
     setEvents(ev)
     setAcks(ak)
     setConflicts(cf)
+    setAttendance(at)
   }
 
   useEffect(() => {
@@ -54,6 +60,44 @@ export default function ScheduleTab() {
 
   async function restoreEvent(event: EventRecord) {
     await pb.collection('events').update(event.id, { status: 'scheduled' })
+    await load()
+  }
+
+  async function reportAttendance(event: EventRecord, status: 'late' | 'absent') {
+    const note = window.prompt(
+      status === 'late'
+        ? 'Anything to add? (e.g. "there by 7:20") — optional'
+        : 'Anything to add? (e.g. "sick") — optional',
+    )
+    if (note === null) return
+    await pb.send('/api/glowtape/attendance/report', {
+      method: 'POST',
+      body: { event: event.id, status, note },
+    })
+    await load()
+  }
+
+  function calledMembers(event: EventRecord): MemberRecord[] {
+    return members.filter(
+      (m) =>
+        m.user &&
+        (event.called.length === 0 ||
+          event.called.includes(m.id) ||
+          (!!m.claimedFrom && event.called.includes(m.claimedFrom))),
+    )
+  }
+
+  async function cycleRoll(event: EventRecord, member: MemberRecord) {
+    const row = attendance.find((a) => a.event === event.id && a.member === member.id)
+    if (!row) {
+      await pb.collection('attendance').create({ event: event.id, member: member.id, status: 'present' })
+    } else if (row.status === 'present') {
+      await pb.collection('attendance').update(row.id, { status: 'late' })
+    } else if (row.status === 'late') {
+      await pb.collection('attendance').update(row.id, { status: 'absent' })
+    } else {
+      await pb.collection('attendance').delete(row.id)
+    }
     await load()
   }
 
@@ -124,10 +168,72 @@ export default function ScheduleTab() {
                   </button>
                 </div>
                 )}
+                {(() => {
+                  const hoursUntil = (pbDate(e.start).getTime() - Date.now()) / 3600e3
+                  const myAtt =
+                    myMember && attendance.find((a) => a.event === e.id && a.member === myMember.id)
+                  if (!iAmCalled || e.status === 'cancelled' || hoursUntil > 24 || hoursUntil < -6)
+                    return null
+                  if (myAtt && myAtt.status !== 'present')
+                    return (
+                      <div className="hint">
+                        You reported: {myAtt.status === 'late' ? 'running late' : "can't make it"}
+                        {myAtt.note ? ` — ${myAtt.note}` : ''} (your team was alerted)
+                      </div>
+                    )
+                  return (
+                    <div className="row">
+                      <button className="link" onClick={() => reportAttendance(e, 'late')}>
+                        🕒 Running late
+                      </button>
+                      <button className="link" onClick={() => reportAttendance(e, 'absent')}>
+                        😷 Can't make it
+                      </button>
+                    </div>
+                  )
+                })()}
                 {isManager && e.status !== 'cancelled' && (
                   <div className="hint">
                     {ackCount} {ackCount === 1 ? 'person has' : 'people have'} tapped “Got it”
+                    {(() => {
+                      const rows = attendance.filter((a) => a.event === e.id)
+                      if (rows.length === 0) return null
+                      const c = (s: string) => rows.filter((a) => a.status === s).length
+                      return ` · roll: ${c('present')} ✓ ${c('late')} 🕒 ${c('absent')} ✗`
+                    })()}
                   </div>
+                )}
+                {isManager && e.status !== 'cancelled' && (
+                  <button
+                    className="link"
+                    onClick={() => setRollFor(rollFor === e.id ? null : e.id)}
+                  >
+                    {rollFor === e.id ? 'Close roll call' : 'Roll call'}
+                  </button>
+                )}
+                {isManager && rollFor === e.id && e.status !== 'cancelled' && (
+                  <ul className="plain-list roll-call">
+                    {calledMembers(e).map((m) => {
+                      const row = attendance.find((a) => a.event === e.id && a.member === m.id)
+                      const icon =
+                        row?.status === 'present'
+                          ? '✓'
+                          : row?.status === 'late'
+                            ? '🕒'
+                            : row?.status === 'absent'
+                              ? '✗'
+                              : '—'
+                      return (
+                        <li key={m.id}>
+                          <button className="chip" onClick={() => cycleRoll(e, m)}>
+                            {icon} {m.expand?.user?.name || m.position}
+                          </button>
+                          {row?.note && <span className="hint"> {row.note}</span>}
+                        </li>
+                      )
+                    })}
+                    <li className="hint">Tap a name to cycle: — → ✓ present → 🕒 late → ✗ absent</li>
+                  </ul>
                 )}
                 {isManager && (
                   <div className="row">
