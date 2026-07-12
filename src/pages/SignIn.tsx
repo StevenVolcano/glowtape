@@ -178,8 +178,8 @@ export default function SignIn() {
         {error && <p className="error">{error}</p>}
 
         <p className="hint legal-links">
-          <a href="/privacy.html">Privacy</a> · <a href="/terms.html">Terms</a> · Free for Grays
-          Harbor theater
+          <a href="/help.html">Help</a> · <a href="/privacy.html">Privacy</a> ·{' '}
+          <a href="/terms.html">Terms</a> · Free for Grays Harbor theater
         </p>
       </div>
     </main>

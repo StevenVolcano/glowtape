@@ -89,6 +89,11 @@ export default function Home() {
       </section>
 
       {user && <PhoneSettings user={user} />}
+
+      <p className="hint legal-links">
+        <a href="/help.html">Help &amp; FAQs</a> · <a href="/privacy.html">Privacy</a> ·{' '}
+        <a href="/terms.html">Terms</a>
+      </p>
     </main>
   )
 }

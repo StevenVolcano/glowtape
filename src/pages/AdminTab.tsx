@@ -28,6 +28,13 @@ function JoinCodeSection() {
         no invitation email required.
       </p>
       <div className="join-code">{production.joinCode}</div>
+      <p className="hint">
+        Handing out paper at the read-through?{' '}
+        <a href="/handout.html" target="_blank" rel="noreferrer">
+          Print the getting-started handout
+        </a>{' '}
+        and write this code in the blank.
+      </p>
     </section>
   )
 }
