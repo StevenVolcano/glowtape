@@ -438,3 +438,12 @@ form.stack,
     padding: 0;
   }
 }
+
+.legal-links {
+  text-align: center;
+  margin-top: 0.5rem;
+}
+
+.legal-links a {
+  color: var(--muted);
+}
