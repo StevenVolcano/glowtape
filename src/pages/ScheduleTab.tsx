@@ -76,7 +76,11 @@ export default function ScheduleTab() {
         {visible.length === 0 && <p className="hint">Nothing on the schedule yet.</p>}
         <ul className="cards">
           {visible.map((e) => {
-            const iAmCalled = e.called.length === 0 || (myMember != null && e.called.includes(myMember.id))
+            const iAmCalled =
+              e.called.length === 0 ||
+              (myMember != null &&
+                (e.called.includes(myMember.id) ||
+                  (!!myMember.claimedFrom && e.called.includes(myMember.claimedFrom))))
             const myAck = acks.find((a) => a.event === e.id && a.user === user?.id)
             const ackCount = acks.filter((a) => a.event === e.id).length
             return (

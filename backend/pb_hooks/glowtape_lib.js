@@ -32,7 +32,12 @@ function recipients(app, productionId, calledMemberIds) {
   });
   const out = [];
   for (const m of members) {
-    if (calledIds.length > 0 && !calledIds.includes(m.id)) continue;
+    if (
+      calledIds.length > 0 &&
+      !calledIds.includes(m.id) &&
+      !calledIds.includes(String(m.get("claimedFrom") || ""))
+    )
+      continue;
     try {
       const u = app.findRecordById("users", m.get("user"));
       out.push({ address: u.email(), name: u.get("name") });

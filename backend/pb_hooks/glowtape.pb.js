@@ -85,6 +85,34 @@ routerAdd(
       } catch {
         throw new BadRequestError("That role code doesn't match anything. Double-check it with your stage manager.");
       }
+      if (role.get("multi")) {
+        // Shared role: the placeholder stays; each claimer gets their own row.
+        try {
+          e.app.findFirstRecordByFilter(
+            "members",
+            "claimedFrom = {:r} && user = {:u}",
+            { r: role.id, u: e.auth.id },
+          );
+          return e.json(200, { ok: true, production: production.id, already: true });
+        } catch {
+          // not claimed by this user yet
+        }
+        if (existing && !existing.get("position")) e.app.delete(existing);
+        else if (existing) {
+          throw new BadRequestError(
+            "You're already in this production. Ask your stage manager to assign the role in Manage instead.",
+          );
+        }
+        const membersCol = e.app.findCollectionByNameOrId("members");
+        const claim = new Record(membersCol);
+        claim.set("production", production.id);
+        claim.set("user", e.auth.id);
+        claim.set("role", role.get("role"));
+        claim.set("position", role.get("position"));
+        claim.set("claimedFrom", role.id);
+        e.app.save(claim);
+        return e.json(200, { ok: true, production: production.id, already: false, claimed: role.get("position") });
+      }
       if (role.get("user") && role.get("user") !== e.auth.id) {
         throw new BadRequestError("That role code was already used. Check with your stage manager.");
       }

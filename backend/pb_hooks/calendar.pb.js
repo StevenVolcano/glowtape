@@ -73,7 +73,12 @@ routerAdd("GET", "/api/glowtape/cal/{token}/calls.ics", (e) => {
 
     for (const ev of events) {
       const called = lib.toIdArray(ev.get("called"));
-      if (called.length > 0 && !called.includes(m.id)) continue;
+      if (
+        called.length > 0 &&
+        !called.includes(m.id) &&
+        !called.includes(String(m.get("claimedFrom") || ""))
+      )
+        continue;
 
       const start = String(ev.get("start"));
       const end = ev.get("end") ? String(ev.get("end")) : null;

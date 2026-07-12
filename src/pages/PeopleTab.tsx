@@ -4,7 +4,8 @@ import { MANAGER_ROLES, ROLE_LABELS } from '../lib/types.ts'
 export default function PeopleTab() {
   const { members } = useProduction()
 
-  const sorted = [...members].sort((a, b) => {
+  const people = members.filter((m) => !(m.multi && !m.user))
+  const sorted = [...people].sort((a, b) => {
     const aTeam = MANAGER_ROLES.includes(a.role) ? 0 : 1
     const bTeam = MANAGER_ROLES.includes(b.role) ? 0 : 1
     if (aTeam !== bTeam) return aTeam - bTeam

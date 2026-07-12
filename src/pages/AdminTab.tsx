@@ -492,6 +492,7 @@ function MembersSection() {
                 <>
                   <em>{m.position || 'Role'}</em>{' '}
                   <span className="pill">{production.joinCode}-{m.roleCode}</span>
+                  {m.multi && <span className="hint"> shared</span>}
                 </>
               )}
             </strong>
@@ -536,6 +537,7 @@ function AddRoleForm({ onAdded }: { onAdded: () => Promise<void> }) {
   const { production, members } = useProduction()
   const [position, setPosition] = useState('')
   const [role, setRole] = useState<MemberRole>('performer')
+  const [multi, setMulti] = useState(false)
   const [busy, setBusy] = useState(false)
 
   function makeRoleCode(): string {
@@ -559,8 +561,10 @@ function AddRoleForm({ onAdded }: { onAdded: () => Promise<void> }) {
         role,
         position: position.trim(),
         roleCode: makeRoleCode(),
+        multi,
       })
       setPosition('')
+      setMulti(false)
       await onAdded()
     } finally {
       setBusy(false)
@@ -568,12 +572,12 @@ function AddRoleForm({ onAdded }: { onAdded: () => Promise<void> }) {
   }
 
   return (
-    <form onSubmit={add} className="row">
+    <form onSubmit={add} className="stack">
       <input
         aria-label="Role or position name"
         value={position}
         onChange={(e) => setPosition(e.target.value)}
-        placeholder="Add a role before casting — e.g. Ophelia"
+        placeholder="Add a role before casting — e.g. Ophelia or Ensemble"
       />
       <select aria-label="Role type" value={role} onChange={(e) => setRole(e.target.value as MemberRole)}>
         {(Object.keys(ROLE_LABELS) as MemberRole[]).map((r) => (
@@ -582,6 +586,10 @@ function AddRoleForm({ onAdded }: { onAdded: () => Promise<void> }) {
           </option>
         ))}
       </select>
+      <label className="row">
+        <input type="checkbox" checked={multi} onChange={(e) => setMulti(e.target.checked)} />
+        Multiple people share this role (ensemble, crew) — everyone uses the same code
+      </label>
       <button type="submit" disabled={busy || !position.trim()}>
         Add role
       </button>
@@ -615,7 +623,14 @@ function ConflictAlertsSection() {
         const calledUsers =
           ev.called.length === 0
             ? members.filter((m) => m.user).map((m) => m.user)
-            : members.filter((m) => ev.called.includes(m.id) && m.user).map((m) => m.user)
+            : members
+                .filter(
+                  (m) =>
+                    m.user &&
+                    (ev.called.includes(m.id) ||
+                      (!!m.claimedFrom && ev.called.includes(m.claimedFrom))),
+                )
+                .map((m) => m.user)
         for (const c of conflicts) {
           if (!calledUsers.includes(c.user)) continue
           const from = String(c.start).slice(0, 10)

@@ -148,7 +148,12 @@ cronAdd("glowtape_sms_reminders", "*/10 * * * *", () => {
       );
 
       for (const m of members) {
-        if (called.length > 0 && !called.includes(m.id)) continue;
+        if (
+          called.length > 0 &&
+          !called.includes(m.id) &&
+          !called.includes(String(m.get("claimedFrom") || ""))
+        )
+          continue;
         let user;
         try {
           user = $app.findRecordById("users", m.get("user"));
