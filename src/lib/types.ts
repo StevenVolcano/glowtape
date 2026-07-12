@@ -132,6 +132,7 @@ export interface MemberRecord {
   displayName: string // child's shown name (first name + last initial)
   guardians: string[] // guardian user ids — each sees everything this member sees
   noPhotos: boolean // photo-consent flag (guardian/manager set)
+  bio: string // program bio, editable by the member/guardian
   expand?: { user?: UserRecord; guardians?: UserRecord[] }
 }
 
@@ -162,6 +163,7 @@ export interface TaskRecord {
   assignee: string
   due: string
   done: boolean
+  kind: string // 'bio' for auto-generated bio requests
 }
 
 export interface AttendanceRecord {

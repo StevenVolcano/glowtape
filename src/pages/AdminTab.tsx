@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 import { pb } from '../lib/pb.ts'
 import { useAuth } from '../lib/auth.tsx'
 import { useProduction } from './Production.tsx'
@@ -13,6 +14,7 @@ export default function AdminTab() {
     <div>
       <JoinCodeSection />
       <ConflictAlertsSection />
+      <BiosSection />
       <NewEventSection />
       <ScheduleTableSection />
       <PresetsSection />
@@ -380,6 +382,66 @@ function PresetsSection() {
           {saved && <span className="acked">{saved}</span>}
         </div>
       </div>
+    </section>
+  )
+}
+
+// "This production needs bios": one task per cast member, compiled view for
+// the program.
+function BiosSection() {
+  const { production, members } = useProduction()
+  const [due, setDue] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [message, setMessage] = useState('')
+
+  const withBio = members.filter((m) => (m.bio ?? '').trim()).length
+  const eligible = members.filter(
+    (m) => m.role !== 'guardian' && !(m.multi && !m.user) && (m.user || m.minor),
+  ).length
+
+  async function request() {
+    setBusy(true)
+    setMessage('')
+    try {
+      const res = await pb.send('/api/glowtape/bios/request', {
+        method: 'POST',
+        body: { production: production.id, due },
+      })
+      setMessage(
+        res.created > 0
+          ? `Created ${res.created} bio task${res.created === 1 ? '' : 's'} — each person (or their guardian) was emailed.`
+          : 'Everyone already has a bio or an open bio task. Nothing to do!',
+      )
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : 'Something went wrong.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <section>
+      <h2>Program bios</h2>
+      <p className="hint">
+        {withBio} of {eligible} bios written. Requesting creates a to-do for everyone still
+        missing one; people write theirs on the People tab, and it compiles below for the
+        program.
+      </p>
+      <div className="row">
+        <label>
+          Due (optional)
+          <input type="date" value={due} onChange={(e) => setDue(e.target.value)} />
+        </label>
+        <button onClick={request} disabled={busy}>
+          {busy ? 'Working…' : 'Request bios from the cast'}
+        </button>
+      </div>
+      {message && <p className="acked">{message}</p>}
+      <p>
+        <Link className="link" to={`/production/${production.id}/bios`}>
+          📄 View compiled bios (print / copy for the program)
+        </Link>
+      </p>
     </section>
   )
 }

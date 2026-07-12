@@ -7,6 +7,7 @@ import ScheduleTab from './ScheduleTab.tsx'
 import MessagesTab from './MessagesTab.tsx'
 import PeopleTab from './PeopleTab.tsx'
 import TasksTab from './TasksTab.tsx'
+import BiosView from './BiosView.tsx'
 import AdminTab from './AdminTab.tsx'
 
 export interface ProductionContextValue {
@@ -98,6 +99,7 @@ export default function Production() {
           <Route path="todo" element={<TasksTab />} />
           <Route path="people" element={<PeopleTab />} />
           {isManager && <Route path="admin" element={<AdminTab />} />}
+          {isManager && <Route path="bios" element={<BiosView />} />}
           <Route path="*" element={<Navigate to={`${base}/schedule`} replace />} />
         </Routes>
       </main>

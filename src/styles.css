@@ -584,3 +584,25 @@ form.stack,
   opacity: 0.55;
   text-decoration: line-through;
 }
+
+.bio-editor {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.bio-entry {
+  margin-bottom: 1rem;
+}
+
+.bio-entry p {
+  margin: 0.2rem 0 0;
+}
+
+@media print {
+  .bios-doc {
+    font-size: 11pt;
+  }
+}
