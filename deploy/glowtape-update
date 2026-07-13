@@ -3,6 +3,14 @@
 set -euo pipefail
 cd /opt/glowtape
 git pull --ff-only
+
+# Self-update: if the repo brought a newer version of this script, install it
+# and re-exec so THIS run already includes the new steps.
+if ! cmp -s "$0" deploy/glowtape-update; then
+  install -m 0755 deploy/glowtape-update /usr/local/bin/glowtape-update
+  echo "glowtape-update updated itself — re-running."
+  exec /usr/local/bin/glowtape-update
+fi
 npm ci --no-audit --no-fund
 npm run build
 rm -rf backend/pb_public
