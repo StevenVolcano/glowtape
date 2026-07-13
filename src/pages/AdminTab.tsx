@@ -746,7 +746,7 @@ function MembersSection() {
               )}
             </strong>
             <select
-              aria-label={`Role for ${m.expand?.user?.name}`}
+              aria-label={`Role for ${memberName(m)}`}
               value={m.role}
               disabled={busyId === m.id}
               onChange={(e) => setRole(m, e.target.value as MemberRole)}
@@ -758,37 +758,13 @@ function MembersSection() {
               ))}
             </select>
             <input
-              aria-label={`Position for ${m.expand?.user?.name}`}
+              aria-label={`Position for ${memberName(m)}`}
               defaultValue={m.position}
               placeholder="Character / position"
               onBlur={(e) => {
                 if (e.target.value !== m.position) setPosition(m, e.target.value)
               }}
             />
-            <label className="row manage-toggle">
-              <input
-                type="checkbox"
-                checked={m.manager}
-                disabled={busyId === m.id}
-                onChange={(e) => setManager(m, e.target.checked)}
-              />
-              Manage
-            </label>
-            <button
-              className="link"
-              aria-label={`Photo consent for ${memberName(m)}: ${
-                m.noPhotos ? 'no photos allowed' : 'photos OK'
-              } — tap to toggle`}
-              onClick={() => setNoPhotos(m, !m.noPhotos)}
-            >
-              {m.noPhotos ? '🚫📷 no photos' : '📷 ok'}
-            </button>
-            <button className="link" disabled={busyId === m.id} onClick={() => remove(m)}>
-              remove
-            </button>
-            {!m.user && !m.minor && !m.multi && (
-              <OfflineContact member={m} onSaved={reload} />
-            )}
             {!m.user && !m.claimedFrom && (
               <input
                 aria-label={`Casting notes for ${memberName(m)}`}
@@ -800,6 +776,32 @@ function MembersSection() {
                   if (e.target.value !== (m.roleNotes ?? '')) setRoleNotes(m, e.target.value)
                 }}
               />
+            )}
+            <label className="row manage-toggle">
+              <input
+                type="checkbox"
+                checked={m.manager}
+                disabled={busyId === m.id}
+                onChange={(e) => setManager(m, e.target.checked)}
+              />
+              Manage
+            </label>
+            {(m.user || m.minor) && (
+              <button
+                className="link"
+                aria-label={`Photo consent for ${memberName(m)}: ${
+                  m.noPhotos ? 'no photos allowed' : 'photos OK'
+                } — tap to toggle`}
+                onClick={() => setNoPhotos(m, !m.noPhotos)}
+              >
+                {m.noPhotos ? '🚫📷 no photos' : '📷 ok'}
+              </button>
+            )}
+            <button className="link" disabled={busyId === m.id} onClick={() => remove(m)}>
+              remove
+            </button>
+            {!m.user && !m.minor && !m.multi && (
+              <OfflineContact member={m} onSaved={reload} />
             )}
           </li>
         ))}
@@ -824,6 +826,7 @@ function AddRoleForm({ onAdded }: { onAdded: () => Promise<void> }) {
   const [multi, setMulti] = useState(false)
   const [minor, setMinor] = useState(false)
   const [childName, setChildName] = useState('')
+  const [roleNotes, setRoleNotes] = useState('')
   const [busy, setBusy] = useState(false)
 
   function makeRoleCode(): string {
@@ -850,12 +853,14 @@ function AddRoleForm({ onAdded }: { onAdded: () => Promise<void> }) {
         multi: minor ? false : multi,
         minor,
         displayName: minor ? childName.trim() : '',
+        roleNotes: roleNotes.trim(),
         manager: minor ? false : MANAGER_ROLES.includes(role),
       })
       setPosition('')
       setMulti(false)
       setMinor(false)
       setChildName('')
+      setRoleNotes('')
       await onAdded()
     } finally {
       setBusy(false)
@@ -877,6 +882,13 @@ function AddRoleForm({ onAdded }: { onAdded: () => Promise<void> }) {
           </option>
         ))}
       </select>
+      <input
+        aria-label="Casting notes"
+        maxLength={500}
+        value={roleNotes}
+        onChange={(e) => setRoleNotes(e.target.value)}
+        placeholder="Casting notes for the audition form (optional) — Example: man, 20s–30s, a hopeless romantic; strong tenor"
+      />
       <label className="row">
         <input type="checkbox" checked={multi} onChange={(e) => setMulti(e.target.checked)} />
         Multiple people share this role (ensemble, crew) — everyone uses the same code
