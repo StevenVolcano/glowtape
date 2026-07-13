@@ -166,6 +166,19 @@ export interface TaskRecord {
   kind: string // 'bio' for auto-generated bio requests
 }
 
+export interface TrackerItemRecord {
+  id: string
+  production: string
+  tracker: 'props' | 'costumes' | 'set' | 'light_cues' | 'sound_cues'
+  name: string
+  a: string
+  b: string
+  c: string
+  status: string
+  notes: string
+  order: number
+}
+
 export interface AttendanceRecord {
   id: string
   event: string
