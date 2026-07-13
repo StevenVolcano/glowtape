@@ -4,6 +4,28 @@ import { pb } from '../lib/pb.ts'
 import { useAuth } from '../lib/auth.tsx'
 import type { MessageRecord, ReactionRecord } from '../lib/types.ts'
 
+// Note links render with the note's actual title; a tiny cache keeps a busy
+// channel from refetching the same note per message.
+const noteTitleCache = new Map<string, string>()
+
+function NoteLink({ path }: { path: string }) {
+  const id = path.split('/notes/')[1]?.split(/[/?#]/)[0] ?? ''
+  const [title, setTitle] = useState(noteTitleCache.get(id) ?? '')
+
+  useEffect(() => {
+    if (!id || noteTitleCache.has(id)) return
+    pb.collection('notes')
+      .getOne<{ title: string }>(id)
+      .then((n) => {
+        noteTitleCache.set(id, n.title)
+        setTitle(n.title)
+      })
+      .catch(() => {}) // not visible to this viewer; keep the generic label
+  }, [id])
+
+  return <Link to={path}>📝 {title || 'Open the note'}</Link>
+}
+
 // Make pasted URLs tappable. Links into Glow Tape itself (rehearsal notes,
 // events) stay in the app; anything else opens in a new tab.
 function Linkified({ text }: { text: string }) {
@@ -15,10 +37,12 @@ function Linkified({ text }: { text: string }) {
         try {
           const url = new URL(part)
           if (url.origin === window.location.origin) {
-            const label = url.pathname.includes('/notes/') ? '\u{1F4DD} Open the note' : part
+            if (url.pathname.includes('/notes/')) {
+              return <NoteLink key={i} path={url.pathname} />
+            }
             return (
               <Link key={i} to={url.pathname + url.search}>
-                {label}
+                {part}
               </Link>
             )
           }

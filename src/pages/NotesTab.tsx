@@ -4,7 +4,7 @@ import { pb } from '../lib/pb.ts'
 import { useAuth } from '../lib/auth.tsx'
 import { useProduction } from './Production.tsx'
 import { formatDay, pbDate } from '../lib/types.ts'
-import type { NoteRecord } from '../lib/types.ts'
+import type { ChannelRecord, NoteRecord } from '../lib/types.ts'
 
 // Rehearsal notes (and any other production notes). Each note has a stable
 // URL — Copy link, paste it in a channel, and the chat makes it tappable.
@@ -113,10 +113,44 @@ function NoteView({
   onBack: () => void
   onChanged: () => Promise<void>
 }) {
+  const { user } = useAuth()
   const [title, setTitle] = useState(note.title)
   const [body, setBody] = useState(note.body)
   const [saved, setSaved] = useState('')
   const [busy, setBusy] = useState(false)
+  const [channels, setChannels] = useState<ChannelRecord[]>([])
+  const [channelId, setChannelId] = useState('')
+
+  useEffect(() => {
+    pb.collection('channels')
+      .getFullList<ChannelRecord>({
+        filter: pb.filter('production = {:p} && archived != true', { p: note.production }),
+        sort: 'created',
+      })
+      .then((list) => {
+        setChannels(list)
+        setChannelId((prev) => prev || list.find((c) => !c.member)?.id || '')
+      })
+      .catch(() => {})
+  }, [note.production])
+
+  async function postToChat() {
+    if (!channelId) return
+    setBusy(true)
+    try {
+      const url = `${window.location.origin}/production/${note.production}/notes/${note.id}`
+      await pb.collection('messages').create({
+        channel: channelId,
+        author: user?.id,
+        text: url,
+      })
+      const name = channels.find((c) => c.id === channelId)?.name ?? 'the channel'
+      setSaved(`Posted to ${name}. ✓`)
+      setTimeout(() => setSaved(''), 4000)
+    } finally {
+      setBusy(false)
+    }
+  }
 
   useEffect(() => {
     setTitle(note.title)
@@ -193,6 +227,24 @@ function NoteView({
           <button className="link" onClick={copyLink}>
             🔗 Copy link
           </button>
+          {channels.length > 0 && (
+            <>
+              <select
+                aria-label="Channel to post to"
+                value={channelId}
+                onChange={(e) => setChannelId(e.target.value)}
+              >
+                {channels.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+              <button onClick={postToChat} disabled={busy || !channelId}>
+                💬 Post to chat
+              </button>
+            </>
+          )}
           {canEdit && (
             <button className="link" aria-label={`Delete note ${note.title}`} onClick={remove}>
               ✕
