@@ -34,17 +34,20 @@ can pick up mid-project — read it fully before changing anything.
 | Sheets: props/costumes/set/light-cues/sound-cues trackers, inline edit, CSV import/export, print | `pages/TrackersTab.tsx`, `lib/trackers.ts` | migration `1753800000` |
 | Notes: rehearsal notes, search, stable URLs, post-to-chat | `pages/NotesTab.tsx` | migration `1754300000` |
 | Resources: docs/links per production, 'show' + 'audition' areas | `components/ResourceList.tsx`, `AdminTab.tsx` | migration `1754000000` |
-| Auditions: open/close, custom questions, signups aggregate on Manage (NO emails per signup, by request), printable blank form | `pages/AuditionForm.tsx`, `AuditionPrint.tsx`, `AdminTab.tsx` | migration `1753900000` |
-| Community profiles (headshot/pronouns/experience/skills; teens: no headshot) | `pages/Profile.tsx` | same migration |
+| Auditions: prepare-first flow (details/questions/preview/share always editable; boxed "Open signups" go-live toggle at the bottom of Manage → Auditions), custom questions, signups aggregate on Manage (NO emails per signup, by request), printable blank form, role checkboxes, performances+strike commitment list with REQUIRED availability checkbox (stored in `answers["Available for all performances and strike"]`), multi-event .ics calendar-add on signup | `pages/AuditionForm.tsx`, `AuditionPrint.tsx`, `AdminTab.tsx`, `lib/calendar.ts` downloadMultiIcs | migration `1753900000`, `community.pb.js` audition-info returns `performances` |
+| Community profiles (headshot/pronouns/experience/skills; teens: no headshot); credits table Company column = dropdown from `companies` collection (operator-curated, seeded w/ 6 Grays Harbor companies) with "Somewhere else…" prompt→freeform-text escape (cell self-heals back to select when cleared) | `pages/Profile.tsx` | migration `1754700000_companies.js` |
 | Pre-cast roles w/ claim codes (join+2 chars), shared/multi roles, child roles claimed by guardians | `AdminTab.tsx` MembersSection | join route in `glowtape.pb.js`, `members.pb.js` |
 | Youth safety: under-13s have no logins (guardian-managed member records), age band only (never birthdate), no DMs, photo-consent flags, teen no-headshot, quiet hours | throughout | `1753500000_youth_safety.js`, signup age gate |
-| SMS reminders (~10h + ~2h, quiet hours 9pm–7am Pacific, early calls announced 7–9pm the evening before), phone verify, sign-in by text | `components/PhoneSettings.tsx` | `pb_hooks/sms.pb.js` — **dormant until Twilio approves; see Operational status** |
+| SMS reminders (~10h + ~2h, quiet hours 9pm–7am Pacific, early calls announced 7–9pm the evening before), phone verify, sign-in by text — **UI hidden behind `SMS_READY` flag in `lib/types.ts` (currently false): flip to true when Twilio clears** to reveal sign-in chips + phone form; until then "coming soon" cards | `components/PhoneSettings.tsx`, `pages/SignIn.tsx` | `pb_hooks/sms.pb.js` — **dormant until Twilio approves; see Operational status** |
 | Web push notifications (messages w/ mutes, announcements, schedule changes, cancellations, task assigns, late/sick→managers) | `components/PushSettings.tsx`, `public/sw.js` | `pb_hooks/push.pb.js`, `glowtape_lib.js` sendPush → Node sidecar `deploy/push-sender/` on 127.0.0.1:8666 |
 | Calendar: per-event Google/ICS + personal ICS feed (guardians get children's) | `lib/calendar.ts`, `ScheduleTab.tsx` | `pb_hooks/calendar.pb.js` |
 | Feedback (idea/problem/question/praise → operator email + in-app status) | `components/FeedbackSection.tsx` | `pb_hooks/feedback.pb.js` |
 | Attendance history (per-member tallies, Manage-only) + nightly rehearsal report email (10pm PT, days with events: roll call, overdue tasks, today's notes) | AttendanceHistorySection in `AdminTab.tsx` | `pb_hooks/reports.pb.js` |
 | Director setup checklist (data-derived, top of To-Do for managers; links jump to Manage anchors via `ManageJumpNav` hash-scroll) + printable `public/director-guide.html`; QR codes for join/audition links (`qrcode` npm pkg, local) | `components/SetupGuide.tsx`, `ManageJumpNav.tsx`, `QrCode.tsx` | — |
-| Operator console (`/operator`, needs `users.operator` flag): feedback triage, production-request approval, community access codes | `pages/Operator.tsx` | approve route in `requests.pb.js` |
+| Operator console (`/operator`, needs `users.operator` flag — set in PB dashboard; `auth.tsx` authRefreshes on load so flag changes propagate without re-login): production-request approval, feedback triage, community access codes, theater-company list | `pages/Operator.tsx` | approve route in `requests.pb.js` |
+| Self-service email change (code to the NEW address proves inbox ownership, then `setEmail`; reuses `phone_codes` w/ purpose `email-change`, email string in the `phone` column) | `components/EmailSettings.tsx` (Home) | `pb_hooks/email.pb.js` |
+| Casting extras: dropdowns offer auditioners + 🎭 already-in-show people + ✍ paper-form freeform (`name:`-prefixed values → offline member displayName); "✓ Cast now" early-casts one role via finalize `members:[id]` subset (draft stays open/private); Strike + Cast Party in DEFAULT_EVENT_KINDS | `pages/CastingTab.tsx` | `casting.pb.js` subset logic |
+| UX conventions: ALL placeholders italic (global `::placeholder` CSS) and realistic samples say "Example:" / "— for example:" — keep new placeholders on this convention; `.golive` CSS class = bordered can't-miss go-live box | `src/styles.css`, everywhere | — |
 | Production requests (director asks; operator edits+approves → org+production+manager membership created) | `pages/RequestProduction.tsx` | `pb_hooks/requests.pb.js` |
 | Community page `/community`: board + public calendar of audition/performance-kind events via `/api/glowtape/community-calendar` route (safe fields only); audition events link to the signup form; EventForm shows 🌍 notice on public kinds (`isCommunityKind`) + open-auditions nudge. Audition form is fed by `/api/glowtape/audition-info` (roles-on-offer checkboxes from uncast performer positions, audition-kind events, questions — auditioners aren't members, so a route, not rules) | `pages/Community.tsx`, `AuditionForm.tsx`, `AuditionPrint.tsx` | `pb_hooks/community.pb.js` |
 | Casting tab (manager-only): draft cast from audition signups in `cast_drafts` (manager-only collection), double-cast ⚠ + conflicts inline, finalize route assigns users to member rows after warning | `pages/CastingTab.tsx` | `pb_hooks/casting.pb.js`, migration `1754600000` |
@@ -52,9 +55,18 @@ can pick up mid-project — read it fully before changing anything.
 | Accessibility: WCAG 2.2 AA pass done (labels, live regions, contrast tokens, per-view titles via `lib/useTitle.ts`) | throughout | — |
 
 Static docs in `public/`: `help.html` (the user manual — keep in sync with
-features!), `handout.html` (printable read-through sheet), `youth-safety.html`,
-`privacy.html`, `terms.html`, `sms-opt-in.html`. All carry auto-year copyright
-(© 2026 Zucchini Volcano LLC).
+features!), `handout.html` (printable read-through sheet), `director-guide.html`
+(printable setup checklist), `why-glowtape.html` (printable pitch page for
+directors/companies: features, philosophy, pricing, links to request form),
+`youth-safety.html`, `privacy.html`, `terms.html`, `sms-opt-in.html`. All carry
+auto-year copyright (© 2026 Zucchini Volcano LLC).
+
+**Pricing story (2026-07, per Steven)**: free forever for Grays Harbor
+productions; ALWAYS free for cast/crew/families everywhere; non-Harbor theater
+companies contribute a modest cost-recovery amount (not profit). This wording
+lives in terms.html, help.html ("What does it cost?"), why-glowtape.html,
+RequestProduction.tsx, and Home.tsx — keep them consistent. No billing is
+implemented; it's a manual/honor arrangement for now.
 
 ## Critical gotchas (violating these breaks production)
 
@@ -146,7 +158,9 @@ the called placeholder. Use `lib.recipients` (emails) / `lib.recipientUserIds`
 
 ## Remaining backlog (GitHub issues + tails)
 
-Open: #4 tails (QR join codes, illustrated iOS install card, SM one-pager),
+Next up when SMS clears: flip `SMS_READY` in `lib/types.ts` to true + revert
+the two "coming soon" help.html paragraphs (sign-in + text reminders).
+Open: #4 tails (illustrated iOS install card, SM one-pager),
 #5 tail (attendance history view per member), #6 tails (schedule milestones,
 tracker rows→tasks), #7 gamification (exploratory, opt-in), #9 tails (EXIF
 stripping on photo upload, guardian self-service co-guardians). Not yet filed:

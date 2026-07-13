@@ -4,6 +4,7 @@ import { pb } from '../lib/pb.ts'
 import { useAuth } from '../lib/auth.tsx'
 import { useTitle } from '../lib/useTitle.ts'
 import PhoneSettings from '../components/PhoneSettings.tsx'
+import EmailSettings from '../components/EmailSettings.tsx'
 import FeedbackSection from '../components/FeedbackSection.tsx'
 import PushSettings from '../components/PushSettings.tsx'
 import { copyrightLine } from '../lib/types.ts'
@@ -164,7 +165,7 @@ export default function Home() {
           </li>
           <li>
             🎬 <Link to="/request-production">Request a production</Link>{' '}
-            <span className="hint">— directing a show? We'll set it up, free</span>
+            <span className="hint">— directing a show? Free for Grays Harbor theaters</span>
           </li>
         </ul>
       </section>
@@ -183,6 +184,7 @@ export default function Home() {
 
       <PushSettings />
 
+      {user && <EmailSettings user={user} />}
       {user && <PhoneSettings user={user} />}
 
       <p className="hint legal-links">

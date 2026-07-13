@@ -89,7 +89,8 @@ export default function RequestProduction() {
       <h1>Set up a production</h1>
       <p className="hint">
         Tell us about your show and we'll set it up — you'll get the Manage tab and a join code
-        for your cast and crew. Free, like everything here.
+        for your cast and crew. Free for Grays Harbor theaters; companies elsewhere chip in a
+        small amount toward hosting. Always free for cast, crew, and families.
       </p>
 
       <form onSubmit={send} className="stack">
