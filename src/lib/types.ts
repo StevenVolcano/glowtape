@@ -69,6 +69,7 @@ export interface ProductionRecord {
   managers: string[]
   eventKinds: string[] | null
   locations: unknown[] | null // strings or {name, address} objects
+  description: string
   auditionOpen: boolean
   auditionNotes: string
   auditionQuestions: string[] | null
@@ -266,6 +267,7 @@ export interface MemberRecord {
   production: string
   user: string // '' = pre-cast placeholder role
   role: MemberRole
+  roleNotes: string
   position: string
   roleCode: string
   manager: boolean // grants the Manage tab; synced server-side to productions.managers

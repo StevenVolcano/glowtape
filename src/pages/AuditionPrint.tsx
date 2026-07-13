@@ -6,7 +6,7 @@ import { useTitle } from '../lib/useTitle.ts'
 import type { ProductionRecord } from '../lib/types.ts'
 
 interface PrintInfo {
-  roles: string[]
+  roles: { name: string; notes: string }[]
   events: { start: string; end: string; location: string }[]
   performances: { start: string; end: string; location: string; kind?: string }[]
 }
@@ -67,6 +67,7 @@ export default function AuditionPrint() {
       </header>
 
       <h1>Audition Form — {production.title}</h1>
+      {production.description && <p>{production.description}</p>}
       {production.auditionNotes && <p>{production.auditionNotes}</p>}
       {info.events.length > 0 && (
         <p>
@@ -107,9 +108,12 @@ export default function AuditionPrint() {
         <div>
           <strong>Role(s) you're interested in</strong> (check all that appeal)
           {info.roles.length > 0 ? (
-            <ul className="plain-list check-columns">
+            <ul className={info.roles.some((r) => r.notes) ? 'plain-list' : 'plain-list check-columns'}>
               {info.roles.map((role) => (
-                <li key={role}>☐ {role}</li>
+                <li key={role.name}>
+                  ☐ {role.name}
+                  {role.notes && <span className="hint"> — {role.notes}</span>}
+                </li>
               ))}
               <li>☐ Ensemble / anything!</li>
             </ul>

@@ -117,10 +117,13 @@ routerAdd(
       { p: production.id },
     );
     const roles = [];
+    const seenRoles = {};
     for (const m of members) {
       if (m.get("claimedFrom")) continue;
       const label = m.get("position") + (m.get("minor") ? " (young performer)" : "");
-      if (!roles.includes(label)) roles.push(label);
+      if (seenRoles[label]) continue;
+      seenRoles[label] = true;
+      roles.push({ name: label, notes: m.get("roleNotes") || "" });
     }
 
     const events = e.app.findRecordsByFilter(
@@ -154,6 +157,7 @@ routerAdd(
     return e.json(200, {
       open: !!production.get("auditionOpen"),
       title: production.get("title"),
+      description: production.get("description") || "",
       notes: production.get("auditionNotes"),
       questions: production.get("auditionQuestions") || [],
       roles,

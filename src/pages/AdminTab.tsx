@@ -697,6 +697,11 @@ function MembersSection() {
     await reload()
   }
 
+  async function setRoleNotes(member: MemberRecord, roleNotes: string) {
+    await pb.collection('members').update(member.id, { roleNotes: roleNotes.trim() })
+    await reload()
+  }
+
   async function remove(member: MemberRecord) {
     if (!window.confirm(`Remove ${member.expand?.user?.name} from ${production.title}?`)) return
     setBusyId(member.id)
@@ -783,6 +788,18 @@ function MembersSection() {
             </button>
             {!m.user && !m.minor && !m.multi && (
               <OfflineContact member={m} onSaved={reload} />
+            )}
+            {!m.user && !m.claimedFrom && (
+              <input
+                aria-label={`Casting notes for ${memberName(m)}`}
+                style={{ width: '100%' }}
+                maxLength={500}
+                defaultValue={m.roleNotes}
+                placeholder="Casting notes for the audition form — Example: woman, 40s–60s, the family's sharp-tongued matriarch; strong alto"
+                onBlur={(e) => {
+                  if (e.target.value !== (m.roleNotes ?? '')) setRoleNotes(m, e.target.value)
+                }}
+              />
             )}
           </li>
         ))}
@@ -965,6 +982,7 @@ function ConflictAlertsSection() {
 function AuditionsSection() {
   const { production, reload } = useProduction()
   const [notes, setNotes] = useState(production.auditionNotes ?? '')
+  const [description, setDescription] = useState(production.description ?? '')
   const [questions, setQuestions] = useState(
     Array.isArray(production.auditionQuestions) ? production.auditionQuestions.join('\n') : '',
   )
@@ -1027,6 +1045,7 @@ function AuditionsSection() {
     setSaved('')
     try {
       await pb.collection('productions').update(production.id, {
+        description: description.trim(),
         auditionNotes: notes.trim(),
         auditionQuestions: questions
           .split('\n')
@@ -1048,6 +1067,16 @@ function AuditionsSection() {
         signups when it's all set.
       </p>
       <div className="stack" style={{ marginTop: '0.5rem' }}>
+        <label>
+          What's the show about? (shown at the top of the audition form)
+          <textarea
+            rows={3}
+            maxLength={2000}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Example: A struggling record-shop owner inherits a haunted jukebox. A comedy with songs, five women and three men, plus a flexible ensemble."
+          />
+        </label>
         <label>
           Details for auditioners (dates, place, what to prepare)
           <textarea
@@ -1094,7 +1123,12 @@ function AuditionsSection() {
           />
         )}
         <p className="hint">
-          The link opens the signup form directly. Anyone already on Glow Tape just taps it;
+          What each <em>role</em> calls for (gender, age, character) is written per role in{' '}
+          <Link className="link" to={`/production/${production.id}/admin#people`}>
+            People &amp; roles
+          </Link>{' '}
+          — those casting notes appear under each role's checkbox on the form. The link opens
+          the signup form directly. Anyone already on Glow Tape just taps it;
           newcomers also need a signup code (your join code works, or a community code from
           the organizer).{' '}
           <Link className="link" to={`/audition/${production.id}/print`}>

@@ -16,12 +16,18 @@ interface AuditionEvent {
   kind?: string
 }
 
+interface AuditionRole {
+  name: string
+  notes: string
+}
+
 interface AuditionInfo {
   open: boolean
   title: string
+  description: string
   notes: string
   questions: string[]
-  roles: string[]
+  roles: AuditionRole[]
   events: AuditionEvent[]
   performances: AuditionEvent[]
 }
@@ -90,9 +96,9 @@ export default function AuditionForm() {
           .split(/,\s*/)
           .map((r) => r.trim())
           .filter(Boolean)
-        const known = parts.filter((r) => res.roles.includes(r))
-        setCheckedRoles(known)
-        setOtherRoles(parts.filter((r) => !res.roles.includes(r)).join(', '))
+        const roleNames = res.roles.map((r) => r.name)
+        setCheckedRoles(parts.filter((r) => roleNames.includes(r)))
+        setOtherRoles(parts.filter((r) => !roleNames.includes(r)).join(', '))
         const rows = Array.isArray(a.conflictDates) ? a.conflictDates : []
         setConflictRows(rows.filter((r) => r && r.start))
         setLegacyConflicts(rows.length === 0 ? a.conflicts : '')
@@ -180,6 +186,12 @@ export default function AuditionForm() {
           ⏸ Signups aren't open to the community yet — you're seeing a manager preview.
         </p>
       )}
+      {info.description && (
+        <section>
+          <h2>About the show</h2>
+          <p style={{ whiteSpace: 'pre-wrap' }}>{info.description}</p>
+        </section>
+      )}
       {info.notes && <p>{info.notes}</p>}
 
       {info.events.length > 0 && (
@@ -245,16 +257,21 @@ export default function AuditionForm() {
             </p>
             <ul className="plain-list" style={{ marginTop: '0.4rem' }}>
               {info.roles.map((role) => (
-                <li key={role}>
+                <li key={role.name}>
                   <label className="row" style={{ alignItems: 'center', fontWeight: 400 }}>
                     <input
                       type="checkbox"
-                      checked={checkedRoles.includes(role)}
-                      onChange={() => toggleRole(role)}
+                      checked={checkedRoles.includes(role.name)}
+                      onChange={() => toggleRole(role.name)}
                       style={{ width: '1.3rem', minHeight: '1.3rem' }}
                     />
-                    {role}
+                    {role.name}
                   </label>
+                  {role.notes && (
+                    <p className="hint" style={{ margin: '0 0 0.4rem 2rem' }}>
+                      {role.notes}
+                    </p>
+                  )}
                 </li>
               ))}
             </ul>
