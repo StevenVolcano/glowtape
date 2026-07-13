@@ -96,6 +96,19 @@ export default function ChannelView({ channelId }: { channelId: string }) {
     await loadReactions()
   }
 
+  async function report(message: MessageRecord) {
+    setPickerFor(null)
+    const reason = window.prompt(
+      'Report this message to the Glow Tape operator?\nTell us what concerns you (optional):',
+    )
+    if (reason === null) return
+    await pb.send('/api/glowtape/messages/report', {
+      method: 'POST',
+      body: { message: message.id, reason },
+    })
+    window.alert('Reported — a human will take a look. Thank you.')
+  }
+
   function reactionSummary(message: MessageRecord) {
     const rows = reactions.filter((r) => r.message === message.id)
     const byEmoji = new Map<string, ReactionRecord[]>()
@@ -143,17 +156,25 @@ export default function ChannelView({ channelId }: { channelId: string }) {
               >
                 +
               </button>
-              {pickerFor === m.id &&
-                QUICK_EMOJI.map((emoji) => (
-                  <button
-                    type="button"
-                    key={emoji}
-                    className="reaction"
-                    onClick={() => toggleReaction(m, emoji)}
-                  >
-                    {emoji}
-                  </button>
-                ))}
+              {pickerFor === m.id && (
+                <>
+                  {QUICK_EMOJI.map((emoji) => (
+                    <button
+                      type="button"
+                      key={emoji}
+                      className="reaction"
+                      onClick={() => toggleReaction(m, emoji)}
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                  {m.author !== user?.id && (
+                    <button type="button" className="reaction" onClick={() => report(m)}>
+                      ⚑
+                    </button>
+                  )}
+                </>
+              )}
             </span>
           </div>
         ))}

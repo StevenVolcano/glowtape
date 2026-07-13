@@ -170,6 +170,14 @@ cronAdd("glowtape_sms_reminders", "*/10 * * * *", () => {
           }
           if (!user.get("smsOptIn") || !user.get("phoneVerified") || !user.get("phone")) continue;
 
+          // Teen quiet hours: no texts 9pm-7am Pacific. Skipping before the
+          // dedupe marker means the reminder still goes out next cron run
+          // once the morning arrives (if the window hasn't passed).
+          if (user.get("ageBand") === "teen") {
+            const h = lib.pacificHour();
+            if (h >= 21 || h < 7) continue;
+          }
+
           try {
             // unique index makes double-sends impossible even if two runs race
             const col = $app.findCollectionByNameOrId("reminders_sent");

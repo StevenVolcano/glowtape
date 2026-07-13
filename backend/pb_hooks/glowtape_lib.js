@@ -209,23 +209,31 @@ function consumeCode(app, phone, purpose, code) {
   return userId;
 }
 
-// Format a UTC datetime for Grays Harbor (America/Los_Angeles) without Intl,
-// which the JSVM lacks. DST: second Sunday of March to first Sunday of November.
-function formatPacific(value) {
-  const utc = new Date(String(value).replace(" ", "T"));
-
+// America/Los_Angeles UTC offset without Intl, which the JSVM lacks.
+// DST: second Sunday of March to first Sunday of November.
+function pacificOffsetHours(t) {
   const nthSunday = (year, month, n) => {
     const first = new Date(Date.UTC(year, month, 1));
     const offset = (7 - first.getUTCDay()) % 7;
     return 1 + offset + (n - 1) * 7;
   };
-  const y = utc.getUTCFullYear();
+  const y = new Date(t).getUTCFullYear();
   const dstStart = Date.UTC(y, 2, nthSunday(y, 2, 2), 10); // 2am PT = 10:00 UTC
   const dstEnd = Date.UTC(y, 10, nthSunday(y, 10, 1), 9); // 2am PDT = 09:00 UTC
-  const t = utc.getTime();
-  const offsetHours = t >= dstStart && t < dstEnd ? 7 : 8;
+  return t >= dstStart && t < dstEnd ? 7 : 8;
+}
 
-  const local = new Date(t - offsetHours * 3600e3);
+// The current (or given) hour of day in Grays Harbor, 0-23.
+function pacificHour(date) {
+  const t = (date || new Date()).getTime();
+  return new Date(t - pacificOffsetHours(t) * 3600e3).getUTCHours();
+}
+
+// Format a UTC datetime for Grays Harbor.
+function formatPacific(value) {
+  const utc = new Date(String(value).replace(" ", "T"));
+  const t = utc.getTime();
+  const local = new Date(t - pacificOffsetHours(t) * 3600e3);
   const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   let h = local.getUTCHours();
@@ -322,6 +330,7 @@ module.exports = {
   createAndSendCode,
   consumeCode,
   formatPacific,
+  pacificHour,
   icsEscape,
   icsDate,
   icsDateFromMs,
