@@ -75,9 +75,9 @@ export default function SetupGuide() {
     },
     {
       key: 'auditions',
-      title: 'Open auditions',
+      title: 'Set up and open auditions',
       detail:
-        'Add the details and your own questions, then share the audition link — signups collect right here, each with the person’s profile and conflicts. Print blank forms for the paper crowd.',
+        'Write the details and your own questions and preview the form, then check the box to open signups — they collect right here, each with the person’s profile and conflicts. Print blank forms for the paper crowd.',
       done: production.auditionOpen || castJoined.length > 0,
       to: `${base}/admin#auditions`,
       action: 'Set up auditions',

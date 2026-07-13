@@ -1001,66 +1001,77 @@ function AuditionsSection() {
   return (
     <section id="auditions">
       <h2>Auditions</h2>
-      <label className="row manage-toggle">
+      <p className="hint">
+        Get everything ready first — details, questions, a look at the form — then open
+        signups when it's all set.
+      </p>
+      <div className="stack" style={{ marginTop: '0.5rem' }}>
+        <label>
+          Details for auditioners (dates, place, what to prepare)
+          <textarea
+            rows={2}
+            maxLength={1000}
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Auditions June 3–4, 6:30pm at the Driftwood. Prepare 16 bars…"
+          />
+        </label>
+        <label>
+          Your questions, one per line (optional)
+          <textarea
+            rows={3}
+            value={questions}
+            onChange={(e) => setQuestions(e.target.value)}
+            placeholder={'Will you accept another role if offered?\nAny costume sizes we should know?'}
+          />
+        </label>
+        <div className="row">
+          <button onClick={saveSetup} disabled={busy}>
+            Save audition setup
+          </button>
+          <Link className="link" to={`/audition/${production.id}`}>
+            👁 Preview the signup form
+          </Link>
+          {saved && <span className="acked" role="status">{saved}</span>}
+        </div>
+        <div className="row">
+          <button onClick={shareAuditionLink}>📤 Share the audition link</button>
+          <button
+            className="link"
+            aria-expanded={showAuditionQr}
+            onClick={() => setShowAuditionQr(!showAuditionQr)}
+          >
+            {showAuditionQr ? 'Hide QR code' : '📱 Show QR code'}
+          </button>
+          {shared && <span className="acked" role="status">{shared}</span>}
+        </div>
+        {showAuditionQr && (
+          <QrCode
+            text={`${window.location.origin}/audition/${production.id}`}
+            label={`Scan to audition for ${production.title}`}
+          />
+        )}
+        <p className="hint">
+          The link opens the signup form directly. Anyone already on Glow Tape just taps it;
+          newcomers also need a signup code (your join code works, or a community code from
+          the organizer).{' '}
+          <Link className="link" to={`/audition/${production.id}/print`}>
+            🖨 Print blank paper forms
+          </Link>{' '}
+          for the audition table — same questions, hand-fillable. Attach sides or packets
+          under <em>Documents &amp; links</em> below (area: Auditions).
+        </p>
+      </div>
+
+      <label className="row manage-toggle" style={{ marginTop: '0.8rem' }}>
         <input type="checkbox" checked={!!production.auditionOpen} onChange={toggleOpen} />
         Auditions are open — everyone on Glow Tape sees this show and can sign up
       </label>
-
-      {production.auditionOpen && (
-        <div className="stack" style={{ marginTop: '0.5rem' }}>
-          <label>
-            Details for auditioners (dates, place, what to prepare)
-            <textarea
-              rows={2}
-              maxLength={1000}
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Auditions June 3–4, 6:30pm at the Driftwood. Prepare 16 bars…"
-            />
-          </label>
-          <label>
-            Your questions, one per line (optional)
-            <textarea
-              rows={3}
-              value={questions}
-              onChange={(e) => setQuestions(e.target.value)}
-              placeholder={'Will you accept another role if offered?\nAny costume sizes we should know?'}
-            />
-          </label>
-          <div className="row">
-            <button onClick={saveSetup} disabled={busy}>
-              Save audition setup
-            </button>
-            {saved && <span className="acked" role="status">{saved}</span>}
-          </div>
-          <div className="row">
-            <button onClick={shareAuditionLink}>📤 Share the audition link</button>
-            <button
-              className="link"
-              aria-expanded={showAuditionQr}
-              onClick={() => setShowAuditionQr(!showAuditionQr)}
-            >
-              {showAuditionQr ? 'Hide QR code' : '📱 Show QR code'}
-            </button>
-            {shared && <span className="acked" role="status">{shared}</span>}
-          </div>
-          {showAuditionQr && (
-            <QrCode
-              text={`${window.location.origin}/audition/${production.id}`}
-              label={`Scan to audition for ${production.title}`}
-            />
-          )}
-          <p className="hint">
-            The link opens the signup form directly. Anyone already on Glow Tape just taps it;
-            newcomers also need a signup code (your join code works, or a community code from
-            the organizer).{' '}
-            <Link className="link" to={`/audition/${production.id}/print`}>
-              🖨 Print blank paper forms
-            </Link>{' '}
-            for the audition table — same questions, hand-fillable. Attach sides or packets
-            under <em>Documents &amp; links</em> below (area: Auditions).
-          </p>
-        </div>
+      {!production.auditionOpen && (
+        <p className="hint" role="status">
+          ⏸ Signups are closed. Until you check the box, the form is a preview only you and
+          the production team can open — sharing the link with anyone else shows them nothing.
+        </p>
       )}
 
       {signups.length > 0 && (
