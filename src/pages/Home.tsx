@@ -144,19 +144,17 @@ export default function Home() {
       <CommunityBoard />
 
       <section>
-        <h2>Directing a show?</h2>
-        <p className="hint">
-          <Link to="/request-production">Request a production</Link> — tell us about your show
-          and we'll set it up with you as the manager. Free, always.
-        </p>
-      </section>
-
-      <section>
-        <h2>My profile</h2>
-        <p className="hint">
-          <Link to="/profile">Your community profile</Link> — experience, skills, headshot —
-          travels with you from show to show and shows up with your audition signups.
-        </p>
+        <h2>More</h2>
+        <ul className="plain-list">
+          <li>
+            🎭 <Link to="/profile">My profile</Link>{' '}
+            <span className="hint">— your acting résumé: experience, skills, headshot</span>
+          </li>
+          <li>
+            🎬 <Link to="/request-production">Request a production</Link>{' '}
+            <span className="hint">— directing a show? We'll set it up, free</span>
+          </li>
+        </ul>
       </section>
 
       <FeedbackSection />

@@ -588,6 +588,15 @@ form.stack,
   min-height: 1.3rem;
 }
 
+.jump-chip {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0.4rem 0.8rem;
+  border-radius: 10px;
+}
+
 .qr-box {
   background: #fff;
   border: 1px solid var(--line);

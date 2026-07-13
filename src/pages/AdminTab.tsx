@@ -4,7 +4,7 @@ import { pb } from '../lib/pb.ts'
 import { useAuth } from '../lib/auth.tsx'
 import { useProduction } from './Production.tsx'
 import EventForm from '../components/EventForm.tsx'
-import SetupGuide from '../components/SetupGuide.tsx'
+import ManageJumpNav from '../components/ManageJumpNav.tsx'
 import QrCode from '../components/QrCode.tsx'
 import { MANAGER_ROLES, ROLE_LABELS } from '../lib/types.ts'
 import type { AttendanceRecord, AuditionRecord, ChannelRecord, ConflictRecord, EventRecord, MemberRecord, MemberRole, ProfileRecord, ResourceRecord } from '../lib/types.ts'
@@ -14,7 +14,7 @@ import type { Place } from '../lib/types.ts'
 export default function AdminTab() {
   return (
     <div>
-      <SetupGuide />
+      <ManageJumpNav />
       <JoinCodeSection />
       <AuditionsSection />
       <ConflictAlertsSection />
@@ -115,7 +115,7 @@ function NewAnnouncementSection() {
   }
 
   return (
-    <section>
+    <section id="announce">
       <h2>Post an announcement</h2>
       <form onSubmit={post} className="stack">
         <input
@@ -467,7 +467,7 @@ function BiosSection() {
   }
 
   return (
-    <section>
+    <section id="bios">
       <h2>Program bios</h2>
       <p className="hint">
         {eligible === 0
@@ -1309,7 +1309,7 @@ function AttendanceHistorySection() {
     .sort((a, b) => memberName(a.m).localeCompare(memberName(b.m)))
 
   return (
-    <section>
+    <section id="attendance">
       <h2>Attendance history</h2>
       <p className="hint">
         Totals from roll call and self-reports across the whole production. Visible only to

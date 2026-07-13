@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import SetupGuide from '../components/SetupGuide.tsx'
 import { pb } from '../lib/pb.ts'
 import { useAuth } from '../lib/auth.tsx'
 import { useProduction } from './Production.tsx'
@@ -67,6 +68,7 @@ export default function TasksTab() {
 
   return (
     <div>
+      {isManager && <SetupGuide />}
       {myEditable.map((m) => (
         <BioEditor key={m.id} member={m} onSaved={load} />
       ))}

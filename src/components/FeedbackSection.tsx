@@ -27,6 +27,7 @@ export default function FeedbackSection() {
   const [mine, setMine] = useState<FeedbackRecord[]>([])
   const [busy, setBusy] = useState(false)
   const [done, setDone] = useState('')
+  const [open, setOpen] = useState(false)
 
   async function load() {
     const list = await pb.collection('feedback').getFullList<FeedbackRecord>({
@@ -64,6 +65,16 @@ export default function FeedbackSection() {
   return (
     <section>
       <h2>Ideas &amp; feedback</h2>
+      {!open && (
+        <p className="hint">
+          <button className="link" aria-expanded={false} onClick={() => setOpen(true)}>
+            💬 Send an idea, problem, or question
+          </button>{' '}
+          — a human reads every one
+          {mine.length > 0 && <>, and yours are tracked here ({mine.length})</>}.
+        </p>
+      )}
+      {open && (
       <form onSubmit={send} className="stack">
         <div className="row">
           <select
@@ -91,8 +102,9 @@ export default function FeedbackSection() {
         </button>
         {done && <p className="acked" role="status">{done}</p>}
       </form>
+      )}
 
-      {mine.length > 0 && (
+      {open && mine.length > 0 && (
         <ul className="plain-list">
           {mine.map((f) => (
             <li key={f.id} className="hint">

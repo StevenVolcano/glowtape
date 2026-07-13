@@ -10,8 +10,7 @@ interface Step {
   title: string
   detail: string
   done: boolean
-  to?: string // router link (other tabs)
-  href?: string // same-page anchor into Manage
+  to: string // router link — Manage anchors ride along as hashes
   action: string
 }
 
@@ -53,7 +52,7 @@ export default function SetupGuide() {
       detail:
         'Save your usual rehearsal spots with street addresses — locations then autofill, map-link, and ride into calendars. Tweak the event-type list if the standard one doesn’t fit.',
       done: productionPlaces(production).length > 0,
-      href: '#presets',
+      to: `${base}/admin#presets`,
       action: 'Set places',
     },
     {
@@ -71,7 +70,7 @@ export default function SetupGuide() {
       detail:
         'Characters and crew positions, before anyone is cast. Each role gets a claim code — on cast night you hand codes out and everyone’s schedule is waiting for them. Check "This is a child" for young performers.',
       done: rolesBeyondMe.length > 0,
-      href: '#people',
+      to: `${base}/admin#people`,
       action: 'Add roles',
     },
     {
@@ -80,7 +79,7 @@ export default function SetupGuide() {
       detail:
         'Add the details and your own questions, then share the audition link — signups collect right here, each with the person’s profile and conflicts. Print blank forms for the paper crowd.',
       done: production.auditionOpen || castJoined.length > 0,
-      href: '#auditions',
+      to: `${base}/admin#auditions`,
       action: 'Set up auditions',
     },
     {
@@ -89,7 +88,7 @@ export default function SetupGuide() {
       detail:
         'Add them as events with the type "Auditions" so times, place, and map link are one tap away for everyone.',
       done: eventKinds.some(isAudition),
-      href: '#add-events',
+      to: `${base}/admin#add-events`,
       action: 'Add audition nights',
     },
     {
@@ -98,7 +97,7 @@ export default function SetupGuide() {
       detail:
         '"Repeats weekly" creates a whole run in one pass with one summary email; the Fix-up table adjusts many nights at once. Pick breakdown units on each event and the right people are called automatically.',
       done: eventKinds.some((k) => !isAudition(k)),
-      href: '#add-events',
+      to: `${base}/admin#add-events`,
       action: 'Add to the schedule',
     },
     {
@@ -107,7 +106,7 @@ export default function SetupGuide() {
       detail:
         'Share the join code (or invite link) at the read-through — role codes for cast, the plain code for everyone else. Parents claim child roles with their own accounts. Then nudge everyone to enter conflicts right away.',
       done: castJoined.length > 0,
-      href: '#invite',
+      to: `${base}/admin#invite`,
       action: 'Invite people',
     },
   ]
@@ -142,16 +141,11 @@ export default function SetupGuide() {
                   <p className="hint" style={{ margin: 0 }}>
                     {s.detail}
                   </p>
-                  {!s.done &&
-                    (s.to ? (
-                      <Link className="link" to={s.to}>
-                        → {s.action}
-                      </Link>
-                    ) : (
-                      <a className="link" href={s.href}>
-                        → {s.action}
-                      </a>
-                    ))}
+                  {!s.done && (
+                    <Link className="link" to={s.to}>
+                      → {s.action}
+                    </Link>
+                  )}
                 </div>
               </div>
             </li>

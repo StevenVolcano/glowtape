@@ -43,7 +43,7 @@ can pick up mid-project — read it fully before changing anything.
 | Calendar: per-event Google/ICS + personal ICS feed (guardians get children's) | `lib/calendar.ts`, `ScheduleTab.tsx` | `pb_hooks/calendar.pb.js` |
 | Feedback (idea/problem/question/praise → operator email + in-app status) | `components/FeedbackSection.tsx` | `pb_hooks/feedback.pb.js` |
 | Attendance history (per-member tallies, Manage-only) + nightly rehearsal report email (10pm PT, days with events: roll call, overdue tasks, today's notes) | AttendanceHistorySection in `AdminTab.tsx` | `pb_hooks/reports.pb.js` |
-| Director setup checklist (data-derived, top of Manage) + printable `public/director-guide.html`; QR codes for join/audition links (`qrcode` npm pkg, local) | `components/SetupGuide.tsx`, `QrCode.tsx` | — |
+| Director setup checklist (data-derived, top of To-Do for managers; links jump to Manage anchors via `ManageJumpNav` hash-scroll) + printable `public/director-guide.html`; QR codes for join/audition links (`qrcode` npm pkg, local) | `components/SetupGuide.tsx`, `ManageJumpNav.tsx`, `QrCode.tsx` | — |
 | Operator console (`/operator`, needs `users.operator` flag): feedback triage, production-request approval, community access codes | `pages/Operator.tsx` | approve route in `requests.pb.js` |
 | Production requests (director asks; operator edits+approves → org+production+manager membership created) | `pages/RequestProduction.tsx` | `pb_hooks/requests.pb.js` |
 | Accessibility: WCAG 2.2 AA pass done (labels, live regions, contrast tokens, per-view titles via `lib/useTitle.ts`) | throughout | — |
