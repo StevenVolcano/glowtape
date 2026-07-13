@@ -63,7 +63,7 @@ export default function ScheduleTab() {
     await load()
   }
 
-  async function reportAttendance(event: EventRecord, status: 'late' | 'absent') {
+  async function reportAttendance(event: EventRecord, status: 'late' | 'absent', member: MemberRecord) {
     const note = window.prompt(
       status === 'late'
         ? 'Anything to add? (e.g. "there by 7:20") — optional'
@@ -72,7 +72,7 @@ export default function ScheduleTab() {
     if (note === null) return
     await pb.send('/api/glowtape/attendance/report', {
       method: 'POST',
-      body: { event: event.id, status, note },
+      body: { event: event.id, status, note, member: member.id },
     })
     await load()
   }
@@ -183,27 +183,42 @@ export default function ScheduleTab() {
                 )}
                 {(() => {
                   const hoursUntil = (pbDate(e.start).getTime() - Date.now()) / 3600e3
-                  const myAtt =
-                    myMember && attendance.find((a) => a.event === e.id && a.member === myMember.id)
-                  if (!iAmCalled || e.status === 'cancelled' || hoursUntil > 24 || hoursUntil < -6)
-                    return null
-                  if (myAtt && myAtt.status !== 'present')
+                  if (e.status === 'cancelled' || hoursUntil > 24 || hoursUntil < -6) return null
+                  // Everyone I can report for: me, plus my called children.
+                  const calledIds = new Set(e.called)
+                  const isCalled = (m: MemberRecord) =>
+                    e.called.length === 0 ||
+                    calledIds.has(m.id) ||
+                    (!!m.claimedFrom && calledIds.has(m.claimedFrom))
+                  const reportable: MemberRecord[] = []
+                  if (myMember && isCalled(myMember)) reportable.push(myMember)
+                  for (const m of members) {
+                    if (myChildIds.includes(m.id) && isCalled(m)) reportable.push(m)
+                  }
+                  if (reportable.length === 0) return null
+                  return reportable.map((m) => {
+                    const isMe = m.id === myMember?.id
+                    const name = isMe ? 'You' : m.displayName || memberName(m)
+                    const att = attendance.find((a) => a.event === e.id && a.member === m.id)
+                    if (att && att.status !== 'present')
+                      return (
+                        <div key={m.id} className="hint">
+                          {name} reported: {att.status === 'late' ? 'running late' : "can't make it"}
+                          {att.note ? ` — ${att.note}` : ''} (your team was alerted)
+                        </div>
+                      )
                     return (
-                      <div className="hint">
-                        You reported: {myAtt.status === 'late' ? 'running late' : "can't make it"}
-                        {myAtt.note ? ` — ${myAtt.note}` : ''} (your team was alerted)
+                      <div key={m.id} className="row">
+                        {!isMe && <span className="hint">{name}:</span>}
+                        <button className="link" onClick={() => reportAttendance(e, 'late', m)}>
+                          🕒 Running late
+                        </button>
+                        <button className="link" onClick={() => reportAttendance(e, 'absent', m)}>
+                          😷 Can't make it
+                        </button>
                       </div>
                     )
-                  return (
-                    <div className="row">
-                      <button className="link" onClick={() => reportAttendance(e, 'late')}>
-                        🕒 Running late
-                      </button>
-                      <button className="link" onClick={() => reportAttendance(e, 'absent')}>
-                        😷 Can't make it
-                      </button>
-                    </div>
-                  )
+                  })
                 })()}
                 {isManager && e.status !== 'cancelled' && (
                   <div className="hint">

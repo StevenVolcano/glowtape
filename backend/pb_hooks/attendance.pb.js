@@ -13,7 +13,7 @@ routerAdd(
   "/api/glowtape/attendance/report",
   (e) => {
     const lib = require(`${__hooks}/glowtape_lib.js`);
-    const data = new DynamicModel({ event: "", status: "", note: "" });
+    const data = new DynamicModel({ event: "", status: "", note: "", member: "" });
     e.bindBody(data);
 
     if (data.status !== "late" && data.status !== "absent") {
@@ -28,14 +28,29 @@ routerAdd(
     }
     const production = e.app.findRecordById("productions", event.get("production"));
 
+    // Reporting for a specific member (a guardian on a child's behalf, or an
+    // explicit self); otherwise fall back to the caller's own member row.
     let member;
-    try {
-      member = e.app.findFirstRecordByFilter("members", "production = {:p} && user = {:u}", {
-        p: production.id,
-        u: e.auth.id,
-      });
-    } catch {
-      throw new BadRequestError("You're not in this production.");
+    if (data.member) {
+      try {
+        member = e.app.findRecordById("members", data.member);
+      } catch {
+        throw new BadRequestError("Unknown member.");
+      }
+      const isSelf = member.get("user") === e.auth.id;
+      const isGuardian = lib.toIdArray(member.get("guardians")).includes(e.auth.id);
+      if (member.get("production") !== production.id || (!isSelf && !isGuardian)) {
+        throw new BadRequestError("You can only report for yourself or your child.");
+      }
+    } else {
+      try {
+        member = e.app.findFirstRecordByFilter("members", "production = {:p} && user = {:u}", {
+          p: production.id,
+          u: e.auth.id,
+        });
+      } catch {
+        throw new BadRequestError("You're not in this production.");
+      }
     }
 
     const note = String(data.note || "").slice(0, 300);
@@ -57,7 +72,11 @@ routerAdd(
 
     // Alert the production team right away.
     try {
-      const who = e.auth.get("name") || e.auth.email();
+      const reporter = e.auth.get("name") || e.auth.email();
+      const onBehalf = member.get("user") !== e.auth.id;
+      const who = onBehalf
+        ? `${member.get("displayName") || "Their child"} (via ${reporter})`
+        : reporter;
       const verb = data.status === "late" ? "is running late" : "can't make it";
       const when = lib.formatPacific(event.get("start"));
       const contacts = lib.managerContacts(e.app, production);
