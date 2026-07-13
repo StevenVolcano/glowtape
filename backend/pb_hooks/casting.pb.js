@@ -39,8 +39,23 @@ routerAdd(
     let assigned = 0;
     const skipped = [];
     for (const memberId of Object.keys(assignments)) {
-      const userId = String(assignments[memberId] || "");
-      if (!userId) continue;
+      const value = String(assignments[memberId] || "");
+      if (!value) continue;
+      // Paper-form pick: record the name on the role as an offline member.
+      if (value.startsWith("name:")) {
+        try {
+          const member = e.app.findRecordById("members", memberId);
+          if (member.get("production") === production.id && !member.get("user")) {
+            member.set("displayName", value.slice(5).slice(0, 80));
+            e.app.save(member);
+            assigned++;
+          }
+        } catch {
+          skipped.push("missing role row");
+        }
+        continue;
+      }
+      const userId = value;
       let member;
       try {
         member = e.app.findRecordById("members", memberId);

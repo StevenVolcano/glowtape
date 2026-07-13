@@ -73,8 +73,33 @@ export default function CastingTab() {
     if (uid) userCounts.set(uid, (userCounts.get(uid) ?? 0) + 1)
   }
 
-  const candidateName = (uid: string) =>
-    auditions.find((a) => a.user === uid)?.expand?.user?.name ?? 'someone'
+  // People already holding a role in the show — draftable into another role
+  // (playing two parts, crew picking up a cameo). Deduped against auditioners.
+  const auditionUserIds = new Set(auditions.map((a) => a.user))
+  const existingPeople = [
+    ...new Map(
+      members
+        .filter((m) => m.user && m.role !== 'guardian' && !auditionUserIds.has(m.user))
+        .map((m) => [m.user, m] as const),
+    ).values(),
+  ]
+
+  const candidateName = (value: string) => {
+    if (value.startsWith('name:')) return value.slice(5)
+    return (
+      auditions.find((a) => a.user === value)?.expand?.user?.name ??
+      existingPeople.find((m) => m.user === value)?.expand?.user?.name ??
+      'someone'
+    )
+  }
+
+  // Paper audition forms: no account, just a name. Finalize records it on the
+  // role as an offline member; they join for real whenever they claim the code.
+  function assignFreeForm(memberId: string) {
+    const name = window.prompt('Their name, from the paper form:')
+    if (name === null) return
+    assign(memberId, name.trim() ? `name:${name.trim()}` : '')
+  }
 
   async function finalize() {
     const count = Object.values(assignments).filter(Boolean).length
@@ -84,7 +109,7 @@ export default function CastingTab() {
     }
     if (
       !window.confirm(
-        `Finalize this cast? ${count} ${count === 1 ? 'person' : 'people'} will be attached to their roles and immediately see the production — its schedule, messages, and materials. Announce your cast however you normally do; Glow Tape won't email anyone about this. This is the real cast list: undoing it means editing roles by hand.`,
+        `Finalize this cast? ${count} ${count === 1 ? 'person' : 'people'} will be attached to their roles — anyone with a Glow Tape account immediately sees the production (schedule, messages, materials), and paper-form names are recorded on their roles as not-on-Glow-Tape members. Announce your cast however you normally do; Glow Tape won't email anyone about this. This is the real cast list: undoing it means editing roles by hand.`,
       )
     )
       return
@@ -147,15 +172,37 @@ export default function CastingTab() {
                     <select
                       aria-label={`Cast ${m.position || 'this role'}`}
                       value={picked}
-                      onChange={(e) => assign(m.id, e.target.value)}
+                      onChange={(e) =>
+                        e.target.value === '__paper'
+                          ? assignFreeForm(m.id)
+                          : assign(m.id, e.target.value)
+                      }
                     >
                       <option value="">— undecided —</option>
-                      {auditions.map((a) => (
-                        <option key={a.id} value={a.user}>
-                          {a.expand?.user?.name}
-                          {a.roles ? ` (asked for: ${a.roles.slice(0, 40)})` : ''}
-                        </option>
-                      ))}
+                      {auditions.length > 0 && (
+                        <optgroup label="Audition signups">
+                          {auditions.map((a) => (
+                            <option key={a.id} value={a.user}>
+                              {a.expand?.user?.name}
+                              {a.roles ? ` (asked for: ${a.roles.slice(0, 40)})` : ''}
+                            </option>
+                          ))}
+                        </optgroup>
+                      )}
+                      {existingPeople.length > 0 && (
+                        <optgroup label="Already in the show">
+                          {existingPeople.map((em) => (
+                            <option key={em.id} value={em.user}>
+                              🎭 {em.expand?.user?.name}
+                              {em.position ? ` (${em.position})` : ''}
+                            </option>
+                          ))}
+                        </optgroup>
+                      )}
+                      {picked.startsWith('name:') && (
+                        <option value={picked}>✍ {picked.slice(5)} (paper form)</option>
+                      )}
+                      <option value="__paper">✍ Someone from a paper form…</option>
                     </select>
                     {doubled && (
                       <span className="error">⚠ {candidateName(picked)} is drafted for another role too</span>
