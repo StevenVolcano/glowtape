@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { pb } from '../lib/pb.ts'
 import { useAuth } from '../lib/auth.tsx'
 import ResourceList from '../components/ResourceList.tsx'
+import { useTitle } from '../lib/useTitle.ts'
 import type { AuditionRecord, ProductionRecord } from '../lib/types.ts'
 
 // Audition signup for a production with open auditions. One form per person;
@@ -18,6 +19,7 @@ export default function AuditionForm() {
   const [failed, setFailed] = useState(false)
   const [busy, setBusy] = useState(false)
   const [saved, setSaved] = useState('')
+  useTitle(production ? `Audition: ${production.title}` : 'Audition')
 
   useEffect(() => {
     async function load() {
@@ -148,7 +150,7 @@ export default function AuditionForm() {
           <button onClick={save} disabled={busy}>
             {busy ? 'Sending…' : existing ? 'Update my signup' : 'Sign up to audition'}
           </button>
-          {saved && <span className="acked">{saved}</span>}
+          {saved && <span className="acked" role="status">{saved}</span>}
         </div>
       </section>
     </main>

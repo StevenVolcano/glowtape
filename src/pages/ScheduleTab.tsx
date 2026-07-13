@@ -228,13 +228,14 @@ export default function ScheduleTab() {
                       const rows = attendance.filter((a) => a.event === e.id)
                       if (rows.length === 0) return null
                       const c = (s: string) => rows.filter((a) => a.status === s).length
-                      return ` · roll: ${c('present')} ✓ ${c('late')} 🕒 ${c('absent')} ✗`
+                      return ` · roll: ${c('present')} present, ${c('late')} late, ${c('absent')} absent`
                     })()}
                   </div>
                 )}
                 {isManager && e.status !== 'cancelled' && (
                   <button
                     className="link"
+                    aria-expanded={rollFor === e.id}
                     onClick={() => setRollFor(rollFor === e.id ? null : e.id)}
                   >
                     {rollFor === e.id ? 'Close roll call' : 'Roll call'}
@@ -254,7 +255,13 @@ export default function ScheduleTab() {
                               : '—'
                       return (
                         <li key={m.id}>
-                          <button className="chip" onClick={() => cycleRoll(e, m)}>
+                          <button
+                            className="chip"
+                            aria-label={`${memberName(m)} — ${
+                              row?.status ?? 'unmarked'
+                            }. Tap to change.`}
+                            onClick={() => cycleRoll(e, m)}
+                          >
                             {icon} {memberName(m)}
                           </button>
                           {row?.note && <span className="hint"> {row.note}</span>}
@@ -298,7 +305,7 @@ export default function ScheduleTab() {
             )
           })}
         </ul>
-        <button className="link" onClick={() => setShowPast(!showPast)}>
+        <button className="link" aria-expanded={showPast} onClick={() => setShowPast(!showPast)}>
           {showPast ? 'Hide past events' : 'Show past events'}
         </button>
       </section>
@@ -346,7 +353,7 @@ function CalendarSubscribeSection() {
         <div className="stack">
           <div className="row">
             <input aria-label="Calendar link" readOnly value={url} onFocus={(e) => e.target.select()} />
-            <button onClick={copy}>{copied ? 'Copied ✓' : 'Copy'}</button>
+            <button onClick={copy} aria-live="polite">{copied ? 'Copied ✓' : 'Copy'}</button>
           </div>
           <p className="hint">
             <strong>Google Calendar:</strong> Other calendars → + → From URL → paste.{' '}
@@ -428,6 +435,7 @@ function ConflictsSection({ conflicts, reload }: { conflicts: ConflictRecord[]; 
           </label>
         </div>
         <input
+          aria-label="Conflict reason"
           value={note}
           onChange={(e) => setNote(e.target.value)}
           placeholder="Reason (optional) — e.g. work trip"

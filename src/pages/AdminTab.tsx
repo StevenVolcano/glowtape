@@ -48,7 +48,7 @@ function JoinCodeSection() {
       <div className="join-code">{production.joinCode}</div>
       <div className="row">
         <button onClick={() => share(production.joinCode)}>📤 Share invite link</button>
-        {feedback && <span className="acked">{feedback}</span>}
+        {feedback && <span className="acked" role="status">{feedback}</span>}
       </div>
       <p className="hint">
         Handing out paper at the read-through?{' '}
@@ -104,8 +104,20 @@ function NewAnnouncementSection() {
     <section>
       <h2>Post an announcement</h2>
       <form onSubmit={post} className="stack">
-        <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" required />
-        <textarea value={body} onChange={(e) => setBody(e.target.value)} placeholder="Details" rows={3} />
+        <input
+          aria-label="Announcement title"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Title"
+          required
+        />
+        <textarea
+          aria-label="Announcement details"
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          placeholder="Details"
+          rows={3}
+        />
         <label className="row">
           <input type="checkbox" checked={pinned} onChange={(e) => setPinned(e.target.checked)} />
           Pin to the top
@@ -113,7 +125,7 @@ function NewAnnouncementSection() {
         <button type="submit" disabled={busy || !title}>
           {busy ? 'Posting…' : 'Post announcement'}
         </button>
-        {done && <p className="acked">{done}</p>}
+        {done && <p className="acked" role="status">{done}</p>}
       </form>
     </section>
   )
@@ -228,19 +240,23 @@ function ScheduleTableSection() {
         <table>
           <thead>
             <tr>
-              <th>Type</th>
-              <th>Title</th>
-              <th>Date</th>
-              <th>Start</th>
-              <th>End</th>
-              <th>Location</th>
+              <th scope="col">Type</th>
+              <th scope="col">Title</th>
+              <th scope="col">Date</th>
+              <th scope="col">Start</th>
+              <th scope="col">End</th>
+              <th scope="col">Location</th>
             </tr>
           </thead>
           <tbody>
             {rows.map((r) => (
               <tr key={r.id}>
                 <td>
-                  <select value={r.kind} onChange={(e) => setField(r.id, 'kind', e.target.value)}>
+                  <select
+                    aria-label={`Type for ${r.title}`}
+                    value={r.kind}
+                    onChange={(e) => setField(r.id, 'kind', e.target.value)}
+                  >
                     <option value="">—</option>
                     {kinds.map((k) => (
                       <option key={k} value={k}>
@@ -250,10 +266,15 @@ function ScheduleTableSection() {
                   </select>
                 </td>
                 <td>
-                  <input value={r.title} onChange={(e) => setField(r.id, 'title', e.target.value)} />
+                  <input
+                    aria-label="Title"
+                    value={r.title}
+                    onChange={(e) => setField(r.id, 'title', e.target.value)}
+                  />
                 </td>
                 <td>
                   <input
+                    aria-label={`Date for ${r.title}`}
                     type="date"
                     value={r.date}
                     onChange={(e) => setField(r.id, 'date', e.target.value)}
@@ -261,6 +282,7 @@ function ScheduleTableSection() {
                 </td>
                 <td>
                   <input
+                    aria-label={`Start time for ${r.title}`}
                     type="time"
                     value={r.startTime}
                     onChange={(e) => setField(r.id, 'startTime', e.target.value)}
@@ -268,6 +290,7 @@ function ScheduleTableSection() {
                 </td>
                 <td>
                   <input
+                    aria-label={`End time for ${r.title}`}
                     type="time"
                     value={r.endTime}
                     onChange={(e) => setField(r.id, 'endTime', e.target.value)}
@@ -275,6 +298,7 @@ function ScheduleTableSection() {
                 </td>
                 <td>
                   <input
+                    aria-label={`Location for ${r.title}`}
                     list="gt-locations"
                     value={r.location}
                     onChange={(e) => setField(r.id, 'location', e.target.value)}
@@ -293,7 +317,7 @@ function ScheduleTableSection() {
       <button onClick={saveAll} disabled={busy || dirty.length === 0}>
         {busy ? 'Saving…' : dirty.length > 0 ? `Save all (${dirty.length} changed)` : 'Save all'}
       </button>
-      {message && <p className="acked">{message}</p>}
+      {message && <p className="acked" role="status">{message}</p>}
     </section>
   )
 }
@@ -359,6 +383,7 @@ function PresetsSection() {
               <button
                 type="button"
                 className="link"
+                aria-label={`Remove ${pl.name || 'place'}`}
                 onClick={() => setPlaces((prev) => prev.filter((_, idx) => idx !== i))}
               >
                 ✕
@@ -381,7 +406,7 @@ function PresetsSection() {
         </div>
         <div className="row">
           <button onClick={save}>Save presets</button>
-          {saved && <span className="acked">{saved}</span>}
+          {saved && <span className="acked" role="status">{saved}</span>}
         </div>
       </div>
     </section>
@@ -455,7 +480,7 @@ function BiosSection() {
           {busy ? 'Working…' : 'Request bios'}
         </button>
       </div>
-      {message && <p className="acked">{message}</p>}
+      {message && <p className="acked" role="status">{message}</p>}
       <p>
         <Link className="link" to={`/production/${production.id}/bios`}>
           📄 View compiled bios (print / copy for the program)
@@ -682,7 +707,9 @@ function MembersSection() {
             </label>
             <button
               className="link"
-              title="Photo consent — tap to toggle"
+              aria-label={`Photo consent for ${memberName(m)}: ${
+                m.noPhotos ? 'no photos allowed' : 'photos OK'
+              } — tap to toggle`}
               onClick={() => setNoPhotos(m, !m.noPhotos)}
             >
               {m.noPhotos ? '🚫📷 no photos' : '📷 ok'}
@@ -961,7 +988,7 @@ function AuditionsSection() {
             <button onClick={saveSetup} disabled={busy}>
               Save audition setup
             </button>
-            {saved && <span className="acked">{saved}</span>}
+            {saved && <span className="acked" role="status">{saved}</span>}
           </div>
           <p className="hint">
             <Link className="link" to={`/audition/${production.id}/print`}>
@@ -984,7 +1011,11 @@ function AuditionsSection() {
               const open = openId === a.id
               return (
                 <li key={a.id}>
-                  <button className="link" onClick={() => setOpenId(open ? '' : a.id)}>
+                  <button
+                    className="link"
+                    aria-expanded={open}
+                    onClick={() => setOpenId(open ? '' : a.id)}
+                  >
                     {open ? '▾' : '▸'} {a.expand?.user?.name || 'Someone'}
                     {a.roles && <span className="hint"> — {a.roles}</span>}
                   </button>

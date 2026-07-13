@@ -3,11 +3,13 @@ import { Link } from 'react-router-dom'
 import { pb } from '../lib/pb.ts'
 import { useAuth } from '../lib/auth.tsx'
 import CommunityBoard from '../components/CommunityBoard.tsx'
+import { useTitle } from '../lib/useTitle.ts'
 import PhoneSettings from '../components/PhoneSettings.tsx'
 import { copyrightLine } from '../lib/types.ts'
 import type { ProductionRecord } from '../lib/types.ts'
 
 export default function Home() {
+  useTitle('Home')
   const { user, signOut } = useAuth()
   const [productions, setProductions] = useState<ProductionRecord[]>([])
   const [memberProdIds, setMemberProdIds] = useState<Set<string>>(new Set())
@@ -134,7 +136,7 @@ export default function Home() {
             {busy ? 'Joining…' : 'Join'}
           </button>
         </form>
-        {error && <p className="error">{error}</p>}
+        {error && <p className="error" role="alert">{error}</p>}
       </section>
 
       <CommunityBoard />

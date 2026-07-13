@@ -24,11 +24,11 @@ export default function PeopleTab() {
       <table className="contact-sheet">
         <thead>
           <tr>
-            <th>Name</th>
-            <th>Role</th>
-            <th>Position / Character</th>
-            <th>Email</th>
-            <th>Phone</th>
+            <th scope="col">Name</th>
+            <th scope="col">Role</th>
+            <th scope="col">Position / Character</th>
+            <th scope="col">Email</th>
+            <th scope="col">Phone</th>
           </tr>
         </thead>
         <tbody>

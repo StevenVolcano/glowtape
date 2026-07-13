@@ -118,6 +118,7 @@ export default function TrackersTab() {
             <button
               key={t}
               className={`chip ${tracker === t ? 'chip-active' : ''}`}
+              aria-pressed={tracker === t}
               onClick={() => setTracker(t)}
             >
               {TRACKERS[t].label}
@@ -144,9 +145,15 @@ export default function TrackersTab() {
               <thead>
                 <tr>
                   {cols.map((c) => (
-                    <th key={c}>{labels[c]}</th>
+                    <th key={c} scope="col">
+                      {labels[c]}
+                    </th>
                   ))}
-                  {isManager && <th />}
+                  {isManager && (
+                    <th scope="col">
+                      <span className="sr-only">Actions</span>
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -167,7 +174,11 @@ export default function TrackersTab() {
                     ))}
                     {isManager && (
                       <td>
-                        <button className="link no-print" onClick={() => remove(item)}>
+                        <button
+                          className="link no-print"
+                          aria-label={`Delete ${item.name || 'row'}`}
+                          onClick={() => remove(item)}
+                        >
                           ✕
                         </button>
                       </td>
@@ -206,7 +217,7 @@ export default function TrackersTab() {
             </>
           )}
         </div>
-        {status && <p className="hint">{status}</p>}
+        {status && <p className="hint" role="status">{status}</p>}
 
         {isManager && (
           <p className="hint no-print">

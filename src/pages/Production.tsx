@@ -9,6 +9,7 @@ import PeopleTab from './PeopleTab.tsx'
 import TasksTab from './TasksTab.tsx'
 import TrackersTab from './TrackersTab.tsx'
 import BiosView from './BiosView.tsx'
+import { useTitle } from '../lib/useTitle.ts'
 import AdminTab from './AdminTab.tsx'
 
 export interface ProductionContextValue {
@@ -33,6 +34,7 @@ export default function Production() {
   const [production, setProduction] = useState<ProductionRecord | null>(null)
   const [members, setMembers] = useState<MemberRecord[]>([])
   const [failed, setFailed] = useState(false)
+  useTitle(production?.title ?? '')
 
   async function reload() {
     if (!id) return

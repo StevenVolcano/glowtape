@@ -10,7 +10,8 @@
   --accent: #4a3f66;
   --muted: #6b6478;
   --line: #ddd8ce;
-  --ok: #2e7d4f;
+  --ctrl: #8a8478; /* control borders: ≥3:1 on white and paper */
+  --ok: #256843;
   --error: #b3372f;
 }
 
@@ -98,11 +99,16 @@ textarea {
   font: inherit;
   padding: 0.6rem 0.75rem;
   min-height: 44px;
-  border: 2px solid var(--line);
+  border: 2px solid var(--ctrl);
   border-radius: 10px;
   background: var(--card);
   color: var(--ink);
   width: 100%;
+}
+
+::placeholder {
+  color: var(--muted);
+  opacity: 1;
 }
 
 textarea {
@@ -113,8 +119,20 @@ input:focus,
 select:focus,
 textarea:focus,
 button:focus-visible {
-  outline: 3px solid var(--lamp);
-  outline-offset: 1px;
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 label {
@@ -260,13 +278,13 @@ form.stack,
 
 .chip {
   background: var(--card);
-  border: 2px solid var(--line);
+  border: 2px solid var(--ctrl);
   color: var(--ink);
   font-weight: 500;
 }
 
 .chip-active {
-  border-color: var(--lamp);
+  border-color: var(--accent);
   background: #f4fadd;
   font-weight: 700;
 }
@@ -491,17 +509,18 @@ form.stack,
 }
 
 .reaction {
-  border: 1px solid var(--line);
+  border: 1px solid var(--ctrl);
   border-radius: 999px;
   padding: 0 0.6rem;
   background: var(--card);
-  min-height: 30px;
+  min-height: 40px;
+  min-width: 40px;
   font-size: 0.9rem;
   font-weight: 500;
 }
 
 .reaction.mine {
-  border-color: var(--lamp);
+  border-color: var(--accent);
   background: #f4fadd;
 }
 
@@ -511,7 +530,7 @@ form.stack,
   justify-content: center;
   min-height: 44px;
   min-width: 44px;
-  border: 2px solid var(--line);
+  border: 2px solid var(--ctrl);
   border-radius: 10px;
   background: var(--card);
   cursor: pointer;

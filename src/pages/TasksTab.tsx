@@ -77,6 +77,7 @@ export default function TasksTab() {
             <button
               key={f}
               className={`chip ${filter === f ? 'chip-active' : ''}`}
+              aria-pressed={filter === f}
               onClick={() => setFilter(f)}
             >
               {f === 'open' ? 'Open' : f === 'mine' ? 'Mine' : 'Everything'}
@@ -119,7 +120,11 @@ export default function TasksTab() {
                         </span>
                       </label>
                       {isManager && (
-                        <button className="link" onClick={() => remove(t)}>
+                        <button
+                          className="link"
+                          aria-label={`Delete task ${t.title}`}
+                          onClick={() => remove(t)}
+                        >
                           ✕
                         </button>
                       )}
@@ -177,12 +182,14 @@ function NewTaskForm({
       <h2>Add a task</h2>
       <form onSubmit={add} className="stack">
         <input
+          aria-label="Task"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="What needs doing — e.g. Source a fainting couch"
         />
         <div className="row">
           <input
+            aria-label="Department"
             list="gt-departments"
             value={department}
             onChange={(e) => setDepartment(e.target.value)}
@@ -215,7 +222,7 @@ function NewTaskForm({
         <button type="submit" disabled={busy || !title.trim()}>
           Add task
         </button>
-        {done && <p className="acked">{done}</p>}
+        {done && <p className="acked" role="status">{done}</p>}
       </form>
     </section>
   )
@@ -275,7 +282,7 @@ function BioEditor({ member, onSaved }: { member: MemberRecord; onSaved: () => P
         <button onClick={save} disabled={busy}>
           {busy ? 'Saving…' : 'Save bio'}
         </button>
-        {saved && <span className="acked">{saved}</span>}
+        {saved && <span className="acked" role="status">{saved}</span>}
       </div>
     </div>
   )

@@ -2,11 +2,13 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { pb } from '../lib/pb.ts'
 import { useAuth } from '../lib/auth.tsx'
+import { useTitle } from '../lib/useTitle.ts'
 import type { ProfileRecord } from '../lib/types.ts'
 
 // The community acting profile: headshot + experience, shown to directors
 // alongside audition signups. Teens skip the headshot (youth-safety model).
 export default function Profile() {
+  useTitle('My profile')
   const { user } = useAuth()
   const [profile, setProfile] = useState<ProfileRecord | null>(null)
   const [pronouns, setPronouns] = useState('')
@@ -101,7 +103,12 @@ export default function Profile() {
                   </button>
                 </div>
               )}
-              <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" />
+              <input
+                ref={fileRef}
+                type="file"
+                aria-label="Upload a headshot"
+                accept="image/jpeg,image/png,image/webp"
+              />
             </>
           )}
           {isTeen && (
@@ -147,7 +154,7 @@ export default function Profile() {
             <button onClick={save} disabled={busy}>
               {busy ? 'Saving…' : 'Save profile'}
             </button>
-            {saved && <span className="acked">{saved}</span>}
+            {saved && <span className="acked" role="status">{saved}</span>}
           </div>
         </section>
       )}

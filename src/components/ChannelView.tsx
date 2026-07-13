@@ -124,7 +124,7 @@ export default function ChannelView({ channelId }: { channelId: string }) {
 
   return (
     <div className="channel">
-      <div className="messages">
+      <div className="messages" role="log" aria-live="polite" aria-label="Messages">
         {messages.length === 0 && <p className="hint">No messages yet. Say hi!</p>}
         {messages.map((m) => (
           <div key={m.id} className={`msg ${m.author === user?.id ? 'mine' : ''}`}>
@@ -132,7 +132,12 @@ export default function ChannelView({ channelId }: { channelId: string }) {
             <span className="msg-text">
               {m.image && (
                 <a href={imageUrl(m)} target="_blank" rel="noreferrer">
-                  <img className="msg-img" src={imageUrl(m, '400x0')} alt="" loading="lazy" />
+                  <img
+                    className="msg-img"
+                    src={imageUrl(m, '400x0')}
+                    alt={`Photo from ${m.expand?.author?.name || 'a member'}`}
+                    loading="lazy"
+                  />
                 </a>
               )}
               {m.text}
@@ -169,7 +174,12 @@ export default function ChannelView({ channelId }: { channelId: string }) {
                     </button>
                   ))}
                   {m.author !== user?.id && (
-                    <button type="button" className="reaction" onClick={() => report(m)}>
+                    <button
+                      type="button"
+                      className="reaction"
+                      aria-label="Report this message"
+                      onClick={() => report(m)}
+                    >
                       ⚑
                     </button>
                   )}

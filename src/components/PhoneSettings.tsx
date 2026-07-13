@@ -122,7 +122,7 @@ export default function PhoneSettings({ user }: { user: UserRecord }) {
             Never mind
           </button>
         )}
-        {error && <p className="error">{error}</p>}
+        {error && <p className="error" role="alert">{error}</p>}
       </div>
     </section>
   )

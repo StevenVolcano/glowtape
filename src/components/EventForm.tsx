@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useId, useState, type FormEvent } from 'react'
 import { pb } from '../lib/pb.ts'
 import { useProduction } from '../pages/Production.tsx'
 import { DEFAULT_EVENT_KINDS, memberName, pbDate, productionPlaces } from '../lib/types.ts'
@@ -22,6 +22,7 @@ export default function EventForm({
 }) {
   const { production, members } = useProduction()
   const editing = !!event
+  const locationsListId = useId()
 
   const kinds = production.eventKinds?.length ? production.eventKinds : DEFAULT_EVENT_KINDS
   const locations = productionPlaces(production).map((pl) => pl.name)
@@ -160,6 +161,7 @@ export default function EventForm({
           ))}
         </select>
         <input
+          aria-label="Event title"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Title — e.g. Act II run-through"
@@ -198,6 +200,7 @@ export default function EventForm({
                     type="button"
                     key={name}
                     className={`chip ${repeatDays.includes(i) ? 'chip-active' : ''}`}
+                    aria-pressed={repeatDays.includes(i)}
                     onClick={() => toggleDay(i)}
                   >
                     {name}
@@ -223,17 +226,23 @@ export default function EventForm({
       )}
 
       <input
-        list="gt-locations"
+        aria-label="Location"
+        list={locationsListId}
         value={location}
         onChange={(e) => setLocation(e.target.value)}
         placeholder="Location"
       />
-      <datalist id="gt-locations">
+      <datalist id={locationsListId}>
         {locations.map((l) => (
           <option key={l} value={l} />
         ))}
       </datalist>
-      <input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notes (optional)" />
+      <input
+        aria-label="Notes"
+        value={notes}
+        onChange={(e) => setNotes(e.target.value)}
+        placeholder="Notes (optional)"
+      />
       <label className="row">
         <input type="checkbox" checked={everyone} onChange={(e) => setEveryone(e.target.checked)} />
         Everyone is called
@@ -246,6 +255,7 @@ export default function EventForm({
                 type="button"
                 key={m.id}
                 className={`chip ${called.includes(m.id) ? 'chip-active' : ''}`}
+                aria-pressed={called.includes(m.id)}
                 onClick={() => toggleCalled(m.id)}
               >
                 {memberName(m)}
@@ -253,6 +263,7 @@ export default function EventForm({
             ))}
           </div>
           <input
+            aria-label="Call details"
             value={calledNote}
             onChange={(e) => setCalledNote(e.target.value)}
             placeholder="Call details — e.g. dancers at 6, full cast at 7"
@@ -269,8 +280,8 @@ export default function EventForm({
           automatically. Other edits stay quiet.
         </p>
       )}
-      {done && <p className="acked">{done}</p>}
-      {error && <p className="error">{error}</p>}
+      {done && <p className="acked" role="status">{done}</p>}
+      {error && <p className="error" role="alert">{error}</p>}
     </form>
   )
 }

@@ -82,12 +82,11 @@ export default function MessagesTab() {
             check faces before posting pictures.
           </p>
         )}
-        <div className="chips" role="tablist">
+        <div className="chips">
           {channels.map((c) => (
             <button
               key={c.id}
-              role="tab"
-              aria-selected={active === c.id}
+              aria-pressed={active === c.id}
               className={`chip ${active === c.id ? 'chip-active' : ''}`}
               onClick={() => setActive(c.id)}
             >

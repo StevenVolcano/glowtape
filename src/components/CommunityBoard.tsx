@@ -61,7 +61,7 @@ export default function CommunityBoard() {
     <section>
       <div className="row space-between">
         <h2>Grays Harbor theater community</h2>
-        <button className="link" onClick={() => setOpen(!open)}>
+        <button className="link" aria-expanded={open} onClick={() => setOpen(!open)}>
           {open ? 'Hide' : 'Open'}
         </button>
       </div>
@@ -72,12 +72,11 @@ export default function CommunityBoard() {
       )}
       {open && (
         <>
-          <div className="chips" role="tablist">
+          <div className="chips">
             {channels.map((c) => (
               <button
                 key={c.id}
-                role="tab"
-                aria-selected={active === c.id}
+                aria-pressed={active === c.id}
                 className={`chip ${active === c.id ? 'chip-active' : ''}`}
                 onClick={() => setActive(c.id)}
               >

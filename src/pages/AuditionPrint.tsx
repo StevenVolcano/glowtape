@@ -2,11 +2,13 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { pb } from '../lib/pb.ts'
 import { copyrightLine } from '../lib/types.ts'
+import { useTitle } from '../lib/useTitle.ts'
 import type { ProductionRecord } from '../lib/types.ts'
 
 // A blank, hand-fillable audition form to print for folks who'd rather use
 // paper. Staff keep the sheets with their audition records.
 export default function AuditionPrint() {
+  useTitle('Audition form')
   const { id } = useParams()
   const [production, setProduction] = useState<ProductionRecord | null>(null)
   const [failed, setFailed] = useState(false)

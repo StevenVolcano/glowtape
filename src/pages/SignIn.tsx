@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { pb } from '../lib/pb.ts'
 import { copyrightLine } from '../lib/types.ts'
+import { useTitle } from '../lib/useTitle.ts'
 
 type Method = 'email' | 'phone'
 type Step = 'enter' | 'code'
@@ -9,6 +10,7 @@ type Step = 'enter' | 'code'
 // (Text sign-in only works for phones already verified on an account,
 // and only once the server has an SMS provider configured.)
 export default function SignIn() {
+  useTitle('Sign in')
   const [method, setMethod] = useState<Method>('email')
   const [step, setStep] = useState<Step>('enter')
   const [email, setEmail] = useState('')
@@ -86,11 +88,10 @@ export default function SignIn() {
         </div>
         <p className="tagline">Grays Harbor's theater community</p>
 
-        <div className="chips" role="tablist">
+        <div className="chips">
           <button
             type="button"
-            role="tab"
-            aria-selected={method === 'email'}
+            aria-pressed={method === 'email'}
             className={`chip ${method === 'email' ? 'chip-active' : ''}`}
             onClick={() => switchMethod('email')}
           >
@@ -98,8 +99,7 @@ export default function SignIn() {
           </button>
           <button
             type="button"
-            role="tab"
-            aria-selected={method === 'phone'}
+            aria-pressed={method === 'phone'}
             className={`chip ${method === 'phone' ? 'chip-active' : ''}`}
             onClick={() => switchMethod('phone')}
           >
@@ -205,7 +205,7 @@ export default function SignIn() {
           </form>
         )}
 
-        {error && <p className="error">{error}</p>}
+        {error && <p className="error" role="alert">{error}</p>}
 
         <p className="hint legal-links">
           <a href="/help.html">Help</a> · <a href="/privacy.html">Privacy</a> ·{' '}
