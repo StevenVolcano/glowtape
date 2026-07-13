@@ -36,7 +36,7 @@ export function visibleCols(tracker: TrackerKey): TrackerCol[] {
 
 // --- CSV ------------------------------------------------------------------------
 
-function csvField(s: string): string {
+export function csvField(s: string): string {
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
 }
 

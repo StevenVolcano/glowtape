@@ -12,12 +12,16 @@ import {
   type TrackerKey,
 } from '../lib/trackers.ts'
 import type { TrackerItemRecord } from '../lib/types.ts'
+import BreakdownView from '../components/BreakdownView.tsx'
 
 // The multi-tab Google Sheet, replaced: props, costumes, set, and cue
 // paperwork live here. Managers edit right in the table; everyone else reads.
+type SheetKey = 'breakdown' | TrackerKey
+
 export default function TrackersTab() {
   const { production, isManager } = useProduction()
-  const [tracker, setTracker] = useState<TrackerKey>('props')
+  const [sheet, setSheet] = useState<SheetKey>('breakdown')
+  const tracker = sheet === 'breakdown' ? 'props' : sheet
   const [items, setItems] = useState<TrackerItemRecord[]>([])
   const [status, setStatus] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
@@ -32,9 +36,9 @@ export default function TrackersTab() {
 
   useEffect(() => {
     setStatus('')
-    load().catch(() => {})
+    if (sheet !== 'breakdown') load().catch(() => {})
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [production.id, tracker])
+  }, [production.id, sheet])
 
   const cols = visibleCols(tracker)
   const labels = TRACKERS[tracker].cols
@@ -114,18 +118,28 @@ export default function TrackersTab() {
       <section>
         <h2>Sheets</h2>
         <div className="chips no-print">
+          <button
+            className={`chip ${sheet === 'breakdown' ? 'chip-active' : ''}`}
+            aria-pressed={sheet === 'breakdown'}
+            onClick={() => setSheet('breakdown')}
+          >
+            Breakdown
+          </button>
           {(Object.keys(TRACKERS) as TrackerKey[]).map((t) => (
             <button
               key={t}
-              className={`chip ${tracker === t ? 'chip-active' : ''}`}
-              aria-pressed={tracker === t}
-              onClick={() => setTracker(t)}
+              className={`chip ${sheet === t ? 'chip-active' : ''}`}
+              aria-pressed={sheet === t}
+              onClick={() => setSheet(t)}
             >
               {TRACKERS[t].label}
             </button>
           ))}
         </div>
 
+        {sheet === 'breakdown' && <BreakdownView />}
+        {sheet !== 'breakdown' && (
+        <>
         <h3 className="dept-heading">
           {TRACKERS[tracker].label} — {production.title}
         </h3>
@@ -225,6 +239,8 @@ export default function TrackersTab() {
             sheet: File → Download → Comma Separated Values, one tab at a time, then import it
             here.
           </p>
+        )}
+        </>
         )}
       </section>
     </div>

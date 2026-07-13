@@ -1,8 +1,9 @@
-import { useId, useState, type FormEvent } from 'react'
+import { useEffect, useId, useState, type FormEvent } from 'react'
 import { pb } from '../lib/pb.ts'
 import { useProduction } from '../pages/Production.tsx'
+import { unitMemberIds } from '../lib/breakdown.ts'
 import { DEFAULT_EVENT_KINDS, memberName, pbDate, productionPlaces } from '../lib/types.ts'
-import type { EventRecord } from '../lib/types.ts'
+import type { EventRecord, UnitRecord } from '../lib/types.ts'
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
@@ -40,12 +41,39 @@ export default function EventForm({
   const [repeatWeekly, setRepeatWeekly] = useState(false)
   const [repeatUntil, setRepeatUntil] = useState('')
   const [repeatDays, setRepeatDays] = useState<number[]>([])
+  const [allUnits, setAllUnits] = useState<UnitRecord[]>([])
+  const [units, setUnits] = useState<string[]>(event?.units ?? [])
   const [busy, setBusy] = useState(false)
   const [done, setDone] = useState('')
   const [error, setError] = useState('')
 
+  useEffect(() => {
+    pb.collection('units')
+      .getFullList<UnitRecord>({
+        filter: pb.filter('production = {:p}', { p: production.id }),
+        sort: 'order,created',
+      })
+      .then(setAllUnits)
+      .catch(() => {})
+  }, [production.id])
+
   function toggleCalled(id: string) {
     setCalled((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
+  }
+
+  // Picking units fills "who's called" from the breakdown: the union of
+  // everyone involved in the selected units. Manual chips still adjust after.
+  function toggleUnit(id: string) {
+    const next = units.includes(id) ? units.filter((x) => x !== id) : [...units, id]
+    setUnits(next)
+    if (next.length > 0) {
+      const ids = new Set<string>()
+      for (const u of allUnits) {
+        if (next.includes(u.id)) for (const m of unitMemberIds(u)) ids.add(m)
+      }
+      setEveryone(false)
+      setCalled([...ids])
+    }
   }
 
   function toggleDay(d: number) {
@@ -102,6 +130,7 @@ export default function EventForm({
                 notes,
                 calledNote,
                 called: calledIds,
+                units,
                 start: new Date(`${date}T${startTime}`).toISOString(),
                 end: endTime ? new Date(`${date}T${endTime}`).toISOString() : '',
               },
@@ -119,6 +148,7 @@ export default function EventForm({
             notes,
             calledNote,
             called: calledIds,
+            units,
             occurrences: buildOccurrences(),
           },
         })
@@ -243,6 +273,28 @@ export default function EventForm({
         onChange={(e) => setNotes(e.target.value)}
         placeholder="Notes (optional)"
       />
+      {allUnits.length > 0 && (
+        <div>
+          <strong>Rehearsing (from the breakdown)</strong>
+          <div className="chips">
+            {allUnits.map((u) => (
+              <button
+                type="button"
+                key={u.id}
+                className={`chip ${units.includes(u.id) ? 'chip-active' : ''}`}
+                aria-pressed={units.includes(u.id)}
+                onClick={() => toggleUnit(u.id)}
+              >
+                {u.name}
+              </button>
+            ))}
+          </div>
+          <p className="hint">
+            Picking units calls everyone involved in them — fine-tune with the people chips
+            below.
+          </p>
+        </div>
+      )}
       <label className="row">
         <input type="checkbox" checked={everyone} onChange={(e) => setEveryone(e.target.checked)} />
         Everyone is called

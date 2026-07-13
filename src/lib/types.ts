@@ -61,6 +61,7 @@ export interface ProductionRecord {
   auditionOpen: boolean
   auditionNotes: string
   auditionQuestions: string[] | null
+  breakdownStyle: '' | 'songs' | 'scenes' | 'pages'
   expand?: { org?: OrgRecord }
 }
 
@@ -72,6 +73,19 @@ export interface ProfileRecord {
   experience: string
   skills: string
   expand?: { user?: UserRecord }
+}
+
+export interface UnitRecord {
+  id: string
+  production: string
+  name: string
+  act: string
+  pages: string
+  order: number
+  onstage: string[]
+  singing: string[]
+  dancing: string[]
+  notes: string
 }
 
 export interface NoteRecord {
@@ -221,6 +235,7 @@ export interface EventRecord {
   calledNote: string
   status: '' | 'scheduled' | 'cancelled'
   kind: string
+  units: string[] // breakdown units being rehearsed (called is still authoritative)
 }
 
 export interface TaskRecord {

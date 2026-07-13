@@ -6,7 +6,7 @@ import { formatDay, formatWhen, mapsUrl, memberName, pbDate, placeLine, producti
 import { downloadEventIcs, googleCalendarUrl } from '../lib/calendar.ts'
 import EventForm from '../components/EventForm.tsx'
 import ResourceList from '../components/ResourceList.tsx'
-import type { AckRecord, AttendanceRecord, ConflictRecord, EventRecord, MemberRecord } from '../lib/types.ts'
+import type { AckRecord, AttendanceRecord, ConflictRecord, EventRecord, MemberRecord, UnitRecord } from '../lib/types.ts'
 
 export default function ScheduleTab() {
   const { production, members, myMember, isManager } = useProduction()
@@ -15,12 +15,13 @@ export default function ScheduleTab() {
   const [acks, setAcks] = useState<AckRecord[]>([])
   const [conflicts, setConflicts] = useState<ConflictRecord[]>([])
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([])
+  const [units, setUnits] = useState<UnitRecord[]>([])
   const [showPast, setShowPast] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [rollFor, setRollFor] = useState<string | null>(null)
 
   async function load() {
-    const [ev, ak, cf, at] = await Promise.all([
+    const [ev, ak, cf, at, un] = await Promise.all([
       pb.collection('events').getFullList<EventRecord>({
         filter: pb.filter('production = {:p}', { p: production.id }),
         sort: 'start',
@@ -36,11 +37,16 @@ export default function ScheduleTab() {
       pb.collection('attendance').getFullList<AttendanceRecord>({
         filter: pb.filter('event.production = {:p}', { p: production.id }),
       }),
+      pb.collection('units').getFullList<UnitRecord>({
+        filter: pb.filter('production = {:p}', { p: production.id }),
+        sort: 'order,created',
+      }),
     ])
     setEvents(ev)
     setAcks(ak)
     setConflicts(cf)
     setAttendance(at)
+    setUnits(un)
   }
 
   useEffect(() => {
@@ -108,6 +114,14 @@ export default function ScheduleTab() {
   const now = new Date()
   const visible = events.filter((e) => showPast || pbDate(e.end || e.start) >= now)
 
+  function unitsLabel(e: EventRecord): string {
+    if (!e.units?.length) return ''
+    return e.units
+      .map((id) => units.find((u) => u.id === id)?.name)
+      .filter(Boolean)
+      .join(' · ')
+  }
+
   function calledLabel(e: EventRecord): string {
     if (e.called.length === 0) return 'Everyone'
     const names = e.called
@@ -150,6 +164,11 @@ export default function ScheduleTab() {
                     <a href={mapsUrl(places, e.location)} target="_blank" rel="noreferrer">
                       📍 {e.location}
                     </a>
+                  </div>
+                )}
+                {unitsLabel(e) && (
+                  <div className="event-line">
+                    <strong>Rehearsing:</strong> {unitsLabel(e)}
                   </div>
                 )}
                 <div className="event-line">

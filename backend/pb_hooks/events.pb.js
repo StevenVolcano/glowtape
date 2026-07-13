@@ -26,6 +26,7 @@ routerAdd(
       notes: "",
       calledNote: "",
       called: [],
+      units: [],
       // one entry per event: { start: ISO string, end: ISO string or "" }
       occurrences: [],
     });
@@ -59,6 +60,7 @@ routerAdd(
       rec.set("notes", data.notes);
       rec.set("calledNote", data.calledNote);
       rec.set("called", lib.toIdArray(data.called));
+      rec.set("units", lib.toIdArray(data.units));
       rec.set("status", "scheduled");
       e.app.save(rec);
       created.push(rec);
@@ -188,6 +190,7 @@ routerAdd(
       if (item.start !== undefined) rec.set("start", item.start);
       if (item.end !== undefined) rec.set("end", item.end);
       if (item.called !== undefined) rec.set("called", lib.toIdArray(item.called));
+      if (item.units !== undefined) rec.set("units", lib.toIdArray(item.units));
       e.app.save(rec);
 
       const significant =
