@@ -38,7 +38,7 @@ Update it as the project evolves.
 │   └── make-icons.mjs     # regenerates PNG icons (no image deps)
 └── src/
     ├── lib/               # pb client, types/formatting, auth context, calendar helpers
-    ├── pages/             # SignIn, Home, Production shell + Schedule/Messages/People/Admin tabs
+    ├── pages/             # SignIn, Home, Profile, AuditionForm, Production shell + tabs
     └── components/        # PhoneSettings, shared pieces
 ```
 

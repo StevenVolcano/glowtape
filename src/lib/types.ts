@@ -24,6 +24,7 @@ export interface UserRecord {
   phone: string
   phoneVerified: boolean
   smsOptIn: boolean
+  ageBand: '' | 'adult' | 'teen'
 }
 
 export interface ProductionRecord {
@@ -35,7 +36,31 @@ export interface ProductionRecord {
   managers: string[]
   eventKinds: string[] | null
   locations: unknown[] | null // strings or {name, address} objects
+  auditionOpen: boolean
+  auditionNotes: string
+  auditionQuestions: string[] | null
   expand?: { org?: OrgRecord }
+}
+
+export interface ProfileRecord {
+  id: string
+  user: string
+  headshot: string
+  pronouns: string
+  experience: string
+  skills: string
+  expand?: { user?: UserRecord }
+}
+
+export interface AuditionRecord {
+  id: string
+  production: string
+  user: string
+  roles: string
+  conflicts: string
+  answers: Record<string, string> | null
+  created: string
+  expand?: { user?: UserRecord }
 }
 
 export interface OrgRecord {

@@ -5,7 +5,7 @@ import { useAuth } from '../lib/auth.tsx'
 import { useProduction } from './Production.tsx'
 import EventForm from '../components/EventForm.tsx'
 import { MANAGER_ROLES, ROLE_LABELS } from '../lib/types.ts'
-import type { ChannelRecord, ConflictRecord, EventRecord, MemberRecord, MemberRole } from '../lib/types.ts'
+import type { AuditionRecord, ChannelRecord, ConflictRecord, EventRecord, MemberRecord, MemberRole, ProfileRecord } from '../lib/types.ts'
 import { DEFAULT_EVENT_KINDS, memberName, normalizePlaces, pbDate, productionPlaces, shareInvite } from '../lib/types.ts'
 import type { Place } from '../lib/types.ts'
 
@@ -13,6 +13,7 @@ export default function AdminTab() {
   return (
     <div>
       <JoinCodeSection />
+      <AuditionsSection />
       <ConflictAlertsSection />
       <BiosSection />
       <NewEventSection />
@@ -430,7 +431,7 @@ function BiosSection() {
       <h2>Program bios</h2>
       <p className="hint">
         {withBio} of {eligible} bios written. Requesting creates a to-do for everyone still
-        missing one; people write theirs on the People tab, and it compiles below for the
+        missing one; people write theirs on the To-Do tab, and it compiles below for the
         program.
       </p>
       <div className="row">
@@ -861,6 +862,175 @@ function ConflictAlertsSection() {
           </li>
         ))}
       </ul>
+    </section>
+  )
+}
+
+// Audition setup + signups, aggregated in-app (no per-signup emails).
+function AuditionsSection() {
+  const { production, reload } = useProduction()
+  const [notes, setNotes] = useState(production.auditionNotes ?? '')
+  const [questions, setQuestions] = useState(
+    Array.isArray(production.auditionQuestions) ? production.auditionQuestions.join('\n') : '',
+  )
+  const [signups, setSignups] = useState<AuditionRecord[]>([])
+  const [profiles, setProfiles] = useState<Map<string, ProfileRecord>>(new Map())
+  const [openId, setOpenId] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [saved, setSaved] = useState('')
+
+  async function loadSignups() {
+    const list = await pb.collection('auditions').getFullList<AuditionRecord>({
+      filter: pb.filter('production = {:p}', { p: production.id }),
+      expand: 'user',
+      sort: 'created',
+    })
+    setSignups(list)
+    const userIds = [...new Set(list.map((a) => a.user))]
+    if (userIds.length) {
+      const filter = userIds.map((_, i) => `user = {:u${i}}`).join(' || ')
+      const params = Object.fromEntries(userIds.map((id, i) => [`u${i}`, id]))
+      const profs = await pb
+        .collection('profiles')
+        .getFullList<ProfileRecord>({ filter: pb.filter(filter, params) })
+      setProfiles(new Map(profs.map((p) => [p.user, p])))
+    }
+  }
+
+  useEffect(() => {
+    loadSignups().catch(() => {})
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [production.id])
+
+  async function toggleOpen() {
+    await pb.collection('productions').update(production.id, {
+      auditionOpen: !production.auditionOpen,
+    })
+    await reload()
+  }
+
+  async function saveSetup() {
+    setBusy(true)
+    setSaved('')
+    try {
+      await pb.collection('productions').update(production.id, {
+        auditionNotes: notes.trim(),
+        auditionQuestions: questions
+          .split('\n')
+          .map((q) => q.trim())
+          .filter(Boolean),
+      })
+      await reload()
+      setSaved('Saved. ✓')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <section>
+      <h2>Auditions</h2>
+      <label className="row manage-toggle">
+        <input type="checkbox" checked={!!production.auditionOpen} onChange={toggleOpen} />
+        Auditions are open — everyone on Glow Tape sees this show and can sign up
+      </label>
+
+      {production.auditionOpen && (
+        <div className="stack" style={{ marginTop: '0.5rem' }}>
+          <label>
+            Details for auditioners (dates, place, what to prepare)
+            <textarea
+              rows={2}
+              maxLength={1000}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Auditions June 3–4, 6:30pm at the Driftwood. Prepare 16 bars…"
+            />
+          </label>
+          <label>
+            Your questions, one per line (optional)
+            <textarea
+              rows={3}
+              value={questions}
+              onChange={(e) => setQuestions(e.target.value)}
+              placeholder={'Will you accept another role if offered?\nAny costume sizes we should know?'}
+            />
+          </label>
+          <div className="row">
+            <button onClick={saveSetup} disabled={busy}>
+              Save audition setup
+            </button>
+            {saved && <span className="acked">{saved}</span>}
+          </div>
+        </div>
+      )}
+
+      {signups.length > 0 && (
+        <>
+          <h3 className="dept-heading">
+            {signups.length} signup{signups.length === 1 ? '' : 's'}
+          </h3>
+          <ul className="plain-list">
+            {signups.map((a) => {
+              const profile = profiles.get(a.user)
+              const open = openId === a.id
+              return (
+                <li key={a.id}>
+                  <button className="link" onClick={() => setOpenId(open ? '' : a.id)}>
+                    {open ? '▾' : '▸'} {a.expand?.user?.name || 'Someone'}
+                    {a.roles && <span className="hint"> — {a.roles}</span>}
+                  </button>
+                  {open && (
+                    <div className="stack" style={{ margin: '0.3rem 0 0.8rem 1.2rem' }}>
+                      {profile?.headshot && (
+                        <img
+                          src={pb.files.getURL(profile, profile.headshot, { thumb: '400x0' })}
+                          alt={`Headshot of ${a.expand?.user?.name}`}
+                          style={{ maxWidth: '140px', borderRadius: '10px' }}
+                        />
+                      )}
+                      {profile?.pronouns && <p className="hint">Pronouns: {profile.pronouns}</p>}
+                      {a.conflicts && (
+                        <p>
+                          <strong>Conflicts:</strong> {a.conflicts}
+                        </p>
+                      )}
+                      {Object.entries(a.answers ?? {}).map(
+                        ([q, ans]) =>
+                          ans && (
+                            <p key={q}>
+                              <strong>{q}</strong>
+                              <br />
+                              {ans}
+                            </p>
+                          ),
+                      )}
+                      {profile?.experience && (
+                        <p>
+                          <strong>Experience:</strong> {profile.experience}
+                        </p>
+                      )}
+                      {profile?.skills && (
+                        <p>
+                          <strong>Skills:</strong> {profile.skills}
+                        </p>
+                      )}
+                      {!profile && <p className="hint">No community profile yet.</p>}
+                      <p className="hint">
+                        Signed up {pbDate(a.created).toLocaleDateString()} ·{' '}
+                        {a.expand?.user?.email}
+                      </p>
+                    </div>
+                  )}
+                </li>
+              )
+            })}
+          </ul>
+        </>
+      )}
+      {production.auditionOpen && signups.length === 0 && (
+        <p className="hint">No signups yet — they'll collect here as people fill out the form.</p>
+      )}
     </section>
   )
 }

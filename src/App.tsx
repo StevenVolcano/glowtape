@@ -3,6 +3,8 @@ import { useAuth } from './lib/auth.tsx'
 import SignIn from './pages/SignIn.tsx'
 import Home from './pages/Home.tsx'
 import Production from './pages/Production.tsx'
+import Profile from './pages/Profile.tsx'
+import AuditionForm from './pages/AuditionForm.tsx'
 
 export default function App() {
   const { user } = useAuth()
@@ -15,6 +17,8 @@ export default function App() {
     <Routes>
       <Route path="/" element={<Home />} />
       <Route path="/production/:id/*" element={<Production />} />
+      <Route path="/profile" element={<Profile />} />
+      <Route path="/audition/:id" element={<AuditionForm />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
