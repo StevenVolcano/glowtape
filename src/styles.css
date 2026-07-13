@@ -588,6 +588,17 @@ form.stack,
   min-height: 1.3rem;
 }
 
+/* Visible only on paper: hidden on screen, restored when printing. */
+.print-only {
+  display: none !important;
+}
+
+@media print {
+  .print-only {
+    display: revert !important;
+  }
+}
+
 .month-grid {
   width: 100%;
   border-collapse: collapse;

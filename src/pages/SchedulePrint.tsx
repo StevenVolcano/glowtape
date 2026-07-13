@@ -13,6 +13,7 @@ export default function SchedulePrint() {
   const { memberId } = useParams()
   const [events, setEvents] = useState<EventRecord[]>([])
   const [loaded, setLoaded] = useState(false)
+  const [showPastOnScreen, setShowPastOnScreen] = useState(false)
 
   const member = memberId ? members.find((m) => m.id === memberId) ?? null : null
 
@@ -33,6 +34,10 @@ export default function SchedulePrint() {
     (!!m.claimedFrom && e.called.includes(m.claimedFrom))
 
   const mine = member ? events.filter((e) => calledFor(e, member)) : events
+  // Past items hide on screen only — the printout always has the full run.
+  const nowMs = Date.now()
+  const isPast = (e: EventRecord) => pbDate(e.end || e.start).getTime() < nowMs
+  const pastCount = mine.filter(isPast).length
 
   // Month grids spanning the schedule.
   const months: { label: string; year: number; month: number }[] = []
@@ -69,6 +74,20 @@ export default function SchedulePrint() {
       <h2>
         {production.title} — schedule{member ? ` for ${memberName(member)}` : ''}
       </h2>
+      {pastCount > 0 && (
+        <p className="hint no-print">
+          <button
+            className="link"
+            aria-pressed={showPastOnScreen}
+            onClick={() => setShowPastOnScreen(!showPastOnScreen)}
+          >
+            {showPastOnScreen
+              ? 'Hide past events on screen'
+              : `Show ${pastCount} past event${pastCount === 1 ? '' : 's'} on screen`}
+          </button>{' '}
+          — the printout always includes the whole run.
+        </p>
+      )}
       {!loaded && <p>Loading…</p>}
       {loaded && mine.length === 0 && <p className="hint">Nothing on the schedule.</p>}
 
@@ -86,7 +105,7 @@ export default function SchedulePrint() {
             const d = pbDate(e.start)
             const end = e.end ? pbDate(e.end) : null
             return (
-              <tr key={e.id}>
+              <tr key={e.id} className={!showPastOnScreen && isPast(e) ? 'print-only' : ''}>
                 <td>{d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</td>
                 <td>
                   {time(e)}
@@ -113,8 +132,17 @@ export default function SchedulePrint() {
         while (cells.length % 7 !== 0) cells.push(null)
         const weeks: (number | null)[][] = []
         for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7))
+        const monthAllPast = mine
+          .filter((e) => {
+            const d = pbDate(e.start)
+            return d.getFullYear() === year && d.getMonth() === month
+          })
+          .every(isPast)
         return (
-          <div key={label} className="month-block">
+          <div
+            key={label}
+            className={`month-block ${!showPastOnScreen && monthAllPast ? 'print-only' : ''}`}
+          >
             <h3>{label}</h3>
             <table className="month-grid">
               <thead>
