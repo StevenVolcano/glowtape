@@ -1063,16 +1063,29 @@ function AuditionsSection() {
         </p>
       </div>
 
-      <label className="row manage-toggle" style={{ marginTop: '0.8rem' }}>
-        <input type="checkbox" checked={!!production.auditionOpen} onChange={toggleOpen} />
-        Auditions are open — everyone on Glow Tape sees this show and can sign up
-      </label>
-      {!production.auditionOpen && (
-        <p className="hint" role="status">
-          ⏸ Signups are closed. Until you check the box, the form is a preview only you and
-          the production team can open — sharing the link with anyone else shows them nothing.
-        </p>
-      )}
+      <div className="golive">
+        <label className="row" style={{ alignItems: 'center', fontWeight: 600 }}>
+          <input
+            type="checkbox"
+            checked={!!production.auditionOpen}
+            onChange={toggleOpen}
+            style={{ width: '1.5rem', minHeight: '1.5rem', flexShrink: 0 }}
+          />
+          Open signups — everyone on Glow Tape sees this show and can sign up
+        </label>
+        {production.auditionOpen ? (
+          <p className="hint" role="status">
+            🟢 Signups are live — on everyone's home screen and the community calendar.
+            Uncheck to close them.
+          </p>
+        ) : (
+          <p className="hint" role="status">
+            ⏸ Signups are closed. Until you check the box, the form is a preview only you and
+            the production team can open — sharing the link with anyone else shows them
+            nothing.
+          </p>
+        )}
+      </div>
 
       {signups.length > 0 && (
         <>

@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { pb } from '../lib/pb.ts'
-import { copyrightLine } from '../lib/types.ts'
+import { SMS_READY, copyrightLine } from '../lib/types.ts'
 import { useTitle } from '../lib/useTitle.ts'
 
 type Method = 'email' | 'phone'
@@ -88,24 +88,26 @@ export default function SignIn() {
         </div>
         <p className="tagline">Grays Harbor's theater community</p>
 
-        <div className="chips">
-          <button
-            type="button"
-            aria-pressed={method === 'email'}
-            className={`chip ${method === 'email' ? 'chip-active' : ''}`}
-            onClick={() => switchMethod('email')}
-          >
-            Email me a code
-          </button>
-          <button
-            type="button"
-            aria-pressed={method === 'phone'}
-            className={`chip ${method === 'phone' ? 'chip-active' : ''}`}
-            onClick={() => switchMethod('phone')}
-          >
-            Text me a code
-          </button>
-        </div>
+        {SMS_READY && (
+          <div className="chips">
+            <button
+              type="button"
+              aria-pressed={method === 'email'}
+              className={`chip ${method === 'email' ? 'chip-active' : ''}`}
+              onClick={() => switchMethod('email')}
+            >
+              Email me a code
+            </button>
+            <button
+              type="button"
+              aria-pressed={method === 'phone'}
+              className={`chip ${method === 'phone' ? 'chip-active' : ''}`}
+              onClick={() => switchMethod('phone')}
+            >
+              Text me a code
+            </button>
+          </div>
+        )}
 
         {step === 'enter' ? (
           <form onSubmit={sendCode}>

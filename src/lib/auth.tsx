@@ -20,6 +20,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })
   }, [])
 
+  // The cached record can go stale (e.g. the operator flag flipped in the
+  // dashboard) — re-fetch it once per load. Only auth failures sign out;
+  // being offline keeps the cached session.
+  useEffect(() => {
+    if (!pb.authStore.isValid) return
+    pb.collection('users')
+      .authRefresh()
+      .catch((err: unknown) => {
+        const status = (err as { status?: number }).status
+        if (status === 401 || status === 403 || status === 404) pb.authStore.clear()
+      })
+  }, [])
+
   const signOut = () => {
     pb.authStore.clear()
   }

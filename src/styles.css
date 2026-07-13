@@ -580,6 +580,19 @@ form.stack,
   padding: 0.5rem 0.75rem;
 }
 
+/* The go-live step at the end of a setup flow — boxed so it can't be missed. */
+.golive {
+  border: 3px solid var(--accent);
+  border-radius: 12px;
+  background: var(--card);
+  padding: 0.7rem 0.9rem;
+  margin-top: 1rem;
+}
+
+.golive p {
+  margin-bottom: 0;
+}
+
 .manage-toggle {
   gap: 0.35rem;
   align-items: center;

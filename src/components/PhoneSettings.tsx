@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { pb } from '../lib/pb.ts'
+import { SMS_READY } from '../lib/types.ts'
 import type { UserRecord } from '../lib/types.ts'
 
 // Attach a cell number and opt into text reminders. Verification codes only
@@ -14,6 +15,21 @@ export default function PhoneSettings({ user }: { user: UserRecord }) {
 
   async function refreshAuth() {
     await pb.collection('users').authRefresh()
+  }
+
+  if (!SMS_READY) {
+    return (
+      <section>
+        <h2>Text reminders</h2>
+        <div className="card">
+          <p className="hint" style={{ margin: 0 }}>
+            📱 <strong>Coming soon!</strong> Text-message reminders are working their way
+            through carrier approval. Until then, email and app notifications cover your
+            call reminders.
+          </p>
+        </div>
+      </section>
+    )
   }
 
   async function start(e: FormEvent) {
