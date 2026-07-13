@@ -24,6 +24,7 @@ interface AuditionRole {
 interface AuditionInfo {
   open: boolean
   title: string
+  writtenBy: string
   description: string
   notes: string
   questions: string[]
@@ -181,6 +182,11 @@ export default function AuditionForm() {
       </header>
 
       <h1>Audition: {info.title}</h1>
+      {info.writtenBy && (
+        <p className="hint" style={{ marginTop: '-0.4rem' }}>
+          {info.writtenBy}
+        </p>
+      )}
       {!info.open && (
         <p className="hint" role="status">
           ⏸ Signups aren't open to the community yet — you're seeing a manager preview.

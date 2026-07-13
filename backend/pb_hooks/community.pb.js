@@ -157,6 +157,7 @@ routerAdd(
     return e.json(200, {
       open: !!production.get("auditionOpen"),
       title: production.get("title"),
+      writtenBy: production.get("writtenBy") || "",
       description: production.get("description") || "",
       notes: production.get("auditionNotes"),
       questions: production.get("auditionQuestions") || [],

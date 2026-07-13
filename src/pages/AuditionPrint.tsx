@@ -67,6 +67,7 @@ export default function AuditionPrint() {
       </header>
 
       <h1>Audition Form — {production.title}</h1>
+      {production.writtenBy && <p className="hint">{production.writtenBy}</p>}
       {production.description && <p>{production.description}</p>}
       {production.auditionNotes && <p>{production.auditionNotes}</p>}
       {info.events.length > 0 && (

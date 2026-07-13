@@ -983,6 +983,7 @@ function AuditionsSection() {
   const { production, reload } = useProduction()
   const [notes, setNotes] = useState(production.auditionNotes ?? '')
   const [description, setDescription] = useState(production.description ?? '')
+  const [writtenBy, setWrittenBy] = useState(production.writtenBy ?? '')
   const [questions, setQuestions] = useState(
     Array.isArray(production.auditionQuestions) ? production.auditionQuestions.join('\n') : '',
   )
@@ -1045,6 +1046,7 @@ function AuditionsSection() {
     setSaved('')
     try {
       await pb.collection('productions').update(production.id, {
+        writtenBy: writtenBy.trim(),
         description: description.trim(),
         auditionNotes: notes.trim(),
         auditionQuestions: questions
@@ -1067,6 +1069,15 @@ function AuditionsSection() {
         signups when it's all set.
       </p>
       <div className="stack" style={{ marginTop: '0.5rem' }}>
+        <label>
+          Playwright / composer credit (shown under the title)
+          <input
+            maxLength={200}
+            value={writtenBy}
+            onChange={(e) => setWrittenBy(e.target.value)}
+            placeholder="Example: Book by Joseph Stein, music by Jerry Bock, lyrics by Sheldon Harnick"
+          />
+        </label>
         <label>
           What's the show about? (shown at the top of the audition form)
           <textarea

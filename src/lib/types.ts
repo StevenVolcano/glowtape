@@ -69,6 +69,7 @@ export interface ProductionRecord {
   managers: string[]
   eventKinds: string[] | null
   locations: unknown[] | null // strings or {name, address} objects
+  writtenBy: string
   description: string
   auditionOpen: boolean
   auditionNotes: string
