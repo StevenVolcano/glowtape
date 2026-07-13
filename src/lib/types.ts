@@ -47,6 +47,7 @@ export const SMS_READY = false
 export interface CompanyRecord {
   id: string
   name: string
+  ticketUrl?: string
 }
 
 export interface AccessCodeRecord {
@@ -110,6 +111,7 @@ export interface CommunityEvent {
   productionTitle: string
   org: string
   auditionOpen: boolean
+  ticketUrl?: string
 }
 
 // Event kinds that appear on the public community calendar.
@@ -208,6 +210,14 @@ export function placeLine(places: Place[], name: string): string {
 
 export function mapsUrl(places: Place[], name: string): string {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(placeLine(places, name))}`
+}
+
+// A safe href for an operator-typed external link: prepend https:// when they
+// paste a bare domain ("driftwood.org/tickets"), leave real schemes alone.
+export function externalHref(url: string): string {
+  const u = (url || '').trim()
+  if (!u) return ''
+  return /^https?:\/\//i.test(u) ? u : `https://${u}`
 }
 
 export const DEFAULT_EVENT_KINDS = [

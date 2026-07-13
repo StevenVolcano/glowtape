@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { pb } from '../lib/pb.ts'
 import { useTitle } from '../lib/useTitle.ts'
 import CommunityBoard from '../components/CommunityBoard.tsx'
-import { copyrightLine, formatWhen, pbDate } from '../lib/types.ts'
+import { copyrightLine, externalHref, formatWhen, pbDate } from '../lib/types.ts'
 import type { CommunityEvent } from '../lib/types.ts'
 
 // The Grays Harbor theater commons: the message board plus a public calendar
@@ -79,6 +79,16 @@ export default function Community() {
                     ) : (
                       <span className="hint">Signups aren't open yet — watch this space.</span>
                     ))}
+                  {!isAudition(ev.kind) && ev.ticketUrl && (
+                    <a
+                      className="link"
+                      href={externalHref(ev.ticketUrl)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      🎟 Buy tickets
+                    </a>
+                  )}
                 </li>
               ))}
             </ul>

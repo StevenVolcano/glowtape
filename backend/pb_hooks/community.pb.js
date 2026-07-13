@@ -21,6 +21,20 @@ routerAdd(
       0,
       { from: lib.pbNow(-24 * 3600e3) },
     );
+
+    // Ticket links live on the company, keyed by name so a performance's org
+    // maps to its box office. Match is case/space-insensitive so a stray
+    // capital doesn't drop the link.
+    const ticketUrls = {};
+    try {
+      const companies = e.app.findRecordsByFilter("companies", "ticketUrl != ''", "name", 200, 0);
+      for (const c of companies) {
+        ticketUrls[String(c.get("name")).trim().toLowerCase()] = c.get("ticketUrl");
+      }
+    } catch {
+      /* no companies with links */
+    }
+
     const productionNames = {};
     const out = [];
     for (const ev of events) {
@@ -41,6 +55,9 @@ routerAdd(
       }
       const prod = productionNames[pid];
       if (!prod) continue;
+      // Only performances sell tickets; auditions never carry a buy link.
+      const isPerformance = String(ev.get("kind")).toLowerCase().indexOf("performance") !== -1;
+      const ticketUrl = isPerformance ? ticketUrls[String(prod.org).trim().toLowerCase()] || "" : "";
       out.push({
         id: ev.id,
         title: ev.get("title"),
@@ -52,6 +69,7 @@ routerAdd(
         productionTitle: prod.title,
         org: prod.org,
         auditionOpen: prod.auditionOpen,
+        ticketUrl: ticketUrl,
       });
     }
     return e.json(200, { events: out });

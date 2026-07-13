@@ -78,20 +78,37 @@ function CompaniesSection() {
     await load()
   }
 
+  async function saveTicketUrl(c: CompanyRecord, ticketUrl: string) {
+    if (ticketUrl === (c.ticketUrl ?? '')) return
+    await pb.collection('companies').update(c.id, { ticketUrl })
+    await load()
+  }
+
   return (
     <section>
       <h2>Theater companies</h2>
       <p className="hint">
         The dropdown people see in their profile's stage-history table (they can always type
-        somewhere else by hand).
+        somewhere else by hand). A company's ticket link is added to that company's performances
+        on the community calendar as a <em>🎟 Buy tickets</em> button — leave it blank if there's
+        no online box office.
       </p>
       <ul className="plain-list">
         {companies.map((c) => (
-          <li key={c.id} className="row">
-            <span>{c.name}</span>
-            <button className="link" aria-label={`Remove ${c.name}`} onClick={() => remove(c)}>
-              ✕
-            </button>
+          <li key={c.id} className="stack" style={{ marginBottom: '0.75rem' }}>
+            <div className="row">
+              <strong>{c.name}</strong>
+              <button className="link" aria-label={`Remove ${c.name}`} onClick={() => remove(c)}>
+                ✕
+              </button>
+            </div>
+            <input
+              type="url"
+              aria-label={`Ticket link for ${c.name}`}
+              defaultValue={c.ticketUrl ?? ''}
+              onBlur={(e) => saveTicketUrl(c, e.target.value.trim())}
+              placeholder="Ticket link — for example: driftwoodplayers.com/tickets"
+            />
           </li>
         ))}
       </ul>
