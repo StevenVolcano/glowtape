@@ -86,6 +86,40 @@ routerAdd(
       member.set("user", userId);
       e.app.save(member); // members hooks keep production.managers in sync
       assigned++;
+
+      // Their audition conflicts become real schedule conflicts, so the SM
+      // sees them the moment the cast lands. Once per person per production.
+      try {
+        const already = e.app.findRecordsByFilter(
+          "conflicts",
+          "production = {:p} && user = {:u}",
+          "",
+          1,
+          0,
+          { p: production.id, u: userId },
+        );
+        if (already.length === 0) {
+          const audition = e.app.findFirstRecordByFilter(
+            "auditions",
+            "production = {:p} && user = {:u}",
+            { p: production.id, u: userId },
+          );
+          const rows = audition.get("conflictDates") || [];
+          const confCol = e.app.findCollectionByNameOrId("conflicts");
+          for (const r of rows) {
+            if (!r || !r.start) continue;
+            const c = new Record(confCol);
+            c.set("production", production.id);
+            c.set("user", userId);
+            c.set("start", r.start);
+            c.set("end", r.end || r.start);
+            c.set("note", String(r.note || "").slice(0, 500));
+            e.app.save(c);
+          }
+        }
+      } catch {
+        /* no audition on file (e.g. drafted from "already in the show") */
+      }
     }
 
     // Early-casting a subset keeps the rest of the draft open.

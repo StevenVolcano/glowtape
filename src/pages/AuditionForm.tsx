@@ -4,7 +4,7 @@ import { pb } from '../lib/pb.ts'
 import { useAuth } from '../lib/auth.tsx'
 import ResourceList from '../components/ResourceList.tsx'
 import { useTitle } from '../lib/useTitle.ts'
-import { formatWhen } from '../lib/types.ts'
+import { formatDay, formatWhen } from '../lib/types.ts'
 import { downloadMultiIcs } from '../lib/calendar.ts'
 import type { AuditionRecord } from '../lib/types.ts'
 
@@ -29,6 +29,25 @@ interface AuditionInfo {
 // Stored in answers so directors see the confirmation on every signup.
 const AVAILABLE_KEY = 'Available for all performances and strike'
 
+interface ConflictRow {
+  start: string
+  end: string
+  note: string
+}
+
+// The review/casting screens show the plain-text `conflicts` field, so the
+// rows are also flattened into a readable summary on save.
+function summarizeConflicts(rows: ConflictRow[]): string {
+  return rows
+    .map(
+      (r) =>
+        formatDay(r.start) +
+        (r.end && r.end !== r.start ? ` – ${formatDay(r.end)}` : '') +
+        (r.note ? ` — ${r.note}` : ''),
+    )
+    .join('; ')
+}
+
 // Audition signup. Everything an auditioner needs comes from one route
 // (they usually aren't production members yet): the details, the roles on
 // offer as checkboxes, the scheduled audition times, and the director's
@@ -40,7 +59,8 @@ export default function AuditionForm() {
   const [existing, setExisting] = useState<AuditionRecord | null>(null)
   const [checkedRoles, setCheckedRoles] = useState<string[]>([])
   const [otherRoles, setOtherRoles] = useState('')
-  const [conflicts, setConflicts] = useState('')
+  const [conflictRows, setConflictRows] = useState<ConflictRow[]>([])
+  const [legacyConflicts, setLegacyConflicts] = useState('')
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [available, setAvailable] = useState(false)
   const [error, setError] = useState('')
@@ -73,7 +93,9 @@ export default function AuditionForm() {
         const known = parts.filter((r) => res.roles.includes(r))
         setCheckedRoles(known)
         setOtherRoles(parts.filter((r) => !res.roles.includes(r)).join(', '))
-        setConflicts(a.conflicts)
+        const rows = Array.isArray(a.conflictDates) ? a.conflictDates : []
+        setConflictRows(rows.filter((r) => r && r.start))
+        setLegacyConflicts(rows.length === 0 ? a.conflicts : '')
         setAnswers(a.answers ?? {})
         setAvailable(Boolean(a.answers?.[AVAILABLE_KEY]))
       } catch {
@@ -119,11 +141,13 @@ export default function AuditionForm() {
     setError('')
     try {
       const roles = [...checkedRoles, otherRoles.trim()].filter(Boolean).join(', ')
+      const rows = conflictRows.filter((r) => r.start)
       const data = {
         production: id,
         user: user?.id,
         roles,
-        conflicts: conflicts.trim(),
+        conflicts: rows.length > 0 ? summarizeConflicts(rows) : legacyConflicts,
+        conflictDates: rows,
         answers: { ...answers, [AVAILABLE_KEY]: 'Yes ✓' },
       }
       const rec = existing
@@ -247,16 +271,73 @@ export default function AuditionForm() {
           />
         </label>
 
-        <label>
-          Conflicts during the rehearsal period
-          <textarea
-            rows={3}
-            maxLength={1000}
-            value={conflicts}
-            onChange={(e) => setConflicts(e.target.value)}
-            placeholder="Dates or evenings you can't rehearse — work trips, weddings…"
-          />
-        </label>
+        <div>
+          <strong>Conflicts during the rehearsal period</strong>
+          <p className="hint" style={{ margin: 0 }}>
+            Dates you <em>can't</em> rehearse — work trips, weddings — with a word on why.
+            Knowing now is what lets the schedule be built around you.
+          </p>
+          {legacyConflicts && (
+            <p className="hint">Previously noted: {legacyConflicts}</p>
+          )}
+          <ul className="plain-list" style={{ marginTop: '0.4rem' }}>
+            {conflictRows.map((row, i) => {
+              const setRow = (patch: Partial<ConflictRow>) =>
+                setConflictRows((prev) =>
+                  prev.map((r, j) => (j === i ? { ...r, ...patch } : r)),
+                )
+              return (
+                <li key={i} className="row" style={{ alignItems: 'end' }}>
+                  <label>
+                    From
+                    <input
+                      type="date"
+                      value={row.start}
+                      onChange={(e) => setRow({ start: e.target.value })}
+                      required
+                    />
+                  </label>
+                  <label>
+                    To (optional)
+                    <input
+                      type="date"
+                      value={row.end}
+                      onChange={(e) => setRow({ end: e.target.value })}
+                    />
+                  </label>
+                  <label style={{ flex: 1 }}>
+                    Why
+                    <input
+                      maxLength={200}
+                      value={row.note}
+                      onChange={(e) => setRow({ note: e.target.value })}
+                      placeholder="Example: work trip"
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    className="link"
+                    aria-label={`Remove conflict ${i + 1}`}
+                    onClick={() =>
+                      setConflictRows((prev) => prev.filter((_, j) => j !== i))
+                    }
+                  >
+                    ✕
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+          <button
+            type="button"
+            className="link"
+            onClick={() =>
+              setConflictRows((prev) => [...prev, { start: '', end: '', note: '' }])
+            }
+          >
+            + Add a conflict
+          </button>
+        </div>
 
         {questions.map((q) => (
           <label key={q}>

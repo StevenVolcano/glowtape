@@ -162,6 +162,7 @@ export interface AuditionRecord {
   user: string
   roles: string
   conflicts: string
+  conflictDates: { start: string; end: string; note: string }[] | null
   answers: Record<string, string> | null
   created: string
   expand?: { user?: UserRecord }

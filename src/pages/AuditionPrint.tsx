@@ -121,8 +121,8 @@ export default function AuditionPrint() {
           )}
         </div>
         <div>
-          <strong>Conflicts during the rehearsal period</strong> (dates or evenings you can't
-          rehearse)
+          <strong>Conflicts during the rehearsal period</strong> (dates + why — for
+          example: June 3–5, work trip)
           <div className="blank-box" />
         </div>
         {questions.map((q) => (
