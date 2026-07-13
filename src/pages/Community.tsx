@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { pb } from '../lib/pb.ts'
 import { useTitle } from '../lib/useTitle.ts'
 import CommunityBoard from '../components/CommunityBoard.tsx'
+import { TAGLINE } from '../lib/types.ts'
 import { copyrightLine, externalHref, formatWhen, pbDate } from '../lib/types.ts'
 import type { CommunityEvent } from '../lib/types.ts'
 
@@ -97,6 +98,9 @@ export default function Community() {
       </section>
 
       <CommunityBoard />
+      <p className="hint legal-links">
+        <em>{TAGLINE}</em>
+      </p>
 
       <p className="hint legal-links">
         <a href="/help.html">Help &amp; FAQs</a> · {copyrightLine()}

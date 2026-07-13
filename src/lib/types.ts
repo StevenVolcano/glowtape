@@ -253,6 +253,8 @@ export async function shareInvite(code: string, title: string): Promise<'shared'
   return 'copied'
 }
 
+export const TAGLINE = 'Glow Tape helps you find your way backstage.'
+
 export function copyrightLine(): string {
   const y = new Date().getFullYear()
   return `© ${y > 2026 ? '2026–' + y : '2026'} Zucchini Volcano LLC`

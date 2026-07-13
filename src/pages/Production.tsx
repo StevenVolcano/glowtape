@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState } from 'react'
 import { Link, NavLink, Navigate, Route, Routes, useParams } from 'react-router-dom'
 import { pb } from '../lib/pb.ts'
 import { useAuth } from '../lib/auth.tsx'
+import { TAGLINE } from '../lib/types.ts'
 import type { MemberRecord, ProductionRecord } from '../lib/types.ts'
 import ScheduleTab from './ScheduleTab.tsx'
 import MessagesTab from './MessagesTab.tsx'
@@ -117,6 +118,9 @@ export default function Production() {
           {isManager && <Route path="bios" element={<BiosView />} />}
           <Route path="*" element={<Navigate to={`${base}/schedule`} replace />} />
         </Routes>
+        <p className="hint legal-links">
+          <em>{TAGLINE}</em>
+        </p>
       </main>
     </ProductionContext.Provider>
   )

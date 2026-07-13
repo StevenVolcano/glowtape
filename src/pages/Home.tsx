@@ -7,7 +7,7 @@ import PhoneSettings from '../components/PhoneSettings.tsx'
 import EmailSettings from '../components/EmailSettings.tsx'
 import FeedbackSection from '../components/FeedbackSection.tsx'
 import PushSettings from '../components/PushSettings.tsx'
-import { copyrightLine } from '../lib/types.ts'
+import { TAGLINE, copyrightLine } from '../lib/types.ts'
 import type { ProductionRecord } from '../lib/types.ts'
 
 export default function Home() {
@@ -159,6 +159,14 @@ export default function Home() {
       <section>
         <h2>More</h2>
         <ul className="plain-list">
+          {!window.matchMedia('(display-mode: standalone)').matches && (
+            <li>
+              📲 <a href="/help.html#install">Put Glow Tape on your home screen</a>{' '}
+              <span className="hint">
+                — it works like an app; setup takes a minute on iPhone or Android
+              </span>
+            </li>
+          )}
           <li>
             🎭 <Link to="/profile">My profile</Link>{' '}
             <span className="hint">— your acting résumé: experience, skills, headshot</span>
@@ -188,6 +196,8 @@ export default function Home() {
       {user && <PhoneSettings user={user} />}
 
       <p className="hint legal-links">
+        <em>{TAGLINE}</em>
+        <br />
         <a href="/help.html">Help &amp; FAQs</a> · <a href="/youth-safety.html">Youth safety</a> ·{' '}
         <a href="/privacy.html">Privacy</a> · <a href="/terms.html">Terms</a>
         <br />
