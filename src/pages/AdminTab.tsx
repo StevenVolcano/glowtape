@@ -5,8 +5,9 @@ import { useAuth } from '../lib/auth.tsx'
 import { useProduction } from './Production.tsx'
 import EventForm from '../components/EventForm.tsx'
 import SetupGuide from '../components/SetupGuide.tsx'
+import QrCode from '../components/QrCode.tsx'
 import { MANAGER_ROLES, ROLE_LABELS } from '../lib/types.ts'
-import type { AuditionRecord, ChannelRecord, ConflictRecord, EventRecord, MemberRecord, MemberRole, ProfileRecord, ResourceRecord } from '../lib/types.ts'
+import type { AttendanceRecord, AuditionRecord, ChannelRecord, ConflictRecord, EventRecord, MemberRecord, MemberRole, ProfileRecord, ResourceRecord } from '../lib/types.ts'
 import { DEFAULT_EVENT_KINDS, memberName, normalizePlaces, pbDate, productionPlaces, shareInvite } from '../lib/types.ts'
 import type { Place } from '../lib/types.ts'
 
@@ -17,6 +18,7 @@ export default function AdminTab() {
       <JoinCodeSection />
       <AuditionsSection />
       <ConflictAlertsSection />
+      <AttendanceHistorySection />
       <BiosSection />
       <NewEventSection />
       <ScheduleTableSection />
@@ -32,6 +34,7 @@ export default function AdminTab() {
 function JoinCodeSection() {
   const { production } = useProduction()
   const [feedback, setFeedback] = useState('')
+  const [showQr, setShowQr] = useState(false)
 
   async function share(code: string) {
     const result = await shareInvite(code, production.title)
@@ -50,8 +53,17 @@ function JoinCodeSection() {
       <div className="join-code">{production.joinCode}</div>
       <div className="row">
         <button onClick={() => share(production.joinCode)}>📤 Share invite link</button>
+        <button className="link" aria-expanded={showQr} onClick={() => setShowQr(!showQr)}>
+          {showQr ? 'Hide QR code' : '📱 Show QR code'}
+        </button>
         {feedback && <span className="acked" role="status">{feedback}</span>}
       </div>
+      {showQr && (
+        <QrCode
+          text={`${window.location.origin}/?code=${encodeURIComponent(production.joinCode)}`}
+          label={`Scan to join ${production.title} — code ${production.joinCode}`}
+        />
+      )}
       <p className="hint">
         Handing out paper at the read-through?{' '}
         <a href="/handout.html" target="_blank" rel="noreferrer">
@@ -909,6 +921,7 @@ function AuditionsSection() {
   const [busy, setBusy] = useState(false)
   const [saved, setSaved] = useState('')
   const [shared, setShared] = useState('')
+  const [showAuditionQr, setShowAuditionQr] = useState(false)
 
   async function shareAuditionLink() {
     const url = `${window.location.origin}/audition/${production.id}`
@@ -1011,8 +1024,21 @@ function AuditionsSection() {
           </div>
           <div className="row">
             <button onClick={shareAuditionLink}>📤 Share the audition link</button>
+            <button
+              className="link"
+              aria-expanded={showAuditionQr}
+              onClick={() => setShowAuditionQr(!showAuditionQr)}
+            >
+              {showAuditionQr ? 'Hide QR code' : '📱 Show QR code'}
+            </button>
             {shared && <span className="acked" role="status">{shared}</span>}
           </div>
+          {showAuditionQr && (
+            <QrCode
+              text={`${window.location.origin}/audition/${production.id}`}
+              label={`Scan to audition for ${production.title}`}
+            />
+          )}
           <p className="hint">
             The link opens the signup form directly. Anyone already on Glow Tape just taps it;
             newcomers also need a signup code (your join code works, or a community code from
@@ -1241,6 +1267,73 @@ function ResourcesSection() {
         </button>
         {message && <p className="acked" role="status">{message}</p>}
       </form>
+    </section>
+  )
+}
+
+// Per-member attendance across the production, from roll call and self-
+// reports. Manager-only on purpose — this is an SM's tool, not a leaderboard.
+function AttendanceHistorySection() {
+  const { production, members } = useProduction()
+  const [rows, setRows] = useState<AttendanceRecord[]>([])
+  const [open, setOpen] = useState(false)
+
+  useEffect(() => {
+    pb.collection('attendance')
+      .getFullList<AttendanceRecord>({
+        filter: pb.filter('event.production = {:p}', { p: production.id }),
+      })
+      .then(setRows)
+      .catch(() => {})
+  }, [production.id])
+
+  if (rows.length === 0) return null
+
+  const byMember = new Map<string, { present: number; late: number; absent: number }>()
+  for (const r of rows) {
+    const t = byMember.get(r.member) ?? { present: 0, late: 0, absent: 0 }
+    t[r.status]++
+    byMember.set(r.member, t)
+  }
+  const tallied = members
+    .filter((m) => byMember.has(m.id))
+    .map((m) => ({ m, t: byMember.get(m.id)! }))
+    .sort((a, b) => memberName(a.m).localeCompare(memberName(b.m)))
+
+  return (
+    <section>
+      <h2>Attendance history</h2>
+      <p className="hint">
+        Totals from roll call and self-reports across the whole production. Visible only to
+        the production team.
+      </p>
+      <button className="link" aria-expanded={open} onClick={() => setOpen(!open)}>
+        {open ? 'Hide the table' : `Show the table (${tallied.length} people)`}
+      </button>
+      {open && (
+        <div className="edit-table">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Name</th>
+                <th scope="col">Present</th>
+                <th scope="col">Late</th>
+                <th scope="col">Absent</th>
+              </tr>
+            </thead>
+            <tbody>
+              {tallied.map(({ m, t }) => (
+                <tr key={m.id}>
+                  <td>{memberName(m)}</td>
+                  <td>{t.present}</td>
+                  <td>{t.late}</td>
+                  <td className={t.absent > 2 ? 'error' : ''}>{t.absent}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </section>
   )
 }

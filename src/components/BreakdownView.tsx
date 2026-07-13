@@ -11,11 +11,12 @@ import {
   peopleLine,
   splitPeople,
   unitInvolves,
+  unitMemberIds,
   type BreakdownStyle,
   type UnitGroup,
 } from '../lib/breakdown.ts'
-import { memberName } from '../lib/types.ts'
-import type { MemberRecord, UnitRecord } from '../lib/types.ts'
+import { memberName, pbDate } from '../lib/types.ts'
+import type { EventRecord, MemberRecord, UnitRecord } from '../lib/types.ts'
 
 // The show breakdown: songs, scenes, or page hunks, each knowing who's
 // involved. This is what "who's called" hangs off when scheduling.
@@ -73,6 +74,48 @@ export default function BreakdownView() {
     if (!window.confirm(`Delete "${unit.name}"?`)) return
     await pb.collection('units').delete(unit.id)
     await load()
+  }
+
+  // The breakdown changed after events were scheduled? Recompute who's called
+  // on every upcoming event that references units. Called-only changes go
+  // through the update route silently (no emails, no ack resets).
+  async function resyncSchedule() {
+    const events = await pb.collection('events').getFullList<EventRecord>({
+      filter: pb.filter("production = {:p} && status != 'cancelled'", { p: production.id }),
+      sort: 'start',
+    })
+    const now = Date.now()
+    const withUnits = events.filter(
+      (e) => (e.units?.length ?? 0) > 0 && pbDate(e.start).getTime() >= now,
+    )
+    if (withUnits.length === 0) {
+      setStatus('No upcoming events use breakdown units yet.')
+      return
+    }
+    const items: { id: string; called: string[] }[] = []
+    for (const e of withUnits) {
+      const ids = new Set<string>()
+      for (const u of units) {
+        if (e.units.includes(u.id)) for (const m of unitMemberIds(u)) ids.add(m)
+      }
+      const next = [...ids].sort()
+      const current = [...(e.called ?? [])].sort()
+      if (JSON.stringify(next) !== JSON.stringify(current)) items.push({ id: e.id, called: next })
+    }
+    if (items.length === 0) {
+      setStatus(`All ${withUnits.length} upcoming events already match the breakdown. ✓`)
+      return
+    }
+    if (
+      !window.confirm(
+        `Recompute who's called on ${items.length} upcoming event${
+          items.length === 1 ? '' : 's'
+        } from the breakdown? Manual adjustments to those call lists will be replaced. Nobody is emailed.`,
+      )
+    )
+      return
+    await pb.send('/api/glowtape/events/update', { method: 'POST', body: { events: items } })
+    setStatus(`Updated who's called on ${items.length} event${items.length === 1 ? '' : 's'}. ✓`)
   }
 
   function exportCsv() {
@@ -268,6 +311,11 @@ export default function BreakdownView() {
             }}
           />
           {units.length > 0 && <button onClick={exportCsv}>⬇ Export CSV</button>}
+          {units.length > 0 && (
+            <button onClick={() => resyncSchedule().catch(() => setStatus('Sync failed — sorry.'))}>
+              ↻ Re-sync the schedule
+            </button>
+          )}
         </div>
       )}
       {status && <p className="hint" role="status">{status}</p>}

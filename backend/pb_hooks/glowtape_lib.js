@@ -425,6 +425,7 @@ module.exports = {
   consumeCode,
   formatPacific,
   pacificHour,
+  pacificOffsetHours,
   pushConfigured,
   recipientUserIds,
   sendPush,

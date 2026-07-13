@@ -588,6 +588,15 @@ form.stack,
   min-height: 1.3rem;
 }
 
+.qr-box {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0.75rem;
+  display: inline-block;
+  text-align: center;
+}
+
 .setup-steps li {
   margin-bottom: 0.7rem;
 }

@@ -9,8 +9,10 @@
          max-width: 720px; margin: 0 auto; padding: 1.5rem 1rem; color: #241f2e; line-height: 1.5; }
   h1 { font-size: 2rem; margin: 0; }
   .tagline { color: #555; margin: 0 0 1rem; }
-  .url { font-size: 1.8rem; font-weight: 800; text-align: center; border: 3px solid #241f2e;
-         border-radius: 12px; padding: .6rem; margin: 1rem 0; }
+  .url-row { display: flex; align-items: center; gap: 1rem; margin: 1rem 0; }
+  .url { flex: 1; font-size: 1.8rem; font-weight: 800; text-align: center; border: 3px solid #241f2e;
+         border-radius: 12px; padding: .6rem; }
+  .qr { flex-shrink: 0; }
   ol { font-size: 1.1rem; } li { margin-bottom: .8rem; }
   .code-blank { display: inline-block; min-width: 9rem; border-bottom: 3px solid #241f2e;
                 height: 1.6rem; vertical-align: bottom; }
@@ -33,7 +35,10 @@ production's join code in the blank, and hand it out at the read-through.</p>
 <h1>📱 Get your rehearsal schedule on your phone</h1>
 <p class="tagline">Glow Tape — free for Grays Harbor theater. No app store, no password, no cost.</p>
 
-<div class="url">glowtape.net</div>
+<div class="url-row">
+  <div class="url">glowtape.net</div>
+  <img class="qr" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAANwAAADcCAYAAAAbWs+BAAAAAklEQVR4AewaftIAAAUXSURBVO3BQXLjWhIEwcgy3v/KOdr9FZ51Q4MipQ739AuSVgyS1gyS1gyS1gyS1gyS1gyS1gyS1gyS1gyS1gyS1gyS1gyS1gyS1gyS1gyS1rz4piT8Nm25koSTttyVhLvacpKEK215ShJ+m7bcNUhaM0haM0haM0haM0haM0ha8+JBbflESfhEbTlJwl1t+URt+URJeMIgac0gac0gac0gac0gac0gac0gac2LN0rCU9ryDkm4qy13JeGkLT9NEp7SlncYJK0ZJK0ZJK0ZJK0ZJK0ZJK15ob/Slu9IwqdJwne0RX9mkLRmkLRmkLRmkLRmkLRmkLRmkLTmhf5KEr6jLVeScFdbTpJwpS3aMUhaM0haM0haM0haM0haM0haM0ha8+KN2vLTtOUpbTlJwr+kLb/NIGnNIGnNIGnNIGnNIGnNIGnNiwcl4bdJwklbTpJwpS2fKAknbbkrCf+SQdKaQdKaQdKaQdKaQdKaQdKaQdKa9Av6v0nCJ2rLXUk4aYv+zCBpzSBpzSBpzSBpzSBpzSBpzYtvSsKVttyVhJ+oLSdJuKstdyXhKUm40pa7knDSlpMkPKEtdw2S1gyS1gyS1gyS1gyS1gyS1gyS1qRfeJMkPKUtnygJV9ryDkk4actTkvCJ2vKEQdKaQdKaQdKaQdKaQdKaQdKaQdKaF2/UlitJOGnLXUk4acuVJDwlCXe15bdpy0kSTtpyVxKutOWuQdKaQdKaQdKaQdKaQdKaQdKaFw9KwklbrrTlJAl3teUpbTlJwqdpy0kSfqIkfJpB0ppB0ppB0ppB0ppB0ppB0ppB0poXD2rLSRKutOU72nIlCSdtudKWp7TlriQ8pS13JeEpbXlKEp4wSFozSFozSFozSFozSFozSFqTfuEbknBXW+5Kwklb7krCXW15ShKutOUkCU9pyxOScNKWu5Jw0pYnDJLWDJLWDJLWDJLWDJLWDJLWDJLWvHijJFxpy3ck4QlteZe2vENbTpJwpS1PScJTknClLXcNktYMktYMktYMktYMktYMkta8eFBb7krCSVtOknClLSdJuJKEk7acJOFKW06S8IS2nCThKUm40paTJNzVlpMkPGGQtGaQtGaQtGaQtGaQtGaQtGaQtCb9wjck4UpbnpKEk7ZcScJT2nJXEu5qy11J+InacpKEu9ryhEHSmkHSmkHSmkHSmkHSmkHSmkHSmvQL+mNJeJe2vEMSTtryhCSctOUkCXe15QmDpDWDpDWDpDWDpDWDpDWDpDUvvikJv01b7mrLSRKutOUkCU9oy1OScNKWp7TlriRcactdg6Q1g6Q1g6Q1g6Q1g6Q1g6Q1g6Q1Lx7Ulk+UhHdpy5UknLTlShJO2nIlCU9pi/4zSFozSFozSFozSFozSFozSFrz4o2S8JS2aEcSfpokvMMgac0gac0gac0gac0gac0gac0gac0LrUrClbacJOEJbTlJwlPa8i8ZJK0ZJK0ZJK0ZJK0ZJK0ZJK0ZJK15ob/SlpMknLTlShJO2nIlCU9pyzsk4bcZJK0ZJK0ZJK0ZJK0ZJK0ZJK158UZt+dck4a4kPCEJJ225KwlPactJEj7NIGnNIGnNIGnNIGnNIGnNIGnNIGnNiwcl4bdJwklbTpLwadpykoSTtlxpy1OScNKWu5LwhEHSmkHSmkHSmkHSmkHSmkHSmvQLklYMktYMktYMktYMktYMktYMktYMktYMktYMktYMktYMktYMktYMktYMktb8Dy0ieccZzLF4AAAAAElFTkSuQmCC" alt="QR code for glowtape.net" width="110" height="110">
+</div>
 
 <ol>
   <li><strong>Open glowtape.net</strong> in your phone's web browser.</li>
