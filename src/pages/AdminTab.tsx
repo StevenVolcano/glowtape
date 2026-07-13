@@ -375,7 +375,7 @@ function PresetsSection() {
           <input
             value={kinds}
             onChange={(e) => setKinds(e.target.value)}
-            placeholder={DEFAULT_EVENT_KINDS.join(', ')}
+            placeholder={'Standard list: ' + DEFAULT_EVENT_KINDS.join(', ')}
           />
         </label>
         <div>
@@ -386,13 +386,13 @@ function PresetsSection() {
                 aria-label="Place name"
                 value={pl.name}
                 onChange={(e) => setPlace(i, 'name', e.target.value)}
-                placeholder="Driftwood Playhouse"
+                placeholder="Example: Driftwood Playhouse"
               />
               <input
                 aria-label="Address"
                 value={pl.address}
                 onChange={(e) => setPlace(i, 'address', e.target.value)}
-                placeholder="120 E 3rd St, Aberdeen, WA"
+                placeholder="Example: 120 E 3rd St, Aberdeen, WA"
               />
               <button
                 type="button"
@@ -591,7 +591,7 @@ function ChannelsSection() {
           aria-label="New channel name"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="New channel — e.g. Costumes"
+          placeholder="New channel — for example: Costumes"
         />
         <select
           aria-label="Who can see it"
@@ -809,7 +809,7 @@ function AddRoleForm({ onAdded }: { onAdded: () => Promise<void> }) {
         aria-label="Role or position name"
         value={position}
         onChange={(e) => setPosition(e.target.value)}
-        placeholder="Add a role before casting — e.g. Ophelia or Ensemble"
+        placeholder="Add a role before casting — for example: Ophelia or Ensemble"
       />
       <select aria-label="Role type" value={role} onChange={(e) => setRole(e.target.value as MemberRole)}>
         {(Object.keys(ROLE_LABELS) as MemberRole[]).map((r) => (
@@ -831,7 +831,7 @@ function AddRoleForm({ onAdded }: { onAdded: () => Promise<void> }) {
           aria-label="Child's name"
           value={childName}
           onChange={(e) => setChildName(e.target.value)}
-          placeholder="Child's first name + last initial — e.g. Emma R."
+          placeholder="Child's first name + last initial — for example: Emma R."
         />
       )}
       <button type="submit" disabled={busy || !position.trim() || (minor && !childName.trim())}>
@@ -1013,7 +1013,7 @@ function AuditionsSection() {
             maxLength={1000}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="Auditions June 3–4, 6:30pm at the Driftwood. Prepare 16 bars…"
+            placeholder="Example: Auditions June 3–4, 6:30pm at the Driftwood. Prepare 16 bars…"
           />
         </label>
         <label>
@@ -1022,7 +1022,7 @@ function AuditionsSection() {
             rows={3}
             value={questions}
             onChange={(e) => setQuestions(e.target.value)}
-            placeholder={'Will you accept another role if offered?\nAny costume sizes we should know?'}
+            placeholder={'Examples:\nWill you accept another role if offered?\nAny costume sizes we should know?'}
           />
         </label>
         <div className="row">
@@ -1279,7 +1279,7 @@ function ResourcesSection() {
             aria-label="Resource title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Title — e.g. Act 1 rehearsal track"
+            placeholder="Title — for example: Act 1 rehearsal track"
           />
         </div>
         <div className="row">

@@ -106,9 +106,12 @@ textarea {
   width: 100%;
 }
 
+/* Placeholders are hints, not content: italic so an empty box never
+   reads as filled in. Realistic sample text also says "Example:". */
 ::placeholder {
   color: var(--muted);
   opacity: 1;
+  font-style: italic;
 }
 
 textarea {

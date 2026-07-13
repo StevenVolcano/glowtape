@@ -187,7 +187,7 @@ function NewTaskForm({
           aria-label="Task"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="What needs doing — e.g. Source a fainting couch"
+          placeholder="What needs doing — for example: source a fainting couch"
         />
         <div className="row">
           <input
@@ -276,8 +276,8 @@ function BioEditor({ member, onSaved }: { member: MemberRecord; onSaved: () => P
         onChange={(e) => setBio(e.target.value)}
         placeholder={
           member.minor
-            ? `${member.displayName} is thrilled to make their Driftwood debut…`
-            : 'Steven is delighted to return to the stage after…'
+            ? `Example: ${member.displayName} is thrilled to make their Driftwood debut…`
+            : 'Example: Pat is delighted to return to the stage after…'
         }
       />
       <div className="row">

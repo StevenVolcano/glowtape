@@ -112,7 +112,7 @@ export default function NotesTab() {
             aria-label="Search notes"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search notes — e.g. fainting couch, cue 12, Act 2…"
+            placeholder="Search notes — for example: fainting couch, cue 12, Act 2…"
             style={{ marginTop: '0.75rem' }}
           />
         )}
@@ -251,7 +251,7 @@ function NoteView({
             value={body}
             onChange={(e) => setBody(e.target.value)}
             placeholder={
-              'Act 1 — pick up the pace in the kitchen scene\nProps: fainting couch still missing a cushion\nLights: cue 12 late again…'
+              'Example:\nAct 1 — pick up the pace in the kitchen scene\nProps: fainting couch still missing a cushion\nLights: cue 12 late again…'
             }
           />
         ) : (

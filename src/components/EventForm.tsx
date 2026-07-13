@@ -194,7 +194,7 @@ export default function EventForm({
           aria-label="Event title"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="Title — e.g. Act II run-through"
+          placeholder="Title — for example: Act II run-through"
         />
       </div>
       {isCommunityKind(kind) && (
@@ -331,7 +331,7 @@ export default function EventForm({
             aria-label="Call details"
             value={calledNote}
             onChange={(e) => setCalledNote(e.target.value)}
-            placeholder="Call details — e.g. dancers at 6, full cast at 7"
+            placeholder="Call details — for example: dancers at 6, full cast at 7"
           />
         </>
       )}

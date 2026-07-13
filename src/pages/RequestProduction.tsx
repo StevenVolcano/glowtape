@@ -100,7 +100,7 @@ export default function RequestProduction() {
             maxLength={200}
             value={org}
             onChange={(e) => setOrg(e.target.value)}
-            placeholder="e.g. Driftwood Players"
+            placeholder="Example: Driftwood Players"
           />
         </label>
         <label>
@@ -110,7 +110,7 @@ export default function RequestProduction() {
             maxLength={200}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="e.g. The Music Man"
+            placeholder="Example: The Music Man"
           />
         </label>
         <label>
@@ -129,7 +129,7 @@ export default function RequestProduction() {
             maxLength={300}
             value={timeline}
             onChange={(e) => setTimeline(e.target.value)}
-            placeholder="e.g. rehearsals start Sept 2, opens Oct 24"
+            placeholder="Example: rehearsals start Sept 2, opens Oct 24"
           />
         </label>
         <label>
@@ -138,7 +138,7 @@ export default function RequestProduction() {
             maxLength={100}
             value={castSize}
             onChange={(e) => setCastSize(e.target.value)}
-            placeholder="e.g. 20 cast, 8 crew"
+            placeholder="Example: 20 cast, 8 crew"
           />
         </label>
         <label className="row">
@@ -159,7 +159,7 @@ export default function RequestProduction() {
             maxLength={1000}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="Multiple casts, shared crew with another show, unusual schedule…"
+            placeholder="For example: multiple casts, shared crew with another show, unusual schedule…"
           />
         </label>
         <button type="submit" disabled={busy || !org.trim() || !title.trim()}>

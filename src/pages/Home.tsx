@@ -131,7 +131,7 @@ export default function Home() {
             aria-label="Join code"
             value={joinCode}
             onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-            placeholder="Join code, e.g. TR7PDQ or TR7PDQ-XY"
+            placeholder="Join code — for example: TR7PDQ or TR7PDQ-XY"
           />
           <button type="submit" disabled={busy || joinCode.trim().length < 4}>
             {busy ? 'Joining…' : 'Join'}

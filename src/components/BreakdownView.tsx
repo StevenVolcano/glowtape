@@ -421,7 +421,7 @@ function UnitEditor({
           value={pages}
           maxLength={60}
           onChange={(e) => setPages(e.target.value)}
-          placeholder="Pages, e.g. 12–18"
+          placeholder="Pages — for example: 12–18"
         />
       </div>
       {groups.map((g) => (

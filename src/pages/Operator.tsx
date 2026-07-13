@@ -215,13 +215,13 @@ function AccessCodesSection() {
           aria-label="New code"
           value={code}
           onChange={(e) => setCode(e.target.value.toUpperCase())}
-          placeholder="Code, e.g. HARBOR26"
+          placeholder="Code — for example: HARBOR26"
         />
         <input
           aria-label="Note"
           value={note}
           onChange={(e) => setNote(e.target.value)}
-          placeholder="Note (e.g. summer quarter)"
+          placeholder="Note — for example: summer quarter"
         />
         <label>
           Expires

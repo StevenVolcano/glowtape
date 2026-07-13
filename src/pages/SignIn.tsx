@@ -128,7 +128,7 @@ export default function SignIn() {
                   autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com"
+                  placeholder="Example: pat@gmail.com"
                   required
                 />
                 <label htmlFor="age">Your age</label>
@@ -165,7 +165,7 @@ export default function SignIn() {
                   inputMode="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  placeholder="(360) 555-0123"
+                  placeholder="Example: (360) 555-0123"
                   required
                 />
                 <p className="hint">
@@ -193,7 +193,7 @@ export default function SignIn() {
               autoComplete="one-time-code"
               value={code}
               onChange={(e) => setCode(e.target.value)}
-              placeholder="123456"
+              placeholder="The 6-digit code"
               required
             />
             <button type="submit" disabled={busy}>

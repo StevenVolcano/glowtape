@@ -129,7 +129,7 @@ export default function Profile() {
             <input
               value={pronouns}
               onChange={(e) => setPronouns(e.target.value)}
-              placeholder="e.g. she/her"
+              placeholder="Example: she/her"
             />
           </label>
 
@@ -215,7 +215,7 @@ export default function Profile() {
               maxLength={400}
               value={skills}
               onChange={(e) => setSkills(e.target.value)}
-              placeholder="e.g. tenor, tap, stage combat, sewing, follow spot"
+              placeholder="Example: tenor, tap, stage combat, sewing, follow spot"
             />
           </label>
 

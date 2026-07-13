@@ -202,7 +202,7 @@ export default function AuditionForm() {
             maxLength={200}
             value={otherRoles}
             onChange={(e) => setOtherRoles(e.target.value)}
-            placeholder={info.roles.length > 0 ? 'Optional' : 'e.g. Tevye, or ensemble, or anything!'}
+            placeholder={info.roles.length > 0 ? 'Optional' : 'Example: Tevye, or ensemble, or anything!'}
           />
         </label>
 

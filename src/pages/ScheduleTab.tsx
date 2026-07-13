@@ -545,7 +545,7 @@ function ConflictsSection({ conflicts, reload }: { conflicts: ConflictRecord[]; 
           aria-label="Conflict reason"
           value={note}
           onChange={(e) => setNote(e.target.value)}
-          placeholder="Reason (optional) — e.g. work trip"
+          placeholder="Reason (optional) — for example: work trip"
         />
         <button type="submit" disabled={busy || !start}>
           Add conflict

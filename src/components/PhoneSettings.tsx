@@ -93,7 +93,7 @@ export default function PhoneSettings({ user }: { user: UserRecord }) {
               autoComplete="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              placeholder="(360) 555-0123"
+              placeholder="Example: (360) 555-0123"
             />
             <button type="submit" disabled={busy || phone.replace(/\D/g, '').length < 10}>
               {busy ? 'Sending…' : 'Text me a code'}
