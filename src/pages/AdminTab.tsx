@@ -5,7 +5,7 @@ import { useAuth } from '../lib/auth.tsx'
 import { useProduction } from './Production.tsx'
 import EventForm from '../components/EventForm.tsx'
 import { MANAGER_ROLES, ROLE_LABELS } from '../lib/types.ts'
-import type { AuditionRecord, ChannelRecord, ConflictRecord, EventRecord, MemberRecord, MemberRole, ProfileRecord } from '../lib/types.ts'
+import type { AuditionRecord, ChannelRecord, ConflictRecord, EventRecord, MemberRecord, MemberRole, ProfileRecord, ResourceRecord } from '../lib/types.ts'
 import { DEFAULT_EVENT_KINDS, memberName, normalizePlaces, pbDate, productionPlaces, shareInvite } from '../lib/types.ts'
 import type { Place } from '../lib/types.ts'
 
@@ -20,6 +20,7 @@ export default function AdminTab() {
       <ScheduleTableSection />
       <PresetsSection />
       <NewAnnouncementSection />
+      <ResourcesSection />
       <ChannelsSection />
       <MembersSection />
     </div>
@@ -962,6 +963,13 @@ function AuditionsSection() {
             </button>
             {saved && <span className="acked">{saved}</span>}
           </div>
+          <p className="hint">
+            <Link className="link" to={`/audition/${production.id}/print`}>
+              🖨 Print blank paper forms
+            </Link>{' '}
+            for the audition table — same questions, hand-fillable. Attach sides or packets
+            under <em>Documents &amp; links</em> below (area: Auditions).
+          </p>
         </div>
       )}
 
@@ -1031,6 +1039,151 @@ function AuditionsSection() {
       {production.auditionOpen && signups.length === 0 && (
         <p className="hint">No signups yet — they'll collect here as people fill out the form.</p>
       )}
+    </section>
+  )
+}
+
+// Documents & links for the show (cast/crew) and for auditions (public while
+// auditions are open).
+function ResourcesSection() {
+  const { production } = useProduction()
+  const [resources, setResources] = useState<ResourceRecord[]>([])
+  const [area, setArea] = useState<'show' | 'audition'>('show')
+  const [title, setTitle] = useState('')
+  const [url, setUrl] = useState('')
+  const [file, setFile] = useState<File | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [message, setMessage] = useState('')
+
+  async function load() {
+    const list = await pb.collection('resources').getFullList<ResourceRecord>({
+      filter: pb.filter('production = {:p}', { p: production.id }),
+      sort: 'area,order,created',
+    })
+    setResources(list)
+  }
+
+  useEffect(() => {
+    load().catch(() => {})
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [production.id])
+
+  async function add(e: FormEvent) {
+    e.preventDefault()
+    if (!title.trim() || (!url.trim() && !file)) return
+    setBusy(true)
+    setMessage('')
+    try {
+      const form = new FormData()
+      form.set('production', production.id)
+      form.set('area', area)
+      form.set('title', title.trim())
+      if (file) form.set('file', file)
+      else form.set('url', url.trim())
+      await pb.collection('resources').create(form)
+      setTitle('')
+      setUrl('')
+      setFile(null)
+      setMessage('Added. ✓')
+      await load()
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : 'Something went wrong.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function remove(r: ResourceRecord) {
+    if (!window.confirm(`Remove "${r.title}"?`)) return
+    await pb.collection('resources').delete(r.id)
+    await load()
+  }
+
+  const byArea = (a: 'show' | 'audition') => resources.filter((r) => r.area === a)
+
+  return (
+    <section>
+      <h2>Documents &amp; links</h2>
+      <p className="hint">
+        Scripts info, rehearsal tracks, forms, sides — anything the cast (or auditioners) should
+        be able to open. Show resources appear at the bottom of the Schedule tab; audition
+        resources appear on the audition signup form.
+      </p>
+
+      {(['show', 'audition'] as const).map(
+        (a) =>
+          byArea(a).length > 0 && (
+            <div key={a}>
+              <h3 className="dept-heading">{a === 'show' ? 'For the show' : 'For auditions'}</h3>
+              <ul className="plain-list">
+                {byArea(a).map((r) => (
+                  <li key={r.id} className="row">
+                    <a
+                      className="link"
+                      href={r.file ? pb.files.getURL(r, r.file) : r.url}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {r.file ? '📄' : '🔗'} {r.title}
+                    </a>
+                    <button
+                      className="link"
+                      aria-label={`Remove ${r.title}`}
+                      onClick={() => remove(r)}
+                    >
+                      ✕
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ),
+      )}
+
+      <form onSubmit={add} className="stack">
+        <div className="row">
+          <select aria-label="Resource area" value={area} onChange={(e) => setArea(e.target.value as typeof area)}>
+            <option value="show">For the show</option>
+            <option value="audition">For auditions</option>
+          </select>
+          <input
+            aria-label="Resource title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Title — e.g. Act 1 rehearsal track"
+          />
+        </div>
+        <div className="row">
+          <input
+            aria-label="Link URL"
+            type="url"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            placeholder="Paste a link…"
+            disabled={!!file}
+          />
+          <label className="photo-btn" aria-label="Attach a document instead">
+            📄
+            <input
+              type="file"
+              hidden
+              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            />
+          </label>
+        </div>
+        {file && (
+          <div className="row hint">
+            📄 {file.name}
+            <button type="button" className="link" onClick={() => setFile(null)}>
+              remove
+            </button>
+          </div>
+        )}
+        <button type="submit" disabled={busy || !title.trim() || (!url.trim() && !file)}>
+          Add {area === 'show' ? 'show' : 'audition'} resource
+        </button>
+        {message && <p className="acked" role="status">{message}</p>}
+      </form>
     </section>
   )
 }

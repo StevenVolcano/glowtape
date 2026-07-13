@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { pb } from '../lib/pb.ts'
 import { useAuth } from '../lib/auth.tsx'
+import ResourceList from '../components/ResourceList.tsx'
 import type { AuditionRecord, ProductionRecord } from '../lib/types.ts'
 
 // Audition signup for a production with open auditions. One form per person;
@@ -98,8 +99,11 @@ export default function AuditionForm() {
       {production.auditionNotes && <p>{production.auditionNotes}</p>}
       <p className="hint">
         The production team also sees <Link to="/profile">your profile</Link> with this form —
-        adding your experience (and a headshot) there saves everyone time.
+        adding your experience (and a headshot) there saves everyone time. Prefer paper?{' '}
+        <Link to={`/audition/${production.id}/print`}>Print a blank form</Link>.
       </p>
+
+      <ResourceList productionId={production.id} area="audition" />
 
       <section className="stack">
         <label>

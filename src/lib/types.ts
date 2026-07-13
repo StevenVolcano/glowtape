@@ -52,6 +52,16 @@ export interface ProfileRecord {
   expand?: { user?: UserRecord }
 }
 
+export interface ResourceRecord {
+  id: string
+  production: string
+  area: 'show' | 'audition'
+  title: string
+  url: string
+  file: string
+  order: number
+}
+
 export interface AuditionRecord {
   id: string
   production: string

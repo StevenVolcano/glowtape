@@ -5,6 +5,7 @@ import { useProduction } from './Production.tsx'
 import { formatDay, formatWhen, mapsUrl, memberName, pbDate, placeLine, productionPlaces } from '../lib/types.ts'
 import { downloadEventIcs, googleCalendarUrl } from '../lib/calendar.ts'
 import EventForm from '../components/EventForm.tsx'
+import ResourceList from '../components/ResourceList.tsx'
 import type { AckRecord, AttendanceRecord, ConflictRecord, EventRecord, MemberRecord } from '../lib/types.ts'
 
 export default function ScheduleTab() {
@@ -302,6 +303,7 @@ export default function ScheduleTab() {
         </button>
       </section>
 
+      <ResourceList productionId={production.id} area="show" />
       <ConflictsSection conflicts={conflicts} reload={load} />
       <CalendarSubscribeSection />
     </div>

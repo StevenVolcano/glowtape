@@ -575,6 +575,35 @@ form.stack,
   color: var(--accent);
 }
 
+/* --- Blank paper forms (printable audition sheet) --- */
+.blank-line {
+  border-bottom: 1.5px solid #555;
+  height: 1.6rem;
+  margin: 0.35rem 0;
+}
+
+.blank-box {
+  border: 1.5px solid #555;
+  border-radius: 4px;
+  height: 6.5rem;
+  margin: 0.35rem 0;
+}
+
+.print-fields > div {
+  margin-bottom: 0.6rem;
+}
+
+@media print {
+  .print-form h1 {
+    font-size: 1.3rem;
+  }
+
+  .blank-line,
+  .blank-box {
+    border-color: #000;
+  }
+}
+
 .task-row {
   display: flex;
   justify-content: space-between;
