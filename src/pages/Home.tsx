@@ -6,6 +6,7 @@ import CommunityBoard from '../components/CommunityBoard.tsx'
 import { useTitle } from '../lib/useTitle.ts'
 import PhoneSettings from '../components/PhoneSettings.tsx'
 import FeedbackSection from '../components/FeedbackSection.tsx'
+import PushSettings from '../components/PushSettings.tsx'
 import { copyrightLine } from '../lib/types.ts'
 import type { ProductionRecord } from '../lib/types.ts'
 
@@ -169,6 +170,8 @@ export default function Home() {
           </p>
         </section>
       )}
+
+      <PushSettings />
 
       {user && <PhoneSettings user={user} />}
 

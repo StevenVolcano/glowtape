@@ -98,6 +98,12 @@ routerAdd(
           `Glow Tape: ${who} ${verb} for ${event.get("title")} (${when}).${note ? " " + note : ""}`,
         );
       }
+      lib.sendPush(e.app, lib.toIdArray(production.get("managers")), {
+        title: `${data.status === "late" ? "🕒" : "😷"} ${who} ${verb}`,
+        body: `${event.get("title")} — ${when}${note ? ` · ${note}` : ""}`,
+        url: `/production/${production.id}/schedule`,
+        tag: `att-${event.id}`,
+      });
     } catch (err) {
       e.app.logger().error("glowtape: attendance alert failed", "error", String(err));
     }

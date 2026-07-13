@@ -61,6 +61,22 @@ TWILIO_FROM=+18335550123
 
 Then `systemctl restart glowtape`. Reminders and text sign-in switch on.
 
+## 4½. Web push notifications (once)
+
+Notifications need a VAPID key pair. Generate it **on the droplet** (the
+private key never leaves the box) after running `glowtape-update` once so the
+push sender's dependencies exist:
+
+```bash
+cd /opt/glowtape/deploy/push-sender
+node -e "const wp=require('web-push');const k=wp.generateVAPIDKeys();require('fs').appendFileSync('/etc/glowtape/env','GLOWTAPE_VAPID_PUBLIC='+k.publicKey+'\nGLOWTAPE_VAPID_PRIVATE='+k.privateKey+'\nGLOWTAPE_VAPID_SUBJECT=mailto:callboard@glowtape.net\n');console.log('VAPID keys written to /etc/glowtape/env')"
+systemctl restart glowtape glowtape-push
+```
+
+That's it — the app's home screen now shows a "Turn on notifications" switch
+on capable devices (on iPhone, only after Add to Home Screen). Until the keys
+exist, the switch stays hidden and every push call is silently skipped.
+
 ## 5. Updating the app
 
 SSH in (or use the Console button in the DigitalOcean dashboard) and run:

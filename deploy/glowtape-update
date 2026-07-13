@@ -8,11 +8,13 @@ npm run build
 rm -rf backend/pb_public
 mkdir -p backend/pb_public
 cp -r dist/* backend/pb_public/
-chown -R glowtape:glowtape backend
+npm ci --no-audit --no-fund --prefix deploy/push-sender
+chown -R glowtape:glowtape backend deploy/push-sender
 cp deploy/Caddyfile /etc/caddy/Caddyfile
-cp deploy/glowtape.service deploy/glowtape-backup.service deploy/glowtape-backup.timer /etc/systemd/system/
+cp deploy/glowtape.service deploy/glowtape-push.service deploy/glowtape-backup.service deploy/glowtape-backup.timer /etc/systemd/system/
 install -m 0755 deploy/glowtape-backup /usr/local/bin/glowtape-backup
 systemctl daemon-reload
-systemctl restart glowtape
+systemctl enable --now glowtape-push >/dev/null 2>&1 || true
+systemctl restart glowtape glowtape-push
 systemctl reload caddy
 echo "Updated to $(git rev-parse --short HEAD) and restarted."

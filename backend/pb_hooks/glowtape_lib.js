@@ -286,6 +286,100 @@ function managerContacts(app, production) {
   return out;
 }
 
+// --- web push -------------------------------------------------------------------
+// The actual Web Push crypto lives in a localhost Node sidecar (see
+// deploy/push-sender); these helpers collect subscriptions and batch to it.
+
+function pushConfigured() {
+  return !!$os.getenv("GLOWTAPE_VAPID_PUBLIC");
+}
+
+// User ids behind a set of member ids (or every member when memberIds is
+// null/empty): each member's own user plus all guardians, claimedFrom-aware.
+function recipientUserIds(app, productionId, memberIds) {
+  const want = memberIds && memberIds.length ? memberIds : null;
+  const rows = app.findRecordsByFilter("members", "production = {:p}", "", 500, 0, {
+    p: productionId,
+  });
+  const seen = {};
+  const out = [];
+  const add = (id) => {
+    if (id && !seen[id]) {
+      seen[id] = 1;
+      out.push(id);
+    }
+  };
+  for (const m of rows) {
+    if (want && !want.includes(m.id) && !want.includes(String(m.get("claimedFrom") || ""))) {
+      continue;
+    }
+    add(String(m.get("user") || ""));
+    for (const g of toIdArray(m.get("guardians"))) add(g);
+  }
+  return out;
+}
+
+// Send one payload to every subscription of the given users (null = every
+// subscription there is). Fire-and-forget: failures only log, and endpoints
+// the push service reports gone are pruned.
+function sendPush(app, userIds, payload) {
+  if (!pushConfigured()) return;
+  try {
+    let subs = [];
+    if (userIds === null) {
+      subs = app.findRecordsByFilter("push_subscriptions", "id != ''", "", 2000, 0);
+    } else {
+      const seen = {};
+      const uniq = [];
+      for (const u of userIds) {
+        if (u && !seen[u]) {
+          seen[u] = 1;
+          uniq.push(u);
+        }
+      }
+      for (let i = 0; i < uniq.length; i += 20) {
+        const chunk = uniq.slice(i, i + 20);
+        const params = {};
+        const filter = chunk
+          .map((id, j) => {
+            params["u" + j] = id;
+            return "user = {:u" + j + "}";
+          })
+          .join(" || ");
+        subs = subs.concat(app.findRecordsByFilter("push_subscriptions", filter, "", 500, 0, params));
+      }
+    }
+    if (subs.length === 0) return;
+
+    const items = subs.map((s) => ({
+      subscription: {
+        endpoint: s.get("endpoint"),
+        keys: { p256dh: s.get("p256dh"), auth: s.get("auth") },
+      },
+      payload,
+    }));
+    const res = $http.send({
+      url: "http://127.0.0.1:8666/send",
+      method: "POST",
+      body: JSON.stringify({ items }),
+      headers: { "content-type": "application/json" },
+      timeout: 20,
+    });
+    const results = ((res && res.json) || {}).results || [];
+    for (let i = 0; i < results.length; i++) {
+      if (results[i] && results[i].gone) {
+        try {
+          app.delete(subs[i]);
+        } catch {
+          /* already gone */
+        }
+      }
+    }
+  } catch (err) {
+    app.logger().warn("glowtape: push send failed", "error", String(err));
+  }
+}
+
 // Recompute a production's denormalized managers list from member flags.
 function syncProductionManagers(app, productionId) {
   try {
@@ -331,6 +425,9 @@ module.exports = {
   consumeCode,
   formatPacific,
   pacificHour,
+  pushConfigured,
+  recipientUserIds,
+  sendPush,
   icsEscape,
   icsDate,
   icsDateFromMs,

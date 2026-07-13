@@ -1,0 +1,9 @@
+{
+  "name": "glowtape-push-sender",
+  "private": true,
+  "type": "module",
+  "description": "Localhost Web Push sender for Glow Tape (PocketBase's JSVM can't do VAPID/ECDH crypto)",
+  "dependencies": {
+    "web-push": "^3.6.7"
+  }
+}

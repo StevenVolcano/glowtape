@@ -237,6 +237,23 @@ routerAdd(
       } catch (err) {
         e.app.logger().error("glowtape: event change mail failed", "error", String(err));
       }
+      try {
+        lib.sendPush(
+          e.app,
+          lib.recipientUserIds(e.app, production.id, everyoneNotified ? null : notifyMemberIds),
+          {
+            title: `🗓 ${production.get("title")}: schedule change`,
+            body:
+              changed.length === 1
+                ? `${changed[0].get("title")} — now ${lib.formatPacific(changed[0].get("start"))}`
+                : `${changed.length} events changed — check the schedule`,
+            url: `/production/${production.id}/schedule`,
+            tag: `sched-${production.id}`,
+          },
+        );
+      } catch (err) {
+        e.app.logger().warn("glowtape: event change push failed", "error", String(err));
+      }
     }
 
     return e.json(200, { ok: true, saved: items.length, notified: changed.length });
