@@ -102,6 +102,9 @@ onRecordUpdateRequest((e) => {
         throw new BadRequestError("Phone numbers are changed via the verification flow.");
       }
     }
+    if (e.record.get("operator") !== original.get("operator")) {
+      throw new BadRequestError("The operator flag is set in the PocketBase dashboard.");
+    }
   }
   e.next();
 }, "users");

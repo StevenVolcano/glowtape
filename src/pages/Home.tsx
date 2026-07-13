@@ -5,6 +5,7 @@ import { useAuth } from '../lib/auth.tsx'
 import CommunityBoard from '../components/CommunityBoard.tsx'
 import { useTitle } from '../lib/useTitle.ts'
 import PhoneSettings from '../components/PhoneSettings.tsx'
+import FeedbackSection from '../components/FeedbackSection.tsx'
 import { copyrightLine } from '../lib/types.ts'
 import type { ProductionRecord } from '../lib/types.ts'
 
@@ -148,6 +149,18 @@ export default function Home() {
           travels with you from show to show and shows up with your audition signups.
         </p>
       </section>
+
+      <FeedbackSection />
+
+      {user?.operator && (
+        <section>
+          <h2>Operator</h2>
+          <p className="hint">
+            <Link to="/operator">⚙ Open the operator console</Link> — feedback triage and
+            community access codes.
+          </p>
+        </section>
+      )}
 
       {user && <PhoneSettings user={user} />}
 

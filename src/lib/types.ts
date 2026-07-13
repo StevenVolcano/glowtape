@@ -25,6 +25,28 @@ export interface UserRecord {
   phoneVerified: boolean
   smsOptIn: boolean
   ageBand: '' | 'adult' | 'teen'
+  operator: boolean
+}
+
+export interface FeedbackRecord {
+  id: string
+  user: string
+  kind: 'idea' | 'problem' | 'question' | 'praise'
+  message: string
+  page: string
+  status: '' | 'new' | 'planned' | 'done' | 'declined'
+  reply: string
+  created: string
+  expand?: { user?: UserRecord }
+}
+
+export interface AccessCodeRecord {
+  id: string
+  code: string
+  note: string
+  expires: string
+  active: boolean
+  created: string
 }
 
 export interface ProductionRecord {
