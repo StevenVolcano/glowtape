@@ -115,10 +115,20 @@ cronAdd("glowtape_sms_reminders", "*/10 * * * *", () => {
   const lib = require(`${__hooks}/glowtape_lib.js`);
   if (!lib.smsConfigured()) return;
 
-  const windows = [
-    { kind: "10h", fromMs: 8 * 3600e3, toMs: 10 * 3600e3, word: "today" },
-    { kind: "2h", fromMs: 0, toMs: 2.5 * 3600e3, word: "soon" },
-  ];
+  // Quiet hours for everyone: no texts 9pm-7am Pacific. Events whose
+  // ~10h-before moment would land overnight (early-morning calls) get their
+  // heads-up during the 7-9pm evening sweep instead; the dedupe marker keeps
+  // it to one text either way.
+  const hour = lib.pacificHour();
+  if (hour >= 21 || hour < 7) return;
+
+  const windows = [{ kind: "2h", fromMs: 0, toMs: 2.5 * 3600e3, word: "soon" }];
+  if (hour >= 19) {
+    // From 7pm on, anything 8-20h out starts tomorrow — remind now, not at 2am.
+    windows.push({ kind: "10h", fromMs: 8 * 3600e3, toMs: 20 * 3600e3, word: "tomorrow" });
+  } else {
+    windows.push({ kind: "10h", fromMs: 8 * 3600e3, toMs: 10 * 3600e3, word: "today" });
+  }
 
   for (const w of windows) {
     const events = $app.findRecordsByFilter(
@@ -169,14 +179,6 @@ cronAdd("glowtape_sms_reminders", "*/10 * * * *", () => {
             continue;
           }
           if (!user.get("smsOptIn") || !user.get("phoneVerified") || !user.get("phone")) continue;
-
-          // Teen quiet hours: no texts 9pm-7am Pacific. Skipping before the
-          // dedupe marker means the reminder still goes out next cron run
-          // once the morning arrives (if the window hasn't passed).
-          if (user.get("ageBand") === "teen") {
-            const h = lib.pacificHour();
-            if (h >= 21 || h < 7) continue;
-          }
 
           try {
             // unique index makes double-sends impossible even if two runs race
