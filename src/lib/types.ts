@@ -212,6 +212,8 @@ export const DEFAULT_EVENT_KINDS = [
   'Tech',
   'Dress',
   'Performance',
+  'Strike',
+  'Cast Party',
   'Work Party',
 ]
 

@@ -8,6 +8,7 @@ import type { ProductionRecord } from '../lib/types.ts'
 interface PrintInfo {
   roles: string[]
   events: { start: string; end: string; location: string }[]
+  performances: { start: string; end: string; location: string; kind?: string }[]
 }
 
 // A blank, hand-fillable audition form to print for folks who'd rather use
@@ -16,7 +17,7 @@ export default function AuditionPrint() {
   useTitle('Audition form')
   const { id } = useParams()
   const [production, setProduction] = useState<ProductionRecord | null>(null)
-  const [info, setInfo] = useState<PrintInfo>({ roles: [], events: [] })
+  const [info, setInfo] = useState<PrintInfo>({ roles: [], events: [], performances: [] })
   const [failed, setFailed] = useState(false)
 
   useEffect(() => {
@@ -26,7 +27,13 @@ export default function AuditionPrint() {
       .then(setProduction)
       .catch(() => setFailed(true))
     pb.send(`/api/glowtape/audition-info?production=${encodeURIComponent(id)}`, { method: 'GET' })
-      .then((res) => setInfo({ roles: res.roles ?? [], events: res.events ?? [] }))
+      .then((res) =>
+        setInfo({
+          roles: res.roles ?? [],
+          events: res.events ?? [],
+          performances: res.performances ?? [],
+        }),
+      )
       .catch(() => {})
   }, [id])
 
@@ -66,6 +73,20 @@ export default function AuditionPrint() {
           <strong>Audition times:</strong>{' '}
           {info.events
             .map((ev) => `${formatWhen(ev.start, ev.end)}${ev.location ? ` at ${ev.location}` : ''}`)
+            .join(' · ')}
+        </p>
+      )}
+      {info.performances.length > 0 && (
+        <p>
+          <strong>Performances &amp; strike</strong> (auditioning means being available for
+          all of these):{' '}
+          {info.performances
+            .map(
+              (ev) =>
+                `${formatWhen(ev.start, ev.end)}${ev.location ? ` at ${ev.location}` : ''}${
+                  ev.kind?.toLowerCase().includes('strike') ? ' (strike)' : ''
+                }`,
+            )
             .join(' · ')}
         </p>
       )}
@@ -110,6 +131,10 @@ export default function AuditionPrint() {
             <div className="blank-box" />
           </div>
         ))}
+        <div>
+          <strong>☐ I am available for all performances and for strike</strong> (taking the
+          set down after the final show) — check to confirm; directors cast on it.
+        </div>
       </div>
 
       <p className="hint print-note">

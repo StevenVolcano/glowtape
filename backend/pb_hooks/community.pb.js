@@ -105,18 +105,33 @@ routerAdd(
       { p: production.id, from: lib.pbNow(-24 * 3600e3) },
     );
 
+    // The commitment being auditioned for: every performance, plus strike if
+    // it's scheduled. The form asks signups to confirm they can make them all.
+    const performances = e.app.findRecordsByFilter(
+      "events",
+      "production = {:p} && (kind ~ 'performance' || kind ~ 'strike') && status != 'cancelled' && start >= {:from}",
+      "start",
+      60,
+      0,
+      { p: production.id, from: lib.pbNow(-24 * 3600e3) },
+    );
+
+    const eventFields = (ev) => ({
+      start: ev.get("start"),
+      end: ev.get("end"),
+      location: ev.get("location"),
+      title: ev.get("title"),
+      kind: ev.get("kind"),
+    });
+
     return e.json(200, {
       open: !!production.get("auditionOpen"),
       title: production.get("title"),
       notes: production.get("auditionNotes"),
       questions: production.get("auditionQuestions") || [],
       roles,
-      events: events.map((ev) => ({
-        start: ev.get("start"),
-        end: ev.get("end"),
-        location: ev.get("location"),
-        title: ev.get("title"),
-      })),
+      events: events.map(eventFields),
+      performances: performances.map(eventFields),
     });
   },
   $apis.requireAuth(),

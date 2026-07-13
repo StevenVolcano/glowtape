@@ -8,14 +8,26 @@ import { formatWhen } from '../lib/types.ts'
 import { downloadMultiIcs } from '../lib/calendar.ts'
 import type { AuditionRecord } from '../lib/types.ts'
 
+interface AuditionEvent {
+  start: string
+  end: string
+  location: string
+  title: string
+  kind?: string
+}
+
 interface AuditionInfo {
   open: boolean
   title: string
   notes: string
   questions: string[]
   roles: string[]
-  events: { start: string; end: string; location: string; title: string }[]
+  events: AuditionEvent[]
+  performances: AuditionEvent[]
 }
+
+// Stored in answers so directors see the confirmation on every signup.
+const AVAILABLE_KEY = 'Available for all performances and strike'
 
 // Audition signup. Everything an auditioner needs comes from one route
 // (they usually aren't production members yet): the details, the roles on
@@ -30,6 +42,8 @@ export default function AuditionForm() {
   const [otherRoles, setOtherRoles] = useState('')
   const [conflicts, setConflicts] = useState('')
   const [answers, setAnswers] = useState<Record<string, string>>({})
+  const [available, setAvailable] = useState(false)
+  const [error, setError] = useState('')
   const [failed, setFailed] = useState(false)
   const [busy, setBusy] = useState(false)
   const [saved, setSaved] = useState('')
@@ -61,6 +75,7 @@ export default function AuditionForm() {
         setOtherRoles(parts.filter((r) => !res.roles.includes(r)).join(', '))
         setConflicts(a.conflicts)
         setAnswers(a.answers ?? {})
+        setAvailable(Boolean(a.answers?.[AVAILABLE_KEY]))
       } catch {
         /* first visit */
       }
@@ -93,8 +108,15 @@ export default function AuditionForm() {
   }
 
   async function save() {
+    if (!available) {
+      setError(
+        "One more thing: check the box confirming you're available for all performances and strike — directors cast on it.",
+      )
+      return
+    }
     setBusy(true)
     setSaved('')
+    setError('')
     try {
       const roles = [...checkedRoles, otherRoles.trim()].filter(Boolean).join(', ')
       const data = {
@@ -102,7 +124,7 @@ export default function AuditionForm() {
         user: user?.id,
         roles,
         conflicts: conflicts.trim(),
-        answers,
+        answers: { ...answers, [AVAILABLE_KEY]: 'Yes ✓' },
       }
       const rec = existing
         ? await pb.collection('auditions').update<AuditionRecord>(existing.id, data)
@@ -155,6 +177,25 @@ export default function AuditionForm() {
           >
             📆 Add {info.events.length === 1 ? 'the audition time' : `all ${info.events.length} audition times`} to my calendar
           </button>
+        </section>
+      )}
+
+      {info.performances.length > 0 && (
+        <section>
+          <h2>The commitment: performances &amp; strike</h2>
+          <p className="hint" style={{ marginTop: 0 }}>
+            Auditioning means being available for every one of these — directors cast on it.
+          </p>
+          <ul className="plain-list">
+            {info.performances.map((ev, i) => (
+              <li key={i}>
+                {ev.kind?.toLowerCase().includes('strike') ? '🔨' : '🎭'}{' '}
+                {formatWhen(ev.start, ev.end)}
+                {ev.location ? ` · ${ev.location}` : ''}
+                {ev.kind?.toLowerCase().includes('strike') ? ' (strike — taking the set down)' : ''}
+              </li>
+            ))}
+          </ul>
         </section>
       )}
 
@@ -228,6 +269,25 @@ export default function AuditionForm() {
             />
           </label>
         ))}
+
+        <label className="row" style={{ alignItems: 'center', fontWeight: 500 }}>
+          <input
+            type="checkbox"
+            checked={available}
+            onChange={(e) => {
+              setAvailable(e.target.checked)
+              if (e.target.checked) setError('')
+            }}
+            style={{ width: '1.3rem', minHeight: '1.3rem', flexShrink: 0 }}
+          />
+          I'm available for all performances and for strike (taking the set down after the
+          final show)
+        </label>
+        {error && (
+          <p className="error" role="alert">
+            {error}
+          </p>
+        )}
 
         <div className="row">
           <button onClick={save} disabled={busy || !info.open}>
