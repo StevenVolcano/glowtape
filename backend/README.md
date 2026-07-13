@@ -48,6 +48,15 @@ code" sign-in (verified phones only), and a 10-minute cron that texts
 called members ~10h and ~2h before events (deduped in `reminders_sent`).
 Codes are hashed, expire in 10 minutes, and are rate-limited per phone/IP.
 
+## Web push (optional, dormant by default)
+
+Pushes are batched to a localhost Node sidecar (`deploy/push-sender/`,
+systemd unit `glowtape-push`) because the PB JSVM can't do VAPID/aes128gcm
+crypto. Dormant until `GLOWTAPE_VAPID_PUBLIC` / `GLOWTAPE_VAPID_PRIVATE` exist
+in the environment — generate them on the server per `deploy/DEPLOY.md` §4½.
+Health check: `systemctl status glowtape-push` should say
+`listening on 127.0.0.1:8666 (configured: true)`.
+
 ## Verification checklist (first run)
 
 This schema and the hooks were written against PocketBase v0.30 without a live

@@ -1,105 +1,222 @@
 # CLAUDE.md
 
 This file documents the repository for AI assistants working in this codebase.
-Update it as the project evolves.
+Update it as the project evolves. It is written so a fresh session (any model)
+can pick up mid-project — read it fully before changing anything.
 
 ## Repository Overview
 
-- **Repo**: `StevenVolcano/glowtape` on GitHub
-- **Purpose**: Glow Tape (glowtape.net) — free production and rehearsal management
-  for the Grays Harbor community-theater scene (Driftwood Players, Bishop Center,
-  Stage West, Plank Island, 7th Street Kids, schools). Schedules with who-is-called
-  and acknowledgments, conflict collection, channels/announcements, contact sheets,
-  SMS reminders, calendar feeds. Free forever, self-hosted, no AI in the product
-  (the community is AI-averse — all features are deterministic).
-- **Stack**: Vite + React + TypeScript PWA frontend; PocketBase backend (single
-  binary, SQLite) with JS migrations and hooks. One VPS runs everything.
-- **Plan**: `planning/glowtape.md` is the product plan — read it before adding
-  features. Phases: 1 pilot core (built) → 2 trackers/reports → 3 script room &
-  line tools → 4 community hub.
+- **Repo**: `StevenVolcano/glowtape` on GitHub. **Live at https://glowtape.net**
+  on a $6 DigitalOcean droplet (Ubuntu 24.04, IP 143.198.156.136) behind Caddy.
+- **Purpose**: Glow Tape — free production and rehearsal management for the
+  Grays Harbor community-theater scene (Driftwood Players, Bishop Center, Stage
+  West, Plank Island, 7th Street Kids, schools). Free forever, self-hosted by
+  Steven Puvogel (steven@zucchinivolcano.com, Zucchini Volcano LLC), **no AI in
+  the product** (the community is AI-averse — all features are deterministic).
+- **Stack**: Vite + React 19 + TypeScript PWA frontend; PocketBase v0.30 backend
+  (single Go binary, SQLite) with JS migrations (`pb_migrations/`) and JS hooks
+  (`pb_hooks/`). PocketBase serves the built frontend from `backend/pb_public/`.
+  A tiny Node sidecar (`deploy/push-sender/`) does Web Push crypto.
+- **Plan**: `planning/glowtape.md` is the original product plan. Most of phases
+  1–2 and chunks of 3–4 are BUILT (see "What's built" below). GitHub issues
+  track the remainder.
+
+## What's built (feature map → where the code lives)
+
+| Feature | Frontend | Backend |
+|---|---|---|
+| Passwordless sign-in (email or SMS code), invite-gated signup (production/role/community codes, `?code=` invite URLs) | `pages/SignIn.tsx`, `pages/Home.tsx` | `pb_hooks/glowtape.pb.js`, `sms.pb.js` |
+| Schedule: events w/ kinds, preset places w/ addresses, bulk weekly create (1 email), bulk edit "Fix up the schedule" (1 digest), cancel/restore, Got-it acks, conflicts, roll call, late/sick self-report (guardians report for children) | `pages/ScheduleTab.tsx`, `components/EventForm.tsx`, `pages/AdminTab.tsx` | `pb_hooks/events.pb.js`, `attendance.pb.js` |
+| **Show breakdown**: units (by song / scene / pages per `productions.breakdownStyle`), on-stage/singing/dancing member groups, CSV import/export, drives who's-called on events | `components/BreakdownView.tsx` (in Sheets tab), `lib/breakdown.ts`, unit picker in `EventForm.tsx` | migration `1754500000`, `units` accepted by `events.pb.js` routes |
+| Messages: channels (+custom, Off Topic default-muted), photos, emoji reactions, per-channel muting, community board (production=''), semi-private team channels (member+guardians+managers), ⚑ report-to-operator, chat linkification, note links show titles, authors shown as "First L. (Role)" | `pages/MessagesTab.tsx`, `components/ChannelView.tsx`, `CommunityBoard.tsx` | `pb_hooks/safety.pb.js`, team-channel route in `requests.pb.js` |
+| Announcements (pinned, emailed, acked) | `MessagesTab.tsx`, `AdminTab.tsx` | announcement hook in `glowtape.pb.js` |
+| To-Do: tasks by department, assignee email, bio-request workflow (audience: performers/team/everyone) + bio editor + compiled program view | `pages/TasksTab.tsx`, `BiosView.tsx`, `AdminTab.tsx` | `pb_hooks/tasks.pb.js` |
+| Sheets: props/costumes/set/light-cues/sound-cues trackers, inline edit, CSV import/export, print | `pages/TrackersTab.tsx`, `lib/trackers.ts` | migration `1753800000` |
+| Notes: rehearsal notes, search, stable URLs, post-to-chat | `pages/NotesTab.tsx` | migration `1754300000` |
+| Resources: docs/links per production, 'show' + 'audition' areas | `components/ResourceList.tsx`, `AdminTab.tsx` | migration `1754000000` |
+| Auditions: open/close, custom questions, signups aggregate on Manage (NO emails per signup, by request), printable blank form | `pages/AuditionForm.tsx`, `AuditionPrint.tsx`, `AdminTab.tsx` | migration `1753900000` |
+| Community profiles (headshot/pronouns/experience/skills; teens: no headshot) | `pages/Profile.tsx` | same migration |
+| Pre-cast roles w/ claim codes (join+2 chars), shared/multi roles, child roles claimed by guardians | `AdminTab.tsx` MembersSection | join route in `glowtape.pb.js`, `members.pb.js` |
+| Youth safety: under-13s have no logins (guardian-managed member records), age band only (never birthdate), no DMs, photo-consent flags, teen no-headshot, quiet hours | throughout | `1753500000_youth_safety.js`, signup age gate |
+| SMS reminders (~10h + ~2h, quiet hours 9pm–7am Pacific, early calls announced 7–9pm the evening before), phone verify, sign-in by text | `components/PhoneSettings.tsx` | `pb_hooks/sms.pb.js` — **dormant until Twilio approves; see Operational status** |
+| Web push notifications (messages w/ mutes, announcements, schedule changes, cancellations, task assigns, late/sick→managers) | `components/PushSettings.tsx`, `public/sw.js` | `pb_hooks/push.pb.js`, `glowtape_lib.js` sendPush → Node sidecar `deploy/push-sender/` on 127.0.0.1:8666 |
+| Calendar: per-event Google/ICS + personal ICS feed (guardians get children's) | `lib/calendar.ts`, `ScheduleTab.tsx` | `pb_hooks/calendar.pb.js` |
+| Feedback (idea/problem/question/praise → operator email + in-app status) | `components/FeedbackSection.tsx` | `pb_hooks/feedback.pb.js` |
+| Operator console (`/operator`, needs `users.operator` flag): feedback triage, production-request approval, community access codes | `pages/Operator.tsx` | approve route in `requests.pb.js` |
+| Production requests (director asks; operator edits+approves → org+production+manager membership created) | `pages/RequestProduction.tsx` | `pb_hooks/requests.pb.js` |
+| Accessibility: WCAG 2.2 AA pass done (labels, live regions, contrast tokens, per-view titles via `lib/useTitle.ts`) | throughout | — |
+
+Static docs in `public/`: `help.html` (the user manual — keep in sync with
+features!), `handout.html` (printable read-through sheet), `youth-safety.html`,
+`privacy.html`, `terms.html`, `sms-opt-in.html`. All carry auto-year copyright
+(© 2026 Zucchini Volcano LLC).
+
+## Critical gotchas (violating these breaks production)
+
+1. **PocketBase hook handlers run in isolated VMs.** Top-level functions in
+   `*.pb.js` files do NOT exist when handlers fire (ReferenceError at runtime,
+   loads fine). ALL shared helpers live in `backend/pb_hooks/glowtape_lib.js`;
+   every handler must `const lib = require(\`${__hooks}/glowtape_lib.js\`)`
+   INSIDE its own body. Multi-relation values from `record.get()` are
+   VM-wrapped — copy via `lib.toIdArray()` before array methods.
+2. **PB datetimes** are `"YYYY-MM-DD HH:MM:SS.sssZ"` (space, not T). Always
+   parse via `pbDate()` (`src/lib/types.ts`); Safari rejects the raw format.
+   Display: `formatWhen`/`formatPacific` for times; `formatDay` for DATE-ONLY
+   values (renders the UTC day on purpose); `formatStamp` for created/updated
+   timestamps (local day). Never swap those two.
+3. **Migration ordering**: API rules referencing back-relations
+   (`members_via_production.user`) are validated at collection save — create
+   collections first, set rules after referenced collections exist (see the
+   structure-first/rules-last pattern in `1752200000_init_glowtape.js`).
+4. **react-router v7 splat routes**: relative links inside `/production/:id/*`
+   resolve against the full URL and stack segments. All tab links/redirects use
+   absolute paths built from `/production/${production.id}`.
+5. **No Intl in the PB JSVM** — Pacific-time math is manual
+   (`lib.pacificOffsetHours/pacificHour/formatPacific`).
+6. **JSVM can't do Web Push crypto** — pushes go through the Node sidecar
+   (`deploy/push-sender/server.mjs`, systemd unit `glowtape-push`, localhost
+   only). Everything is no-op until `GLOWTAPE_VAPID_*` env vars exist.
+7. **Locked user fields**: `phone`, `phoneVerified`, `operator` cannot be
+   changed via the record API (guard hook in `sms.pb.js`).
+8. **Events are edited only through the routes** (`/api/glowtape/events`,
+   `/api/glowtape/events/update`) so emails digest correctly and acks/reminders
+   reset on date/time/place changes. The only raw-record event update the app
+   does is status (cancel/restore), which the cancel hook + push hook watch.
+9. **`chown -R glowtape:glowtape backend`** after touching server files;
+   services run as user `glowtape`.
+
+## Data model (collections)
+
+`users` (+phone/phoneVerified/smsOptIn/ageBand/teenUntil/operator) ·
+`orgs` (name, locations JSON) ·
+`productions` (org, title, status, joinCode, managers[denormalized user ids],
+eventKinds, locations, auditionOpen/Notes/Questions, breakdownStyle) ·
+`members` (production, user?, role, position, roleCode, manager, multi,
+claimedFrom, minor, displayName, guardians[], noPhotos, bio) — THE identity
+row; pre-cast roles have empty user; children never have users ·
+`events` (called[member ids; empty=everyone], calledNote, kind, status,
+units[]) · `acks` · `conflicts` · `attendance` (event+member unique) ·
+`units` (breakdown: name/act/pages/order + onstage/singing/dancing member
+relations + notes) ·
+`channels` (production=''→community; member set→semi-private team channel) ·
+`channel_prefs` (muted) · `messages` (+image) · `reactions` ·
+`announcements` + `announcement_acks` ·
+`tasks` (kind='bio' for bio requests) · `tracker_items` · `notes` ·
+`resources` (area show|audition) · `profiles` · `auditions` (unique
+production+user) · `production_requests` · `feedback` · `access_codes` ·
+`phone_codes` (hashed, expiring) · `reminders_sent` (event+user+kind unique —
+SMS dedupe) · `calendar_tokens` · `push_subscriptions` (endpoint unique).
+
+Recipient resolution (email/SMS/push): a called member resolves to their own
+user PLUS all guardians; `claimedFrom` links claimed shared-role rows back to
+the called placeholder. Use `lib.recipients` (emails) / `lib.recipientUserIds`
+(user ids for push) — never hand-roll it.
+
+## Operational status & runbook (as of 2026-07-13)
+
+- **Deploy**: Steven runs `glowtape-update` in the DO web console (root). It
+  self-updates, pulls main, builds, installs units, restarts everything. He
+  deploys from his phone; never ask him to run anything interactive.
+- **Web push**: LIVE — VAPID keys generated on the droplet 2026-07-13 (in
+  `/etc/glowtape/env`, never in chat/repo).
+- **SMS**: DORMANT. Twilio toll-free verification for 888-299-GLOW (+18882994569)
+  was rejected (30530 entity mismatch — submitted against the old Individual
+  Trust Hub profile). Waiting for the Zucchini Volcano LLC business profile
+  (BU3adf7105071eee02fa9457898a7ae7a2) to be approved, then resubmit "Update
+  Toll-free registration". Priority review window ends 2026-07-20. Twilio env
+  vars are already on the server; SMS code paths log instead of sending until
+  `GLOWTAPE_SMS_PROVIDER` works end-to-end.
+- **Email**: LIVE via Brevo SMTP, sender callboard@glowtape.net (Squarespace
+  forwards to steven@). DMARC deliberately skipped (conflicts with Squarespace
+  forwarding; DKIM is in place).
+- **Operator flag**: set on Steven's user record via the PB dashboard (needed
+  for `/operator`).
+- **Backups**: nightly systemd timer → `glowtape-backup` (pb_data snapshots).
+  `backend/pb_data` is THE thing to back up.
+- **Secrets rule (standing, from Steven): credentials never pass through chat.**
+  Compose commands that write secrets directly into `/etc/glowtape/env` on the
+  droplet; never print or ask for secret values.
+
+## Remaining backlog (GitHub issues + tails)
+
+Open: #4 tails (QR join codes, illustrated iOS install card, SM one-pager),
+#5 tail (attendance history view per member), #6 tails (schedule milestones,
+tracker rows→tasks), #7 gamification (exploratory, opt-in), #9 tails (EXIF
+stripping on photo upload, guardian self-service co-guardians). Not yet filed:
+rehearsal reports (nightly digest), script-room/annotation (phase 3), community
+hub extras (cross-org calendar, lend/borrow). Issues #1/#3/#5/#6-core are built
+but may still be open — close them when touching the tracker.
+
+## Development Workflow
+
+```sh
+npm install
+npm run setup-backend   # once: downloads pocketbase binary (may be blocked by sandbox proxy)
+npm run backend         # :8090
+npm run dev             # :5173 — proxies /api to the backend
+npm run build           # typecheck + production build (MUST pass before pushing)
+node --check backend/pb_hooks/<file>.pb.js   # syntax-check hooks (no runtime here)
+```
+
+The Claude Code sandbox cannot reach the live server (proxy 403s) — Steven
+verifies deployments from his phone and reports back, often with screenshots.
+
+## Branch & Commit Conventions
+
+- Feature branches `claude/<task-slug>`; commit there, then ff-merge to `main`
+  and `git push origin main` — this session-long pattern is Steven-approved
+  (he deploys from main). Never force-push.
+- Commits: imperative mood, subject < 72 chars, no trailing period; explain
+  *why* in the body.
+
+## Code & Product Conventions
+
+- **Ease-of-use constitution** (non-negotiable): no passwords, works in a plain
+  browser tab, every notification mirrors to email, people see only their
+  productions, everything important prints cleanly, big tap targets, plain
+  English for all ages, no jargon.
+- **Accessibility is a maintained bar**: label every input (aria-label or
+  <label>), name icon-only buttons, `role="status"`/`"alert"` on feedback
+  text, `aria-pressed` on toggle chips, `aria-expanded` on disclosures,
+  th scope, contrast ≥ 4.5:1 text / 3:1 controls (tokens `--ctrl`, `--ok`
+  already tuned), `useTitle()` on new pages.
+- **One email per human action** — bulk operations send a single digest.
+- Chat identity: "First L. (Role)" via `chatName()` in `lib/types.ts`.
+- **Youth safety invariants**: no DMs ever (team channels always include all
+  managers + guardians), no under-13 logins, no birthdates, no health fields,
+  emphasize safety in any new documentation.
+- Never build features that distribute licensed scripts (plan §4).
+- Update `public/help.html` whenever a user-facing feature changes — it is the
+  product manual and Steven's community reads it.
+- No AI-powered features. No new documentation files unless asked.
+- Never commit secrets; server env lives in `/etc/glowtape/env` only.
 
 ## Repository Structure
 
 ```
 /
 ├── CLAUDE.md
-├── planning/glowtape.md   # product plan, decisions, roadmap, research summary
+├── planning/glowtape.md    # original product plan (partly superseded — this file wins)
 ├── index.html / vite.config.ts / tsconfig.json / package.json
 ├── backend/
-│   ├── README.md          # run/deploy/SMS setup + first-run verification checklist
-│   ├── pb_migrations/     # schema (applied automatically by PocketBase)
-│   ├── pb_hooks/          # glowtape.pb.js (signup/join/email), sms.pb.js, calendar.pb.js
-│   └── pb_data/           # runtime DB + files (gitignored — THE thing to back up)
-├── deploy/                # server-as-code: cloud-init, setup script, Caddyfile,
-│                          # systemd units, update/backup scripts, DEPLOY.md
-├── public/                # PWA manifest, service worker, icons
-├── scripts/
-│   ├── get-pocketbase.sh  # downloads the pocketbase binary into backend/
-│   └── make-icons.mjs     # regenerates PNG icons (no image deps)
+│   ├── README.md           # run/deploy/SMS setup + first-run checklist
+│   ├── pb_migrations/      # schema, ordered by timestamp prefix — append-only
+│   ├── pb_hooks/           # glowtape_lib.js (SHARED HELPERS) + glowtape.pb.js,
+│   │                       # events, sms, calendar, members, attendance, tasks,
+│   │                       # safety, feedback, requests, push (.pb.js each)
+│   └── pb_data/            # runtime DB + files (gitignored)
+├── deploy/                 # cloud-init, server-setup.sh, Caddyfile, systemd units,
+│   │                       # glowtape-update (self-updating), backup timer, DEPLOY.md
+│   └── push-sender/        # Node web-push sidecar (package-lock committed — npm ci)
+├── public/                 # manifest, sw.js (offline shell + push), icons,
+│                           # help/handout/youth-safety/privacy/terms/sms-opt-in .html
+├── scripts/                # get-pocketbase.sh, make-icons.mjs
 └── src/
-    ├── lib/               # pb client, types/formatting, auth context, calendar helpers
-    ├── pages/             # SignIn, Home, Profile, AuditionForm, Production shell + tabs
-    └── components/        # PhoneSettings, shared pieces
+    ├── lib/                # pb.ts, types.ts (records+helpers), auth.tsx, calendar.ts,
+    │                       # trackers.ts, breakdown.ts, useTitle.ts
+    ├── pages/              # SignIn, Home, Profile, AuditionForm, AuditionPrint,
+    │                       # RequestProduction, Operator, Production shell +
+    │                       # Schedule/Messages/Tasks/Trackers/Notes/People/Admin tabs, BiosView
+    └── components/         # ChannelView, CommunityBoard, EventForm, ResourceList,
+                            # BreakdownView, PhoneSettings, PushSettings, FeedbackSection
 ```
-
-## Domain Notes
-
-- **Ease-of-use constitution** (see plan §5, non-negotiable): no passwords (email/SMS
-  one-time codes), fully functional in a plain browser tab, every notification
-  mirrors to email, people see only productions they're in, everything important
-  prints cleanly, big tap targets, no jargon in UI copy.
-- **Authorization model**: `productions.managers` is a denormalized user-id list
-  (directors/ADs/SMs) kept in sync by the app; API rules check it plus membership
-  back-relations. Channel audience filtering is UI-only in the pilot.
-- **SMS is dormant by default**: activates via `GLOWTAPE_SMS_PROVIDER` env vars
-  (see `backend/README.md`). Reminders at ~10h and ~2h; codes only to verified
-  phones; phone fields locked server-side.
-- **Script licensing**: never build features that distribute scanned licensed
-  scripts. Per-production private materials, rights checkbox, public domain first.
-  See plan §4.
-- **Backend was authored without a live server** — `backend/README.md` has the
-  first-run verification checklist. Until it's been walked once, treat migration/
-  hook runtime behavior as unverified.
-- PocketBase datetimes are `"YYYY-MM-DD HH:MM:SS.sssZ"` (space, not T) — always
-  parse via `pbDate()` in `src/lib/types.ts`; Safari rejects the raw format.
-- **PocketBase hook handlers run in isolated VMs**: top-level functions in
-  `*.pb.js` files do NOT exist when handlers fire (ReferenceError at runtime,
-  works fine at load). All shared helpers live in
-  `backend/pb_hooks/glowtape_lib.js` and every handler must
-  `require(\`${__hooks}/glowtape_lib.js\`)` INSIDE its own body. Multi-relation
-  values from `record.get()` are VM-wrapped — copy via `lib.toIdArray()` before
-  using array methods.
-
-## Development Workflow
-
-```sh
-npm install
-npm run setup-backend   # once: downloads pocketbase binary
-npm run backend         # :8090 — create superuser on first run
-npm run dev             # :5173 — proxies /api to the backend
-npm run build           # typecheck + production build (run before pushing)
-```
-
-## Branch & Commit Conventions
-
-- Feature branches: `feature/<short-description>` or `claude/<task-slug>`
-- Never push directly to `main` without review (initial scaffold commit excepted)
-- Always push with `git push -u origin <branch-name>`
-- Commits: imperative mood, subject < 72 chars, no trailing period; explain *why*
-  in the body when non-obvious
-
-## Code Conventions
-
-- Prefer clarity over cleverness; match surrounding style
-- Comments only for non-obvious *why*; delete dead code
-- UI copy is plain English for all ages ("Who's called", not "Roster matrix")
-- Never commit secrets; SMS/SMTP credentials live in server env vars only
-- Keep changes minimal and scoped to what was requested
-
-## AI Assistant Instructions
-
-- Read this file and skim `planning/glowtape.md` at the start of every session
-- Update "Repository Structure" when adding directories or major files
-- Do not create documentation files unless explicitly asked
-- Do not add AI-powered features — deterministic behavior only, per the plan
-- Do not push to `main` or force-push without explicit user approval

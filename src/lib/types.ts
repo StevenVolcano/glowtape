@@ -223,6 +223,24 @@ export function memberName(m: MemberRecord): string {
   return m.displayName || m.position || 'Role'
 }
 
+// "Steven Puvogel" -> "Steven P." — how people are identified in chat.
+export function firstLastInitial(name: string): string {
+  const parts = name.trim().split(/\s+/)
+  if (parts.length < 2) return name.trim()
+  return `${parts[0]} ${parts[parts.length - 1][0].toUpperCase()}.`
+}
+
+// Chat byline within a show: "Steven P. (Director)" / "Anna K. (Golde)".
+// Guardians read as Parent/Guardian; the character name (position) wins over
+// the generic role label. Without a member match (community channels), just
+// the shortened name.
+export function chatName(fullName: string, member?: MemberRecord | null): string {
+  const short = firstLastInitial(fullName)
+  if (!member) return short
+  const role = member.position || ROLE_LABELS[member.role] || ''
+  return role ? `${short} (${role})` : short
+}
+
 export interface EventRecord {
   id: string
   production: string

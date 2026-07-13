@@ -2,7 +2,8 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { pb } from '../lib/pb.ts'
 import { useAuth } from '../lib/auth.tsx'
-import type { MessageRecord, ReactionRecord } from '../lib/types.ts'
+import { chatName } from '../lib/types.ts'
+import type { MemberRecord, MessageRecord, ReactionRecord } from '../lib/types.ts'
 
 // Note links render with the note's actual title; a tiny cache keeps a busy
 // channel from refetching the same note per message.
@@ -59,8 +60,24 @@ function Linkified({ text }: { text: string }) {
   )
 }
 
-export default function ChannelView({ channelId }: { channelId: string }) {
+export default function ChannelView({
+  channelId,
+  members = [],
+}: {
+  channelId: string
+  members?: MemberRecord[]
+}) {
   const { user } = useAuth()
+
+  // Within a show, people are "First L. (Role)" — the character/position if
+  // cast, the role label otherwise. Prefer a non-guardian row when someone
+  // has several.
+  function authorLabel(m: MessageRecord): string {
+    const name = m.expand?.author?.name || '…'
+    const rows = members.filter((x) => x.user === m.author)
+    const row = rows.find((x) => x.role !== 'guardian') ?? rows[0] ?? null
+    return chatName(name, row)
+  }
   const [messages, setMessages] = useState<MessageRecord[]>([])
   const [reactions, setReactions] = useState<ReactionRecord[]>([])
   const [text, setText] = useState('')
@@ -184,7 +201,7 @@ export default function ChannelView({ channelId }: { channelId: string }) {
         {messages.length === 0 && <p className="hint">No messages yet. Say hi!</p>}
         {messages.map((m) => (
           <div key={m.id} className={`msg ${m.author === user?.id ? 'mine' : ''}`}>
-            <span className="msg-author">{m.expand?.author?.name || '…'}</span>
+            <span className="msg-author">{authorLabel(m)}</span>
             <span className="msg-text">
               {m.image && (
                 <a href={imageUrl(m)} target="_blank" rel="noreferrer">

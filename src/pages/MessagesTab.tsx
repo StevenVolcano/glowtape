@@ -11,7 +11,7 @@ import type {
 } from '../lib/types.ts'
 
 export default function MessagesTab() {
-  const { production, myMember, isManager } = useProduction()
+  const { production, members, myMember, isManager } = useProduction()
   const { user } = useAuth()
   const [channels, setChannels] = useState<ChannelRecord[]>([])
   const [prefs, setPrefs] = useState<ChannelPrefRecord[]>([])
@@ -69,7 +69,7 @@ export default function MessagesTab() {
   }
 
   const activeChannel = channels.find((c) => c.id === active) ?? null
-  const noPhotoMembers = useProduction().members.filter((m) => m.noPhotos)
+  const noPhotoMembers = members.filter((m) => m.noPhotos)
 
   return (
     <div>
@@ -112,7 +112,7 @@ export default function MessagesTab() {
               : '🔔 Notifications on — tap to mute this channel'}
           </button>
         )}
-        {active && <ChannelView channelId={active} />}
+        {active && <ChannelView channelId={active} members={members} />}
       </section>
     </div>
   )
