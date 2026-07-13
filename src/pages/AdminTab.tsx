@@ -17,6 +17,7 @@ export default function AdminTab() {
       <ManageJumpNav />
       <JoinCodeSection />
       <AuditionsSection />
+      <TicketsSection />
       <ConflictAlertsSection />
       <AttendanceHistorySection />
       <BiosSection />
@@ -422,6 +423,47 @@ function PresetsSection() {
           <button onClick={save}>Save presets</button>
           {saved && <span className="acked" role="status">{saved}</span>}
         </div>
+      </div>
+    </section>
+  )
+}
+
+// A show-specific ticket link. If set, the community calendar shows a
+// "🎟 Buy tickets" button on this production's performances — overriding the
+// company-wide box office. Blank means no button (unless the company sets one).
+function TicketsSection() {
+  const { production, reload } = useProduction()
+  const [url, setUrl] = useState(production.ticketUrl ?? '')
+  const [saved, setSaved] = useState('')
+
+  async function save() {
+    const trimmed = url.trim()
+    if (trimmed === (production.ticketUrl ?? '')) return
+    await pb.collection('productions').update(production.id, { ticketUrl: trimmed })
+    setSaved('Saved.')
+    setTimeout(() => setSaved(''), 2000)
+    await reload()
+  }
+
+  return (
+    <section id="tickets">
+      <h2>Tickets</h2>
+      <p className="hint">
+        A link to buy tickets for this show. It shows up as a <em>🎟 Buy tickets</em> button on
+        your performances in the community calendar. Leave it blank and there's no button — unless
+        your company has a box-office link set up, which is used as a fallback.
+      </p>
+      <div className="row">
+        <input
+          type="url"
+          aria-label="Ticket link for this production"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          onBlur={save}
+          placeholder="Example: driftwoodplayers.com/sound-of-music-tickets"
+          style={{ flex: 1 }}
+        />
+        {saved && <span className="acked" role="status">{saved}</span>}
       </div>
     </section>
   )

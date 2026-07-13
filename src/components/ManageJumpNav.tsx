@@ -5,6 +5,7 @@ const JUMPS = [
   ['#invite', 'Invite'],
   ['#add-events', 'Schedule'],
   ['#auditions', 'Auditions'],
+  ['#tickets', 'Tickets'],
   ['#announce', 'Announce'],
   ['#people', 'People & roles'],
   ['#bios', 'Bios'],

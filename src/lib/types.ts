@@ -48,6 +48,7 @@ export interface CompanyRecord {
   id: string
   name: string
   ticketUrl?: string
+  org?: string // the orgs.id this company runs its productions under, if any
 }
 
 export interface AccessCodeRecord {
@@ -72,6 +73,7 @@ export interface ProductionRecord {
   auditionNotes: string
   auditionQuestions: string[] | null
   breakdownStyle: '' | 'songs' | 'scenes' | 'pages'
+  ticketUrl?: string
   expand?: { org?: OrgRecord }
 }
 

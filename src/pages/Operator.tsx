@@ -8,6 +8,7 @@ import type {
   AccessCodeRecord,
   CompanyRecord,
   FeedbackRecord,
+  OrgRecord,
   ProductionRequestRecord,
 } from '../lib/types.ts'
 
@@ -42,13 +43,18 @@ export default function Operator() {
 // saved — profiles store the company as plain text.
 function CompaniesSection() {
   const [companies, setCompanies] = useState<CompanyRecord[]>([])
+  const [orgs, setOrgs] = useState<OrgRecord[]>([])
   const [name, setName] = useState('')
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
 
   async function load() {
-    const list = await pb.collection('companies').getFullList<CompanyRecord>({ sort: 'name' })
+    const [list, orgList] = await Promise.all([
+      pb.collection('companies').getFullList<CompanyRecord>({ sort: 'name' }),
+      pb.collection('orgs').getFullList<OrgRecord>({ sort: 'name' }),
+    ])
     setCompanies(list)
+    setOrgs(orgList)
   }
 
   useEffect(() => {
@@ -78,9 +84,9 @@ function CompaniesSection() {
     await load()
   }
 
-  async function saveTicketUrl(c: CompanyRecord, ticketUrl: string) {
-    if (ticketUrl === (c.ticketUrl ?? '')) return
-    await pb.collection('companies').update(c.id, { ticketUrl })
+  async function saveField(c: CompanyRecord, field: 'ticketUrl' | 'org', value: string) {
+    if (value === ((c[field] as string | undefined) ?? '')) return
+    await pb.collection('companies').update(c.id, { [field]: value })
     await load()
   }
 
@@ -89,9 +95,10 @@ function CompaniesSection() {
       <h2>Theater companies</h2>
       <p className="hint">
         The dropdown people see in their profile's stage-history table (they can always type
-        somewhere else by hand). A company's ticket link is added to that company's performances
-        on the community calendar as a <em>🎟 Buy tickets</em> button — leave it blank if there's
-        no online box office.
+        somewhere else by hand). Link a company to the organization that runs its shows here, then
+        its ticket link is added to that org's performances on the community calendar as a{' '}
+        <em>🎟 Buy tickets</em> button. Leave the link blank if there's no online box office —
+        no link, no button.
       </p>
       <ul className="plain-list">
         {companies.map((c) => (
@@ -102,13 +109,30 @@ function CompaniesSection() {
                 ✕
               </button>
             </div>
-            <input
-              type="url"
-              aria-label={`Ticket link for ${c.name}`}
-              defaultValue={c.ticketUrl ?? ''}
-              onBlur={(e) => saveTicketUrl(c, e.target.value.trim())}
-              placeholder="Ticket link — for example: driftwoodplayers.com/tickets"
-            />
+            <div className="row">
+              <label>
+                Runs shows as
+                <select
+                  aria-label={`Organization for ${c.name}`}
+                  value={c.org ?? ''}
+                  onChange={(e) => saveField(c, 'org', e.target.value)}
+                >
+                  <option value="">— not in Glow Tape —</option>
+                  {orgs.map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <input
+                type="url"
+                aria-label={`Ticket link for ${c.name}`}
+                defaultValue={c.ticketUrl ?? ''}
+                onBlur={(e) => saveField(c, 'ticketUrl', e.target.value.trim())}
+                placeholder="Ticket link — for example: driftwoodplayers.com/tickets"
+              />
+            </div>
           </li>
         ))}
       </ul>

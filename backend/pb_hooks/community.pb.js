@@ -22,14 +22,14 @@ routerAdd(
       { from: lib.pbNow(-24 * 3600e3) },
     );
 
-    // Ticket links live on the company, keyed by name so a performance's org
-    // maps to its box office. Match is case/space-insensitive so a stray
-    // capital doesn't drop the link.
-    const ticketUrls = {};
+    // A company's ticket link, keyed by the org it's linked to (by relation
+    // id, not name). A performance whose production sets its own ticketUrl
+    // wins over this company-wide box office.
+    const orgTicketUrls = {};
     try {
-      const companies = e.app.findRecordsByFilter("companies", "ticketUrl != ''", "name", 200, 0);
+      const companies = e.app.findRecordsByFilter("companies", "ticketUrl != '' && org != ''", "name", 200, 0);
       for (const c of companies) {
-        ticketUrls[String(c.get("name")).trim().toLowerCase()] = c.get("ticketUrl");
+        orgTicketUrls[String(c.get("org"))] = c.get("ticketUrl");
       }
     } catch {
       /* no companies with links */
@@ -48,7 +48,13 @@ routerAdd(
           } catch {
             /* org gone */
           }
-          productionNames[pid] = { title: p.get("title"), org: orgName, auditionOpen: !!p.get("auditionOpen") };
+          productionNames[pid] = {
+            title: p.get("title"),
+            org: orgName,
+            orgId: String(p.get("org")),
+            ticketUrl: p.get("ticketUrl") || "",
+            auditionOpen: !!p.get("auditionOpen"),
+          };
         } catch {
           productionNames[pid] = null;
         }
@@ -56,8 +62,11 @@ routerAdd(
       const prod = productionNames[pid];
       if (!prod) continue;
       // Only performances sell tickets; auditions never carry a buy link.
+      // A show's own link wins; otherwise fall back to the company box office.
       const isPerformance = String(ev.get("kind")).toLowerCase().indexOf("performance") !== -1;
-      const ticketUrl = isPerformance ? ticketUrls[String(prod.org).trim().toLowerCase()] || "" : "";
+      const ticketUrl = isPerformance
+        ? prod.ticketUrl || orgTicketUrls[prod.orgId] || ""
+        : "";
       out.push({
         id: ev.id,
         title: ev.get("title"),
