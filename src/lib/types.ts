@@ -365,8 +365,18 @@ export function formatWhen(start: string, end?: string): string {
   return out
 }
 
-// For all-day values (conflicts): format in UTC so "2026-07-15 00:00:00Z"
-// reads as July 15 everywhere, not July 14 in Pacific time.
+// For all-day values (conflicts, due dates): format in UTC so
+// "2026-07-15 00:00:00Z" reads as July 15 everywhere, not July 14 in Pacific.
 export function formatDay(iso: string): string {
   return dayFmtUTC.format(pbDate(iso))
+}
+
+// For real timestamps (created/updated): the viewer's local calendar day —
+// a note written Sunday evening must not say Monday just because UTC rolled.
+export function formatStamp(iso: string): string {
+  return pbDate(iso).toLocaleDateString(undefined, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  })
 }

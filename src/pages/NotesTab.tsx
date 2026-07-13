@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { pb } from '../lib/pb.ts'
 import { useAuth } from '../lib/auth.tsx'
 import { useProduction } from './Production.tsx'
-import { formatDay, pbDate } from '../lib/types.ts'
+import { formatStamp, pbDate } from '../lib/types.ts'
 import type { ChannelRecord, NoteRecord } from '../lib/types.ts'
 
 // Rehearsal notes (and any other production notes). Each note has a stable
@@ -130,7 +130,7 @@ export default function NotesTab() {
                 📝 {n.title}
               </button>{' '}
               <span className="hint">
-                {n.expand?.author?.name} · {formatDay(n.updated)}
+                {n.expand?.author?.name} · {formatStamp(n.updated)}
               </span>
               {snippet(n) && <div className="hint">“{snippet(n)}”</div>}
             </li>

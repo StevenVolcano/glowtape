@@ -3,7 +3,7 @@ import { Link, Navigate } from 'react-router-dom'
 import { pb } from '../lib/pb.ts'
 import { useAuth } from '../lib/auth.tsx'
 import { useTitle } from '../lib/useTitle.ts'
-import { formatDay, shareInvite } from '../lib/types.ts'
+import { formatDay, formatStamp, shareInvite } from '../lib/types.ts'
 import type { AccessCodeRecord, FeedbackRecord, ProductionRequestRecord } from '../lib/types.ts'
 
 // The operator console: triage feedback and rotate community access codes
@@ -81,7 +81,7 @@ function FeedbackInbox() {
                 {f.expand?.user?.name || 'Unknown'}
               </strong>{' '}
               <span className="hint">
-                {f.expand?.user?.email} · {formatDay(f.created)}
+                {f.expand?.user?.email} · {formatStamp(f.created)}
                 {f.page && f.page !== '/' ? ` · from ${f.page}` : ''}
               </span>
             </div>
@@ -297,7 +297,7 @@ function RequestsSection() {
             <div>
               <strong>{r.expand?.user?.name}</strong>{' '}
               <span className="hint">
-                {r.expand?.user?.email} · {r.role} · {formatDay(r.created)} ·{' '}
+                {r.expand?.user?.email} · {r.role} · {formatStamp(r.created)} ·{' '}
                 {r.status || 'new'}
               </span>
             </div>
