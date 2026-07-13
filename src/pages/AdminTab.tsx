@@ -432,7 +432,7 @@ function PresetsSection() {
 function BiosSection() {
   const { production, members } = useProduction()
   const [due, setDue] = useState('')
-  const [audience, setAudience] = useState<'performers' | 'team' | 'everyone'>('performers')
+  const [audience, setAudience] = useState<'performers' | 'team' | 'everyone'>('everyone')
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
 
@@ -470,9 +470,17 @@ function BiosSection() {
     <section>
       <h2>Program bios</h2>
       <p className="hint">
-        {withBio} of {eligible} bios written. Requesting creates a to-do for everyone still
-        missing one; people write theirs on the To-Do tab, and it compiles below for the
-        program.
+        {eligible === 0
+          ? `Nobody matches "${
+              audience === 'performers'
+                ? 'Performers only'
+                : audience === 'team'
+                  ? 'Production team'
+                  : 'Everyone'
+            }" yet — pick a different group below, or add people in People & roles first.`
+          : `${withBio} of ${eligible} bios written for this group. Requesting creates a to-do
+        for everyone still missing one; people write theirs on the To-Do tab, and it compiles
+        below for the program.`}
       </p>
       <div className="row">
         <label>
@@ -481,9 +489,9 @@ function BiosSection() {
             value={audience}
             onChange={(e) => setAudience(e.target.value as typeof audience)}
           >
+            <option value="everyone">Everyone</option>
             <option value="performers">Performers only</option>
             <option value="team">Production team</option>
-            <option value="everyone">Everyone</option>
           </select>
         </label>
         <label>
