@@ -58,3 +58,66 @@ routerAdd(
   },
   $apis.requireAuth(),
 );
+
+// Everything an auditioner needs, in one call: the production's audition
+// setup, the roles they can try out for, and the scheduled audition times.
+// Auditioners usually aren't members, so this route (not collection rules)
+// is how role names and audition events reach them — safe fields only.
+routerAdd(
+  "GET",
+  "/api/glowtape/audition-info",
+  (e) => {
+    const lib = require(`${__hooks}/glowtape_lib.js`);
+    const productionId = e.request.url.query().get("production");
+    let production;
+    try {
+      production = e.app.findRecordById("productions", productionId);
+    } catch {
+      throw new NotFoundError("Unknown production.");
+    }
+    const isManager = lib.toIdArray(production.get("managers")).includes(e.auth.id);
+    if (!production.get("auditionOpen") && !isManager) {
+      throw new NotFoundError("Auditions aren't open for this production.");
+    }
+
+    // Performer roles with names, not yet cast — what there is to audition for.
+    const members = e.app.findRecordsByFilter(
+      "members",
+      "production = {:p} && role = 'performer' && position != '' && user = ''",
+      "created",
+      200,
+      0,
+      { p: production.id },
+    );
+    const roles = [];
+    for (const m of members) {
+      if (m.get("claimedFrom")) continue;
+      const label = m.get("position") + (m.get("minor") ? " (young performer)" : "");
+      if (!roles.includes(label)) roles.push(label);
+    }
+
+    const events = e.app.findRecordsByFilter(
+      "events",
+      "production = {:p} && kind ~ 'audition' && status != 'cancelled' && start >= {:from}",
+      "start",
+      20,
+      0,
+      { p: production.id, from: lib.pbNow(-24 * 3600e3) },
+    );
+
+    return e.json(200, {
+      open: !!production.get("auditionOpen"),
+      title: production.get("title"),
+      notes: production.get("auditionNotes"),
+      questions: production.get("auditionQuestions") || [],
+      roles,
+      events: events.map((ev) => ({
+        start: ev.get("start"),
+        end: ev.get("end"),
+        location: ev.get("location"),
+        title: ev.get("title"),
+      })),
+    });
+  },
+  $apis.requireAuth(),
+);

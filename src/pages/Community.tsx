@@ -71,11 +71,14 @@ export default function Community() {
                     {ev.org ? ` · ${ev.org}` : ''}
                   </div>
                   {ev.title && ev.title !== ev.kind && <div className="event-line hint">{ev.title}</div>}
-                  {isAudition(ev.kind) && ev.auditionOpen && (
-                    <Link className="link" to={`/audition/${ev.production}`}>
-                      → Sign up to audition
-                    </Link>
-                  )}
+                  {isAudition(ev.kind) &&
+                    (ev.auditionOpen ? (
+                      <Link className="link" to={`/audition/${ev.production}`}>
+                        📝 Sign up to audition
+                      </Link>
+                    ) : (
+                      <span className="hint">Signups aren't open yet — watch this space.</span>
+                    ))}
                 </li>
               ))}
             </ul>

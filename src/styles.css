@@ -663,6 +663,12 @@ form.stack,
   color: var(--accent);
 }
 
+.check-columns {
+  columns: 2;
+  gap: 1.5rem;
+  margin: 0.3rem 0;
+}
+
 /* --- Blank paper forms (printable audition sheet) --- */
 .blank-line {
   border-bottom: 1.5px solid #555;

@@ -1,9 +1,14 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { pb } from '../lib/pb.ts'
-import { copyrightLine } from '../lib/types.ts'
+import { copyrightLine, formatWhen } from '../lib/types.ts'
 import { useTitle } from '../lib/useTitle.ts'
 import type { ProductionRecord } from '../lib/types.ts'
+
+interface PrintInfo {
+  roles: string[]
+  events: { start: string; end: string; location: string }[]
+}
 
 // A blank, hand-fillable audition form to print for folks who'd rather use
 // paper. Staff keep the sheets with their audition records.
@@ -11,6 +16,7 @@ export default function AuditionPrint() {
   useTitle('Audition form')
   const { id } = useParams()
   const [production, setProduction] = useState<ProductionRecord | null>(null)
+  const [info, setInfo] = useState<PrintInfo>({ roles: [], events: [] })
   const [failed, setFailed] = useState(false)
 
   useEffect(() => {
@@ -19,6 +25,9 @@ export default function AuditionPrint() {
       .getOne<ProductionRecord>(id)
       .then(setProduction)
       .catch(() => setFailed(true))
+    pb.send(`/api/glowtape/audition-info?production=${encodeURIComponent(id)}`, { method: 'GET' })
+      .then((res) => setInfo({ roles: res.roles ?? [], events: res.events ?? [] }))
+      .catch(() => {})
   }, [id])
 
   if (failed) {
@@ -52,6 +61,14 @@ export default function AuditionPrint() {
 
       <h1>Audition Form — {production.title}</h1>
       {production.auditionNotes && <p>{production.auditionNotes}</p>}
+      {info.events.length > 0 && (
+        <p>
+          <strong>Audition times:</strong>{' '}
+          {info.events
+            .map((ev) => `${formatWhen(ev.start, ev.end)}${ev.location ? ` at ${ev.location}` : ''}`)
+            .join(' · ')}
+        </p>
+      )}
 
       <div className="stack print-fields">
         <div>
@@ -67,9 +84,20 @@ export default function AuditionPrint() {
           <div className="blank-line" />
         </div>
         <div>
-          <strong>Role(s) you're interested in</strong>
-          <div className="blank-line" />
-          <div className="blank-line" />
+          <strong>Role(s) you're interested in</strong> (check all that appeal)
+          {info.roles.length > 0 ? (
+            <ul className="plain-list check-columns">
+              {info.roles.map((role) => (
+                <li key={role}>☐ {role}</li>
+              ))}
+              <li>☐ Ensemble / anything!</li>
+            </ul>
+          ) : (
+            <>
+              <div className="blank-line" />
+              <div className="blank-line" />
+            </>
+          )}
         </div>
         <div>
           <strong>Conflicts during the rehearsal period</strong> (dates or evenings you can't

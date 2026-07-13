@@ -201,6 +201,13 @@ export default function EventForm({
         <p className="hint" role="status">
           🌍 Heads up: <strong>{kind}</strong> events appear on the public community calendar
           (title, time, and place only — never who's called or your notes).
+          {kind.toLowerCase().includes('audition') && !production.auditionOpen && (
+            <>
+              {' '}
+              Signups aren't open yet — flip on <em>Auditions</em> in Manage so the calendar
+              can link people to your signup form.
+            </>
+          )}
         </p>
       )}
       <div className="row">
