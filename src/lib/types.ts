@@ -40,6 +40,11 @@ export interface FeedbackRecord {
   expand?: { user?: UserRecord }
 }
 
+export interface CompanyRecord {
+  id: string
+  name: string
+}
+
 export interface AccessCodeRecord {
   id: string
   code: string

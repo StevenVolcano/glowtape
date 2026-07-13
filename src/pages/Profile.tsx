@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { pb } from '../lib/pb.ts'
 import { useAuth } from '../lib/auth.tsx'
 import { useTitle } from '../lib/useTitle.ts'
-import type { CreditRow, ProfileRecord } from '../lib/types.ts'
+import type { CompanyRecord, CreditRow, ProfileRecord } from '../lib/types.ts'
 
 // The community acting profile: headshot + experience, shown to directors
 // alongside audition signups. Teens skip the headshot (youth-safety model).
@@ -15,6 +15,7 @@ export default function Profile() {
   const [experience, setExperience] = useState('')
   const [skills, setSkills] = useState('')
   const [credits, setCredits] = useState<CreditRow[]>([])
+  const [companies, setCompanies] = useState<CompanyRecord[]>([])
   const [loaded, setLoaded] = useState(false)
   const [busy, setBusy] = useState(false)
   const [saved, setSaved] = useState('')
@@ -39,6 +40,10 @@ export default function Profile() {
       setLoaded(true)
     }
     load()
+    pb.collection('companies')
+      .getFullList<CompanyRecord>({ sort: 'name' })
+      .then(setCompanies)
+      .catch(() => {})
   }, [user?.id])
 
   async function save() {
@@ -153,23 +158,50 @@ export default function Profile() {
                     </tr>
                   </thead>
                   <tbody>
-                    {credits.map((c, i) => (
+                    {credits.map((c, i) => {
+                      const setField = (field: keyof CreditRow, value: string) =>
+                        setCredits((prev) =>
+                          prev.map((row, j) => (j === i ? { ...row, [field]: value } : row)),
+                        )
+                      const knownCompany =
+                        !c.company || companies.some((co) => co.name === c.company)
+                      return (
                       <tr key={i}>
                         {(['year', 'company', 'show', 'role'] as const).map((field) => (
                           <td key={field}>
-                            <input
-                              aria-label={field}
-                              value={c[field]}
-                              maxLength={field === 'year' ? 9 : 120}
-                              style={field === 'year' ? { minWidth: '4.5rem' } : undefined}
-                              onChange={(e) =>
-                                setCredits((prev) =>
-                                  prev.map((row, j) =>
-                                    j === i ? { ...row, [field]: e.target.value } : row,
-                                  ),
-                                )
-                              }
-                            />
+                            {field === 'company' && companies.length > 0 && knownCompany ? (
+                              // Local companies come from a shared list; picking
+                              // "Somewhere else…" turns the cell into plain text
+                              // (and it turns back if cleared).
+                              <select
+                                aria-label="company"
+                                value={c.company}
+                                onChange={(e) => {
+                                  if (e.target.value === '__other') {
+                                    const name = window.prompt('The company or theater name:')
+                                    if (name?.trim()) setField('company', name.trim())
+                                  } else {
+                                    setField('company', e.target.value)
+                                  }
+                                }}
+                              >
+                                <option value="">— company —</option>
+                                {companies.map((co) => (
+                                  <option key={co.id} value={co.name}>
+                                    {co.name}
+                                  </option>
+                                ))}
+                                <option value="__other">✏️ Somewhere else…</option>
+                              </select>
+                            ) : (
+                              <input
+                                aria-label={field}
+                                value={c[field]}
+                                maxLength={field === 'year' ? 9 : 120}
+                                style={field === 'year' ? { minWidth: '4.5rem' } : undefined}
+                                onChange={(e) => setField(field, e.target.value)}
+                              />
+                            )}
                           </td>
                         ))}
                         <td>
@@ -182,7 +214,8 @@ export default function Profile() {
                           </button>
                         </td>
                       </tr>
-                    ))}
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>

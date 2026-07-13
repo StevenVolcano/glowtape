@@ -4,7 +4,12 @@ import { pb } from '../lib/pb.ts'
 import { useAuth } from '../lib/auth.tsx'
 import { useTitle } from '../lib/useTitle.ts'
 import { formatDay, formatStamp, shareInvite } from '../lib/types.ts'
-import type { AccessCodeRecord, FeedbackRecord, ProductionRequestRecord } from '../lib/types.ts'
+import type {
+  AccessCodeRecord,
+  CompanyRecord,
+  FeedbackRecord,
+  ProductionRequestRecord,
+} from '../lib/types.ts'
 
 // The operator console: triage feedback and rotate community access codes
 // without touching the PocketBase dashboard. Visible only to accounts with
@@ -27,7 +32,83 @@ export default function Operator() {
       <RequestsSection />
       <FeedbackInbox />
       <AccessCodesSection />
+      <CompaniesSection />
     </main>
+  )
+}
+
+// The shared list of local theater companies offered in profile stage-history
+// dropdowns. Renaming or deleting here doesn't touch what anyone already
+// saved — profiles store the company as plain text.
+function CompaniesSection() {
+  const [companies, setCompanies] = useState<CompanyRecord[]>([])
+  const [name, setName] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [message, setMessage] = useState('')
+
+  async function load() {
+    const list = await pb.collection('companies').getFullList<CompanyRecord>({ sort: 'name' })
+    setCompanies(list)
+  }
+
+  useEffect(() => {
+    load().catch(() => {})
+  }, [])
+
+  async function add(e: FormEvent) {
+    e.preventDefault()
+    if (!name.trim()) return
+    setBusy(true)
+    setMessage('')
+    try {
+      await pb.collection('companies').create({ name: name.trim() })
+      setName('')
+      await load()
+    } catch {
+      setMessage("Couldn't add it — is it already on the list?")
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function remove(c: CompanyRecord) {
+    if (!window.confirm(`Remove ${c.name} from the dropdown list? Profiles that already mention it keep it.`))
+      return
+    await pb.collection('companies').delete(c.id)
+    await load()
+  }
+
+  return (
+    <section>
+      <h2>Theater companies</h2>
+      <p className="hint">
+        The dropdown people see in their profile's stage-history table (they can always type
+        somewhere else by hand).
+      </p>
+      <ul className="plain-list">
+        {companies.map((c) => (
+          <li key={c.id} className="row">
+            <span>{c.name}</span>
+            <button className="link" aria-label={`Remove ${c.name}`} onClick={() => remove(c)}>
+              ✕
+            </button>
+          </li>
+        ))}
+      </ul>
+      <form onSubmit={add} className="row">
+        <input
+          aria-label="New company"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          maxLength={120}
+          placeholder="Example: Aberdeen High School"
+        />
+        <button type="submit" disabled={busy || !name.trim()}>
+          Add company
+        </button>
+      </form>
+      {message && <p className="error" role="status">{message}</p>}
+    </section>
   )
 }
 

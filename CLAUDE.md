@@ -108,7 +108,9 @@ relations + notes) ·
 `announcements` + `announcement_acks` ·
 `tasks` (kind='bio' for bio requests) · `tracker_items` · `notes` ·
 `resources` (area show|audition) · `profiles` · `auditions` (unique
-production+user) · `production_requests` · `feedback` · `access_codes` ·
+production+user) · `companies` (operator-curated dropdown for profile
+credits; freeform text still allowed) · `cast_drafts` (manager-only
+worksheet) · `production_requests` · `feedback` · `access_codes` ·
 `phone_codes` (hashed, expiring) · `reminders_sent` (event+user+kind unique —
 SMS dedupe) · `calendar_tokens` · `push_subscriptions` (endpoint unique).
 
