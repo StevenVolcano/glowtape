@@ -580,6 +580,14 @@ form.stack,
   padding: 0.5rem 0.75rem;
 }
 
+/* The ⚑ Report button in the reaction picker: red so it reads as "flag a
+   problem", never as just another emoji. */
+.report-button {
+  color: var(--error);
+  border-color: var(--error);
+  font-weight: 600;
+}
+
 /* The go-live step at the end of a setup flow — boxed so it can't be missed. */
 .golive {
   border: 3px solid var(--accent);

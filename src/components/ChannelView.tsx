@@ -249,11 +249,10 @@ export default function ChannelView({
                   {m.author !== user?.id && (
                     <button
                       type="button"
-                      className="reaction"
-                      aria-label="Report this message"
+                      className="reaction report-button"
                       onClick={() => report(m)}
                     >
-                      ⚑
+                      <span aria-hidden="true">⚑</span> Report
                     </button>
                   )}
                 </>
