@@ -143,6 +143,14 @@ export default function Home() {
       <CommunityBoard />
 
       <section>
+        <h2>Directing a show?</h2>
+        <p className="hint">
+          <Link to="/request-production">Request a production</Link> — tell us about your show
+          and we'll set it up with you as the manager. Free, always.
+        </p>
+      </section>
+
+      <section>
         <h2>My profile</h2>
         <p className="hint">
           <Link to="/profile">Your community profile</Link> — experience, skills, headshot —

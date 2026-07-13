@@ -4,7 +4,7 @@ import { pb } from '../lib/pb.ts'
 import { useAuth } from '../lib/auth.tsx'
 import { useTitle } from '../lib/useTitle.ts'
 import { formatDay, shareInvite } from '../lib/types.ts'
-import type { AccessCodeRecord, FeedbackRecord } from '../lib/types.ts'
+import type { AccessCodeRecord, FeedbackRecord, ProductionRequestRecord } from '../lib/types.ts'
 
 // The operator console: triage feedback and rotate community access codes
 // without touching the PocketBase dashboard. Visible only to accounts with
@@ -24,6 +24,7 @@ export default function Operator() {
         <span className="brand-small">Glow Tape</span>
       </header>
       <h1>Operator console</h1>
+      <RequestsSection />
       <FeedbackInbox />
       <AccessCodesSection />
     </main>
@@ -230,6 +231,125 @@ function AccessCodesSection() {
           Add code
         </button>
       </form>
+      {message && <p className="acked" role="status">{message}</p>}
+    </section>
+  )
+}
+
+// Production requests: edit the details in place, then approve (creates the
+// org, production, and their manager membership) or decline with a note.
+function RequestsSection() {
+  const [requests, setRequests] = useState<ProductionRequestRecord[]>([])
+  const [message, setMessage] = useState('')
+  const [busyId, setBusyId] = useState('')
+
+  async function load() {
+    const list = await pb.collection('production_requests').getFullList<ProductionRequestRecord>({
+      sort: '-created',
+      expand: 'user',
+    })
+    setRequests(list)
+  }
+
+  useEffect(() => {
+    load().catch(() => {})
+  }, [])
+
+  async function saveField(r: ProductionRequestRecord, field: 'org' | 'title' | 'reply', value: string) {
+    if (value === (r[field] ?? '')) return
+    await pb.collection('production_requests').update(r.id, { [field]: value })
+    await load()
+  }
+
+  async function approve(r: ProductionRequestRecord) {
+    if (!window.confirm(`Create "${r.title}" at ${r.org} with ${r.expand?.user?.name} as manager?`))
+      return
+    setBusyId(r.id)
+    setMessage('')
+    try {
+      const res = await pb.send('/api/glowtape/requests/approve', {
+        method: 'POST',
+        body: { request: r.id },
+      })
+      setMessage(`Created — join code ${res.joinCode}. The requester was emailed.`)
+      await load()
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : 'Something went wrong.')
+    } finally {
+      setBusyId('')
+    }
+  }
+
+  async function decline(r: ProductionRequestRecord) {
+    await pb.collection('production_requests').update(r.id, { status: 'declined' })
+    await load()
+  }
+
+  const open = requests.filter((r) => !r.status || r.status === 'new')
+  if (requests.length === 0) return null
+
+  return (
+    <section>
+      <h2>Production requests ({open.length} open)</h2>
+      <ul className="plain-list">
+        {requests.map((r) => (
+          <li key={r.id} className="stack" style={{ marginBottom: '1rem' }}>
+            <div>
+              <strong>{r.expand?.user?.name}</strong>{' '}
+              <span className="hint">
+                {r.expand?.user?.email} · {r.role} · {formatDay(r.created)} ·{' '}
+                {r.status || 'new'}
+              </span>
+            </div>
+            <p className="hint" style={{ margin: 0 }}>
+              {r.timeline && <>Timeline: {r.timeline} · </>}
+              {r.castSize && <>Cast: {r.castSize} · </>}
+              {r.minors ? 'Includes minors 🛡️' : 'No minors expected'}
+              {r.notes && (
+                <>
+                  <br />
+                  {r.notes}
+                </>
+              )}
+            </p>
+            {(!r.status || r.status === 'new') && (
+              <>
+                <div className="row">
+                  <input
+                    aria-label="Organization"
+                    defaultValue={r.org}
+                    onBlur={(e) => saveField(r, 'org', e.target.value.trim())}
+                  />
+                  <input
+                    aria-label="Show title"
+                    defaultValue={r.title}
+                    onBlur={(e) => saveField(r, 'title', e.target.value.trim())}
+                  />
+                </div>
+                <div className="row">
+                  <button onClick={() => approve(r)} disabled={busyId === r.id}>
+                    {busyId === r.id ? 'Creating…' : '✓ Approve & create'}
+                  </button>
+                  <button className="link" onClick={() => decline(r)}>
+                    Decline
+                  </button>
+                  <input
+                    aria-label="Reply shown to the requester"
+                    defaultValue={r.reply ?? ''}
+                    onBlur={(e) => saveField(r, 'reply', e.target.value.trim())}
+                    placeholder="Short note they'll see (optional)"
+                  />
+                </div>
+              </>
+            )}
+            {r.status && r.status !== 'new' && (
+              <span className="hint">
+                {r.title} ({r.org}){r.reply ? ` · ${r.reply}` : ''}
+              </span>
+            )}
+          </li>
+        ))}
+      </ul>
       {message && <p className="acked" role="status">{message}</p>}
     </section>
   )

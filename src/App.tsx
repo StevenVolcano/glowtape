@@ -7,6 +7,7 @@ import Profile from './pages/Profile.tsx'
 import AuditionForm from './pages/AuditionForm.tsx'
 import AuditionPrint from './pages/AuditionPrint.tsx'
 import Operator from './pages/Operator.tsx'
+import RequestProduction from './pages/RequestProduction.tsx'
 
 export default function App() {
   const { user } = useAuth()
@@ -23,6 +24,7 @@ export default function App() {
       <Route path="/audition/:id" element={<AuditionForm />} />
       <Route path="/audition/:id/print" element={<AuditionPrint />} />
       <Route path="/operator" element={<Operator />} />
+      <Route path="/request-production" element={<RequestProduction />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )

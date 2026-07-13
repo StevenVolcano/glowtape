@@ -267,6 +267,23 @@ export interface ChannelRecord {
   audience: 'all' | 'cast' | 'crew' | 'team'
   archived: boolean
   defaultMuted: boolean
+  member: string // set = semi-private: that member + guardians + managers only
+}
+
+export interface ProductionRequestRecord {
+  id: string
+  user: string
+  org: string
+  title: string
+  role: 'director' | 'asst_director' | 'stage_manager' | 'producer'
+  timeline: string
+  castSize: string
+  minors: boolean
+  notes: string
+  status: '' | 'new' | 'approved' | 'declined'
+  reply: string
+  created: string
+  expand?: { user?: UserRecord }
 }
 
 export interface ChannelPrefRecord {

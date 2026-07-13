@@ -27,6 +27,7 @@ export default function MessagesTab() {
         // Audience filtering is a UI courtesy in the pilot; managers see all.
         const role = myMember?.role
         const visible = list.filter((c) => {
+          if (c.member) return true // semi-private: the server already gated who sees it
           if (isManager || !role) return true
           if (c.audience === 'all') return true
           if (c.audience === 'cast') return role === 'performer'
@@ -95,6 +96,15 @@ export default function MessagesTab() {
             </button>
           ))}
         </div>
+        {!isManager && myMember && (
+          <TeamChannelButton
+            channels={channels}
+            onOpened={(ch) => {
+              setChannels((prev) => (prev.some((c) => c.id === ch.id) ? prev : [...prev, ch]))
+              setActive(ch.id)
+            }}
+          />
+        )}
         {activeChannel && (
           <button className="link" onClick={() => toggleMute(activeChannel)}>
             {isMuted(activeChannel)
@@ -169,5 +179,50 @@ function Announcements() {
         })}
       </ul>
     </section>
+  )
+}
+
+// Find-or-create the semi-private channel between this member and the
+// production team. Managers don't need it — they're already the team.
+function TeamChannelButton({
+  channels,
+  onOpened,
+}: {
+  channels: ChannelRecord[]
+  onOpened: (ch: ChannelRecord) => void
+}) {
+  const { production } = useProduction()
+  const [busy, setBusy] = useState(false)
+
+  const existing = channels.find((c) => c.member)
+
+  async function open() {
+    setBusy(true)
+    try {
+      const res = await pb.send('/api/glowtape/team-channel', {
+        method: 'POST',
+        body: { production: production.id },
+      })
+      const ch =
+        channels.find((c) => c.id === res.channel) ??
+        (await pb.collection('channels').getOne<ChannelRecord>(res.channel))
+      onOpened(ch)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  if (existing) return null // it's already in the chip row
+
+  return (
+    <p>
+      <button className="link" onClick={open} disabled={busy}>
+        🔒 Message the production team privately
+      </button>
+      <span className="hint">
+        {' '}
+        — a channel just between you (and your guardians) and the whole production team.
+      </span>
+    </p>
   )
 }
