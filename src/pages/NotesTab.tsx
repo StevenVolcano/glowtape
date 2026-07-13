@@ -15,6 +15,7 @@ export default function NotesTab() {
   const navigate = useNavigate()
   const [notes, setNotes] = useState<NoteRecord[]>([])
   const [loaded, setLoaded] = useState(false)
+  const [query, setQuery] = useState('')
 
   const base = `/production/${production.id}/notes`
 
@@ -47,6 +48,26 @@ export default function NotesTab() {
     })
     await load()
     navigate(`${base}/${rec.id}`)
+  }
+
+  const q = query.trim().toLowerCase()
+  const matches = q
+    ? notes.filter(
+        (n) => n.title.toLowerCase().includes(q) || n.body.toLowerCase().includes(q),
+      )
+    : notes
+
+  // A little context around the first body hit, so you can tell WHICH
+  // "fainting couch" note this is without opening it.
+  function snippet(n: NoteRecord): string {
+    if (!q || n.title.toLowerCase().includes(q)) return ''
+    const i = n.body.toLowerCase().indexOf(q)
+    if (i < 0) return ''
+    const from = Math.max(0, i - 30)
+    const to = Math.min(n.body.length, i + q.length + 50)
+    return `${from > 0 ? '…' : ''}${n.body.slice(from, to).replace(/\s+/g, ' ')}${
+      to < n.body.length ? '…' : ''
+    }`
   }
 
   const selected = noteId ? notes.find((n) => n.id === noteId) : null
@@ -85,8 +106,25 @@ export default function NotesTab() {
         {loaded && notes.length === 0 && (
           <p className="hint">No notes yet — tap the button after your next run-through.</p>
         )}
+        {notes.length > 1 && (
+          <input
+            type="search"
+            aria-label="Search notes"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search notes — e.g. fainting couch, cue 12, Act 2…"
+            style={{ marginTop: '0.75rem' }}
+          />
+        )}
+        {q && (
+          <p className="hint" role="status">
+            {matches.length === 0
+              ? 'No notes mention that.'
+              : `${matches.length} of ${notes.length} notes match.`}
+          </p>
+        )}
         <ul className="plain-list">
-          {notes.map((n) => (
+          {matches.map((n) => (
             <li key={n.id}>
               <button className="link" onClick={() => navigate(`${base}/${n.id}`)}>
                 📝 {n.title}
@@ -94,6 +132,7 @@ export default function NotesTab() {
               <span className="hint">
                 {n.expand?.author?.name} · {formatDay(n.updated)}
               </span>
+              {snippet(n) && <div className="hint">“{snippet(n)}”</div>}
             </li>
           ))}
         </ul>
