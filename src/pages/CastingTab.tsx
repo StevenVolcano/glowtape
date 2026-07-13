@@ -101,6 +101,42 @@ export default function CastingTab() {
     assign(memberId, name.trim() ? `name:${name.trim()}` : '')
   }
 
+  // Lock in one role ahead of the rest — the Jesus-and-Judas-first pattern.
+  async function castOne(memberId: string) {
+    const value = assignments[memberId] ?? ''
+    if (!value) return
+    const role = roles.find((m) => m.id === memberId)
+    const who = candidateName(value)
+    if (
+      !window.confirm(
+        `Cast ${who} as ${role?.position || 'this role'} now, ahead of the rest? ${
+          value.startsWith('name:')
+            ? 'Their name goes on the role as a not-on-Glow-Tape member.'
+            : 'They immediately see the production — schedule, messages, materials.'
+        } The rest of your draft stays private.`,
+      )
+    )
+      return
+    setBusy(true)
+    setStatus('')
+    try {
+      const res = await pb.send('/api/glowtape/casting/finalize', {
+        method: 'POST',
+        body: { production: production.id, members: [memberId] },
+      })
+      setStatus(
+        res.assigned > 0
+          ? `${who} is cast as ${role?.position || 'the role'}. 🎉 The rest of the draft is untouched.`
+          : `Couldn't cast that role${res.skipped?.length ? `: ${res.skipped.join('; ')}` : ''}.`,
+      )
+      await reload()
+    } catch (err) {
+      setStatus(err instanceof Error ? err.message : 'Casting failed.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   async function finalize() {
     const count = Object.values(assignments).filter(Boolean).length
     if (count === 0) {
@@ -207,6 +243,15 @@ export default function CastingTab() {
                     {doubled && (
                       <span className="error">⚠ {candidateName(picked)} is drafted for another role too</span>
                     )}
+                    {picked && !doubled && (
+                      <button
+                        className="link"
+                        disabled={busy}
+                        onClick={() => castOne(m.id)}
+                      >
+                        ✓ Cast now
+                      </button>
+                    )}
                   </>
                 )}
                 {audition?.conflicts && (
@@ -230,7 +275,10 @@ export default function CastingTab() {
         {status && <p className="acked" role="status">{status}</p>}
         <p className="hint">
           Double-cast warnings (⚠) are fine to leave while you think — they're flags, not
-          errors. Finalizing skips child roles and anything already cast.
+          errors. Casting your leads early? <em>✓ Cast now</em> next to a pick locks in just
+          that role while the rest of the draft stays private — the usual move when Jesus and
+          Judas are set before the ensemble. Finalizing skips child roles and anything already
+          cast.
         </p>
       </section>
     </div>

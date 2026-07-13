@@ -5,6 +5,7 @@ import { useAuth } from '../lib/auth.tsx'
 import ResourceList from '../components/ResourceList.tsx'
 import { useTitle } from '../lib/useTitle.ts'
 import { formatWhen } from '../lib/types.ts'
+import { downloadMultiIcs } from '../lib/calendar.ts'
 import type { AuditionRecord } from '../lib/types.ts'
 
 interface AuditionInfo {
@@ -32,6 +33,7 @@ export default function AuditionForm() {
   const [failed, setFailed] = useState(false)
   const [busy, setBusy] = useState(false)
   const [saved, setSaved] = useState('')
+  const [justSignedUp, setJustSignedUp] = useState(false)
   useTitle(info ? `Audition: ${info.title}` : 'Audition')
 
   useEffect(() => {
@@ -109,8 +111,9 @@ export default function AuditionForm() {
       setSaved(
         existing
           ? 'Updated — the production team sees your latest answers. ✓'
-          : "You're signed up! The production team has your form — just show up to an audition time below. Break a leg! 🎭",
+          : "You're signed up! The production team has your form. Break a leg! 🎭",
       )
+      setJustSignedUp(true)
     } finally {
       setBusy(false)
     }
@@ -144,6 +147,14 @@ export default function AuditionForm() {
               </li>
             ))}
           </ul>
+          <button
+            className="link"
+            onClick={() =>
+              downloadMultiIcs(info.events, info.title, `${info.title} auditions`)
+            }
+          >
+            📆 Add {info.events.length === 1 ? 'the audition time' : `all ${info.events.length} audition times`} to my calendar
+          </button>
         </section>
       )}
 
@@ -224,6 +235,19 @@ export default function AuditionForm() {
           </button>
           {saved && <span className="acked" role="status">{saved}</span>}
         </div>
+        {justSignedUp && info.events.length > 0 && (
+          <p role="status">
+            <button
+              className="link"
+              onClick={() =>
+                downloadMultiIcs(info.events, info.title, `${info.title} auditions`)
+              }
+            >
+              📆 Put {info.events.length === 1 ? 'the audition time' : `all ${info.events.length} audition times`} on my calendar
+            </button>{' '}
+            <span className="hint">so audition day doesn't sneak up on you.</span>
+          </p>
+        )}
       </section>
     </main>
   )

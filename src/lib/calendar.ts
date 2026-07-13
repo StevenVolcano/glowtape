@@ -67,3 +67,39 @@ export function downloadEventIcs(
   a.remove()
   URL.revokeObjectURL(url)
 }
+
+// One .ics with several events — used for "add all the audition times".
+export function downloadMultiIcs(
+  events: { start: string; end: string; location: string; title: string }[],
+  productionTitle: string,
+  filename: string,
+): void {
+  const stamp = calStamp(new Date().toISOString().replace('T', ' '))
+  const blocks = events.map((ev, i) =>
+    [
+      'BEGIN:VEVENT',
+      `UID:gt-${stamp}-${i}@glowtape`,
+      `DTSTAMP:${stamp}`,
+      `DTSTART:${calStamp(ev.start)}`,
+      ev.end
+        ? `DTEND:${calStamp(ev.end)}`
+        : `DTEND:${new Date(pbDate(ev.start).getTime() + 2 * 3600e3)
+            .toISOString()
+            .replace(/[-:]/g, '')
+            .replace(/\.\d{3}/, '')}`,
+      `SUMMARY:${icsEscape(`${ev.title || 'Auditions'} — ${productionTitle}`)}`,
+      ...(ev.location ? [`LOCATION:${icsEscape(ev.location)}`] : []),
+      'END:VEVENT',
+    ].join('\r\n'),
+  )
+  const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Glow Tape//Auditions//EN', ...blocks, 'END:VCALENDAR']
+  const blob = new Blob([lines.join('\r\n') + '\r\n'], { type: 'text/calendar;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `${filename.replace(/[^\w -]/g, '')}.ics`
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+}

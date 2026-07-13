@@ -13,7 +13,10 @@ routerAdd(
   "/api/glowtape/casting/finalize",
   (e) => {
     const lib = require(`${__hooks}/glowtape_lib.js`);
-    const data = new DynamicModel({ production: "" });
+    // members: optional subset of role (member) ids to cast now — for shows
+    // that lock in a lead or two before the rest (Jesus and Judas first).
+    // Empty = finalize everything drafted.
+    const data = new DynamicModel({ production: "", members: [] });
     e.bindBody(data);
 
     let production;
@@ -35,10 +38,12 @@ routerAdd(
       throw new BadRequestError("No draft cast to finalize.");
     }
     const assignments = draft.get("assignments") || {};
+    const subset = lib.toIdArray(data.members);
 
     let assigned = 0;
     const skipped = [];
     for (const memberId of Object.keys(assignments)) {
+      if (subset.length > 0 && !subset.includes(memberId)) continue;
       const value = String(assignments[memberId] || "");
       if (!value) continue;
       // Paper-form pick: record the name on the role as an offline member.
@@ -83,8 +88,11 @@ routerAdd(
       assigned++;
     }
 
-    draft.set("status", "final");
-    e.app.save(draft);
+    // Early-casting a subset keeps the rest of the draft open.
+    if (subset.length === 0) {
+      draft.set("status", "final");
+      e.app.save(draft);
+    }
 
     return e.json(200, { ok: true, assigned, skipped });
   },
