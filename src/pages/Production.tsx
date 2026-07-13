@@ -8,6 +8,7 @@ import MessagesTab from './MessagesTab.tsx'
 import PeopleTab from './PeopleTab.tsx'
 import TasksTab from './TasksTab.tsx'
 import TrackersTab from './TrackersTab.tsx'
+import NotesTab from './NotesTab.tsx'
 import BiosView from './BiosView.tsx'
 import { useTitle } from '../lib/useTitle.ts'
 import AdminTab from './AdminTab.tsx'
@@ -93,6 +94,7 @@ export default function Production() {
           <NavLink to={`${base}/messages`}>Messages</NavLink>
           <NavLink to={`${base}/todo`}>To-Do</NavLink>
           <NavLink to={`${base}/sheets`}>Sheets</NavLink>
+          <NavLink to={`${base}/notes`}>Notes</NavLink>
           <NavLink to={`${base}/people`}>People</NavLink>
           {isManager && <NavLink to={`${base}/admin`}>Manage</NavLink>}
         </nav>
@@ -102,6 +104,8 @@ export default function Production() {
           <Route path="messages" element={<MessagesTab />} />
           <Route path="todo" element={<TasksTab />} />
           <Route path="sheets" element={<TrackersTab />} />
+          <Route path="notes" element={<NotesTab />} />
+          <Route path="notes/:noteId" element={<NotesTab />} />
           <Route path="people" element={<PeopleTab />} />
           {isManager && <Route path="admin" element={<AdminTab />} />}
           {isManager && <Route path="bios" element={<BiosView />} />}

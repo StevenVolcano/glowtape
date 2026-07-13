@@ -74,6 +74,17 @@ export interface ProfileRecord {
   expand?: { user?: UserRecord }
 }
 
+export interface NoteRecord {
+  id: string
+  production: string
+  author: string
+  title: string
+  body: string
+  created: string
+  updated: string
+  expand?: { author?: UserRecord }
+}
+
 export interface ResourceRecord {
   id: string
   production: string

@@ -1,7 +1,39 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 import { pb } from '../lib/pb.ts'
 import { useAuth } from '../lib/auth.tsx'
 import type { MessageRecord, ReactionRecord } from '../lib/types.ts'
+
+// Make pasted URLs tappable. Links into Glow Tape itself (rehearsal notes,
+// events) stay in the app; anything else opens in a new tab.
+function Linkified({ text }: { text: string }) {
+  const parts = text.split(/(https?:\/\/\S+)/g)
+  return (
+    <>
+      {parts.map((part, i) => {
+        if (!/^https?:\/\//.test(part)) return part
+        try {
+          const url = new URL(part)
+          if (url.origin === window.location.origin) {
+            const label = url.pathname.includes('/notes/') ? '\u{1F4DD} Open the note' : part
+            return (
+              <Link key={i} to={url.pathname + url.search}>
+                {label}
+              </Link>
+            )
+          }
+        } catch {
+          /* not a real URL after all */
+        }
+        return (
+          <a key={i} href={part} target="_blank" rel="noreferrer">
+            {part}
+          </a>
+        )
+      })}
+    </>
+  )
+}
 
 export default function ChannelView({ channelId }: { channelId: string }) {
   const { user } = useAuth()
@@ -140,7 +172,7 @@ export default function ChannelView({ channelId }: { channelId: string }) {
                   />
                 </a>
               )}
-              {m.text}
+              <Linkified text={m.text} />
             </span>
             <span className="reactions">
               {reactionSummary(m).map(([emoji, rows]) => (
