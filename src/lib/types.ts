@@ -168,6 +168,7 @@ export function mapsUrl(places: Place[], name: string): string {
 }
 
 export const DEFAULT_EVENT_KINDS = [
+  'Auditions',
   'Rehearsal',
   'Table Read',
   'Blocking',

@@ -4,6 +4,7 @@ import { pb } from '../lib/pb.ts'
 import { useAuth } from '../lib/auth.tsx'
 import { useProduction } from './Production.tsx'
 import EventForm from '../components/EventForm.tsx'
+import SetupGuide from '../components/SetupGuide.tsx'
 import { MANAGER_ROLES, ROLE_LABELS } from '../lib/types.ts'
 import type { AuditionRecord, ChannelRecord, ConflictRecord, EventRecord, MemberRecord, MemberRole, ProfileRecord, ResourceRecord } from '../lib/types.ts'
 import { DEFAULT_EVENT_KINDS, memberName, normalizePlaces, pbDate, productionPlaces, shareInvite } from '../lib/types.ts'
@@ -12,6 +13,7 @@ import type { Place } from '../lib/types.ts'
 export default function AdminTab() {
   return (
     <div>
+      <SetupGuide />
       <JoinCodeSection />
       <AuditionsSection />
       <ConflictAlertsSection />
@@ -39,7 +41,7 @@ function JoinCodeSection() {
   }
 
   return (
-    <section>
+    <section id="invite">
       <h2>Invite people</h2>
       <p className="hint">
         Share this code at the read-through, or send the invite link — opening it fills
@@ -63,7 +65,7 @@ function JoinCodeSection() {
 
 function NewEventSection() {
   return (
-    <section>
+    <section id="add-events">
       <h2>Add to the schedule</h2>
       <EventForm onDone={async () => {}} />
     </section>
@@ -353,7 +355,7 @@ function PresetsSection() {
   }
 
   return (
-    <section>
+    <section id="presets">
       <h2>Event types &amp; places</h2>
       <div className="stack">
         <label>
@@ -645,7 +647,7 @@ function MembersSection() {
   }
 
   return (
-    <section>
+    <section id="people">
       <h2>People &amp; roles</h2>
       <ul className="plain-list">
         {members.map((m) => (
@@ -906,6 +908,23 @@ function AuditionsSection() {
   const [openId, setOpenId] = useState('')
   const [busy, setBusy] = useState(false)
   const [saved, setSaved] = useState('')
+  const [shared, setShared] = useState('')
+
+  async function shareAuditionLink() {
+    const url = `${window.location.origin}/audition/${production.id}`
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'Glow Tape', text: `Audition for ${production.title}`, url })
+        setShared('Shared!')
+      } catch {
+        /* cancelled */
+      }
+    } else {
+      await navigator.clipboard.writeText(url)
+      setShared('Link copied — paste it anywhere.')
+    }
+    setTimeout(() => setShared(''), 3000)
+  }
 
   async function loadSignups() {
     const list = await pb.collection('auditions').getFullList<AuditionRecord>({
@@ -956,7 +975,7 @@ function AuditionsSection() {
   }
 
   return (
-    <section>
+    <section id="auditions">
       <h2>Auditions</h2>
       <label className="row manage-toggle">
         <input type="checkbox" checked={!!production.auditionOpen} onChange={toggleOpen} />
@@ -990,7 +1009,14 @@ function AuditionsSection() {
             </button>
             {saved && <span className="acked" role="status">{saved}</span>}
           </div>
+          <div className="row">
+            <button onClick={shareAuditionLink}>📤 Share the audition link</button>
+            {shared && <span className="acked" role="status">{shared}</span>}
+          </div>
           <p className="hint">
+            The link opens the signup form directly. Anyone already on Glow Tape just taps it;
+            newcomers also need a signup code (your join code works, or a community code from
+            the organizer).{' '}
             <Link className="link" to={`/audition/${production.id}/print`}>
               🖨 Print blank paper forms
             </Link>{' '}
@@ -1133,7 +1159,7 @@ function ResourcesSection() {
   const byArea = (a: 'show' | 'audition') => resources.filter((r) => r.area === a)
 
   return (
-    <section>
+    <section id="resources">
       <h2>Documents &amp; links</h2>
       <p className="hint">
         Scripts info, rehearsal tracks, forms, sides — anything the cast (or auditioners) should
