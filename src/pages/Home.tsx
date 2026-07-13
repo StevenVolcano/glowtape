@@ -2,7 +2,6 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { pb } from '../lib/pb.ts'
 import { useAuth } from '../lib/auth.tsx'
-import CommunityBoard from '../components/CommunityBoard.tsx'
 import { useTitle } from '../lib/useTitle.ts'
 import PhoneSettings from '../components/PhoneSettings.tsx'
 import FeedbackSection from '../components/FeedbackSection.tsx'
@@ -141,7 +140,20 @@ export default function Home() {
         {error && <p className="error" role="alert">{error}</p>}
       </section>
 
-      <CommunityBoard />
+      <section>
+        <h2>Theater Community</h2>
+        <ul className="cards">
+          <li>
+            <Link className="card card-link" to="/community">
+              <strong>🎪 The community board &amp; calendar</strong>
+              <span className="pill">all theaters</span>
+            </Link>
+          </li>
+        </ul>
+        <p className="hint">
+          Auditions and performances across Grays Harbor, plus the community message board.
+        </p>
+      </section>
 
       <section>
         <h2>More</h2>

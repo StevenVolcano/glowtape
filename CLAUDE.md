@@ -46,6 +46,9 @@ can pick up mid-project — read it fully before changing anything.
 | Director setup checklist (data-derived, top of To-Do for managers; links jump to Manage anchors via `ManageJumpNav` hash-scroll) + printable `public/director-guide.html`; QR codes for join/audition links (`qrcode` npm pkg, local) | `components/SetupGuide.tsx`, `ManageJumpNav.tsx`, `QrCode.tsx` | — |
 | Operator console (`/operator`, needs `users.operator` flag): feedback triage, production-request approval, community access codes | `pages/Operator.tsx` | approve route in `requests.pb.js` |
 | Production requests (director asks; operator edits+approves → org+production+manager membership created) | `pages/RequestProduction.tsx` | `pb_hooks/requests.pb.js` |
+| Community page `/community`: board + public calendar of audition/performance-kind events via `/api/glowtape/community-calendar` route (safe fields only); EventForm shows 🌍 notice on public kinds (`isCommunityKind`) | `pages/Community.tsx` | `pb_hooks/community.pb.js` |
+| Casting tab (manager-only): draft cast from audition signups in `cast_drafts` (manager-only collection), double-cast ⚠ + conflicts inline, finalize route assigns users to member rows after warning | `pages/CastingTab.tsx` | `pb_hooks/casting.pb.js`, migration `1754600000` |
+| Schedule extras: manager "View as member" filter, print view (list + month grids) at `schedule/print[/:memberId]`, ack-all with confirm; contact sheet columns manager-only (UI-level); members.contactEmail/Phone for offline folks (recipients() emails them, never SMS); profiles.credits table (Year/Company/Show/Role) | `pages/SchedulePrint.tsx`, `ScheduleTab.tsx`, `PeopleTab.tsx`, `Profile.tsx` | migration `1754600000`, `glowtape_lib.js` recipients |
 | Accessibility: WCAG 2.2 AA pass done (labels, live regions, contrast tokens, per-view titles via `lib/useTitle.ts`) | throughout | — |
 
 Static docs in `public/`: `help.html` (the user manual — keep in sync with

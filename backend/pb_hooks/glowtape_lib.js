@@ -52,6 +52,12 @@ function recipients(app, productionId, calledMemberIds) {
     push(m.get("user"));
     // Guardian-managed child: every guardian hears everything (issue #9).
     for (const g of toIdArray(m.get("guardians"))) push(g);
+    // Manager-entered contact for folks not on Glow Tape: email only, no SMS.
+    const offline = String(m.get("contactEmail") || "").trim();
+    if (offline && !m.get("user") && !seen.has("offline:" + offline)) {
+      seen.add("offline:" + offline);
+      out.push({ address: offline, name: m.get("displayName") || m.get("position") || "Cast member" });
+    }
   }
   return out;
 }

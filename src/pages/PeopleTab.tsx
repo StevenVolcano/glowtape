@@ -2,8 +2,10 @@ import { useProduction } from './Production.tsx'
 import { MANAGER_ROLES, ROLE_LABELS } from '../lib/types.ts'
 import { memberName } from '../lib/types.ts'
 
+// The contact sheet. Names and roles for everyone; email/phone columns are
+// production-team only — cast reach each other through Messages.
 export default function PeopleTab() {
-  const { members } = useProduction()
+  const { members, isManager } = useProduction()
 
   const people = members.filter((m) => !(m.multi && !m.user))
   const sorted = [...people].sort((a, b) => {
@@ -16,19 +18,25 @@ export default function PeopleTab() {
   return (
     <section>
       <div className="row space-between">
-        <h2>Contact sheet</h2>
+        <h2>{isManager ? 'Contact sheet' : 'People'}</h2>
         <button className="no-print" onClick={() => window.print()}>
           🖨 Print
         </button>
       </div>
+      {!isManager && (
+        <p className="hint">
+          Who's who in the show. Contact details stay with the production team — the Messages
+          tab (or your 🔒 team channel) is the way to reach people here.
+        </p>
+      )}
       <table className="contact-sheet">
         <thead>
           <tr>
             <th scope="col">Name</th>
             <th scope="col">Role</th>
             <th scope="col">Position / Character</th>
-            <th scope="col">Email</th>
-            <th scope="col">Phone</th>
+            {isManager && <th scope="col">Email</th>}
+            {isManager && <th scope="col">Phone</th>}
           </tr>
         </thead>
         <tbody>
@@ -41,19 +49,25 @@ export default function PeopleTab() {
                   </>
                 ) : m.user ? (
                   m.expand?.user?.name
+                ) : m.displayName ? (
+                  <>
+                    {m.displayName} <em>(not on Glow Tape)</em>
+                  </>
                 ) : (
                   <em>not cast yet</em>
                 )}
               </td>
               <td>{ROLE_LABELS[m.role]}</td>
               <td>{m.position}</td>
-              <td>
-                {m.minor
-                  ? (m.expand?.guardians ?? []).map((g) => `${g.name} (${g.email})`).join(', ') ||
-                    '— via guardian —'
-                  : m.expand?.user?.email}
-              </td>
-              <td>{m.minor ? '' : m.expand?.user?.phone}</td>
+              {isManager && (
+                <td>
+                  {m.minor
+                    ? (m.expand?.guardians ?? []).map((g) => `${g.name} (${g.email})`).join(', ') ||
+                      '— via guardian —'
+                    : m.expand?.user?.email || m.contactEmail}
+                </td>
+              )}
+              {isManager && <td>{m.minor ? '' : m.expand?.user?.phone || m.contactPhone}</td>}
             </tr>
           ))}
         </tbody>

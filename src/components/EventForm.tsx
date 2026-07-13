@@ -2,7 +2,7 @@ import { useEffect, useId, useState, type FormEvent } from 'react'
 import { pb } from '../lib/pb.ts'
 import { useProduction } from '../pages/Production.tsx'
 import { unitMemberIds } from '../lib/breakdown.ts'
-import { DEFAULT_EVENT_KINDS, memberName, pbDate, productionPlaces } from '../lib/types.ts'
+import { DEFAULT_EVENT_KINDS, isCommunityKind, memberName, pbDate, productionPlaces } from '../lib/types.ts'
 import type { EventRecord, UnitRecord } from '../lib/types.ts'
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -197,6 +197,12 @@ export default function EventForm({
           placeholder="Title — e.g. Act II run-through"
         />
       </div>
+      {isCommunityKind(kind) && (
+        <p className="hint" role="status">
+          🌍 Heads up: <strong>{kind}</strong> events appear on the public community calendar
+          (title, time, and place only — never who's called or your notes).
+        </p>
+      )}
       <div className="row">
         <label>
           Date

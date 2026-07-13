@@ -9,6 +9,8 @@ import PeopleTab from './PeopleTab.tsx'
 import TasksTab from './TasksTab.tsx'
 import TrackersTab from './TrackersTab.tsx'
 import NotesTab from './NotesTab.tsx'
+import SchedulePrint from './SchedulePrint.tsx'
+import CastingTab from './CastingTab.tsx'
 import BiosView from './BiosView.tsx'
 import { useTitle } from '../lib/useTitle.ts'
 import AdminTab from './AdminTab.tsx'
@@ -96,17 +98,21 @@ export default function Production() {
           <NavLink to={`${base}/sheets`}>Sheets</NavLink>
           <NavLink to={`${base}/notes`}>Notes</NavLink>
           <NavLink to={`${base}/people`}>People</NavLink>
+          {isManager && <NavLink to={`${base}/casting`}>Casting</NavLink>}
           {isManager && <NavLink to={`${base}/admin`}>Manage</NavLink>}
         </nav>
 
         <Routes>
           <Route path="schedule" element={<ScheduleTab />} />
+          <Route path="schedule/print" element={<SchedulePrint />} />
+          <Route path="schedule/print/:memberId" element={<SchedulePrint />} />
           <Route path="messages" element={<MessagesTab />} />
           <Route path="todo" element={<TasksTab />} />
           <Route path="sheets" element={<TrackersTab />} />
           <Route path="notes" element={<NotesTab />} />
           <Route path="notes/:noteId" element={<NotesTab />} />
           <Route path="people" element={<PeopleTab />} />
+          {isManager && <Route path="casting" element={<CastingTab />} />}
           {isManager && <Route path="admin" element={<AdminTab />} />}
           {isManager && <Route path="bios" element={<BiosView />} />}
           <Route path="*" element={<Navigate to={`${base}/schedule`} replace />} />

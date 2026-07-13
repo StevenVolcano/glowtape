@@ -739,6 +739,9 @@ function MembersSection() {
             <button className="link" disabled={busyId === m.id} onClick={() => remove(m)}>
               remove
             </button>
+            {!m.user && !m.minor && !m.multi && (
+              <OfflineContact member={m} onSaved={reload} />
+            )}
           </li>
         ))}
       </ul>
@@ -1104,6 +1107,30 @@ function AuditionsSection() {
                             </p>
                           ),
                       )}
+                      {Array.isArray(profile?.credits) && profile.credits.length > 0 && (
+                        <div className="edit-table">
+                          <table>
+                            <thead>
+                              <tr>
+                                <th scope="col">Year</th>
+                                <th scope="col">Company</th>
+                                <th scope="col">Show</th>
+                                <th scope="col">Role</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {profile.credits.map((c, i) => (
+                                <tr key={i}>
+                                  <td>{c.year}</td>
+                                  <td>{c.company}</td>
+                                  <td>{c.show}</td>
+                                  <td>{c.role}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
                       {profile?.experience && (
                         <p>
                           <strong>Experience:</strong> {profile.experience}
@@ -1343,5 +1370,58 @@ function AttendanceHistorySection() {
         </div>
       )}
     </section>
+  )
+}
+
+// For cast and crew who can't or won't use Glow Tape: staff record a name
+// and contact info on the role itself. Emails to the production include the
+// address; texts never do (they didn't opt in).
+function OfflineContact({
+  member,
+  onSaved,
+}: {
+  member: MemberRecord
+  onSaved: () => Promise<void>
+}) {
+  const [open, setOpen] = useState(!!member.contactEmail || !!member.contactPhone)
+
+  async function save(field: 'displayName' | 'contactEmail' | 'contactPhone', value: string) {
+    if (value === (member[field] ?? '')) return
+    await pb.collection('members').update(member.id, { [field]: value })
+    await onSaved()
+  }
+
+  return (
+    <div style={{ width: '100%' }}>
+      <button className="link" aria-expanded={open} onClick={() => setOpen(!open)}>
+        📇 {open ? 'Hide' : 'Not on Glow Tape? Add their contact info'}
+      </button>
+      {open && (
+        <div className="row">
+          <input
+            aria-label="Their name"
+            defaultValue={member.displayName}
+            placeholder="Their name"
+            maxLength={80}
+            onBlur={(e) => save('displayName', e.target.value.trim())}
+          />
+          <input
+            aria-label="Their email"
+            type="email"
+            defaultValue={member.contactEmail}
+            placeholder="Email (gets production emails)"
+            maxLength={200}
+            onBlur={(e) => save('contactEmail', e.target.value.trim())}
+          />
+          <input
+            aria-label="Their phone"
+            defaultValue={member.contactPhone}
+            placeholder="Phone (contact sheet only)"
+            maxLength={40}
+            onBlur={(e) => save('contactPhone', e.target.value.trim())}
+          />
+        </div>
+      )}
+    </div>
   )
 }

@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 import { pb } from '../lib/pb.ts'
 import { useAuth } from '../lib/auth.tsx'
 import { useProduction } from './Production.tsx'
@@ -17,6 +18,7 @@ export default function ScheduleTab() {
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([])
   const [units, setUnits] = useState<UnitRecord[]>([])
   const [showPast, setShowPast] = useState(false)
+  const [viewAs, setViewAs] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [rollFor, setRollFor] = useState<string | null>(null)
 
@@ -108,11 +110,51 @@ export default function ScheduleTab() {
     await load()
   }
 
+  // "See the show through one person's eyes" — filters to their calls.
+  const viewAsMember = viewAs ? members.find((m) => m.id === viewAs) ?? null : null
+  const calledForMember = (e: EventRecord, m: MemberRecord) =>
+    e.called.length === 0 ||
+    e.called.includes(m.id) ||
+    (!!m.claimedFrom && e.called.includes(m.claimedFrom))
+
+  async function ackAll(unacked: EventRecord[]) {
+    if (
+      !window.confirm(
+        `Mark "Got it" on all ${unacked.length} upcoming events you're called to? Only do this if you've really looked them over — your stage manager counts on it.`,
+      )
+    )
+      return
+    for (const e of unacked) {
+      try {
+        await pb.collection('acks').create({ event: e.id, user: user!.id })
+      } catch {
+        /* raced an existing ack */
+      }
+    }
+    await load()
+  }
+
   const places = productionPlaces(production)
   // Children this user guards — their calls are your calls.
   const myChildIds = members.filter((m) => m.guardians?.includes(user?.id ?? '')).map((m) => m.id)
   const now = new Date()
-  const visible = events.filter((e) => showPast || pbDate(e.end || e.start) >= now)
+  const visible = events.filter(
+    (e) =>
+      (showPast || pbDate(e.end || e.start) >= now) &&
+      (!viewAsMember || calledForMember(e, viewAsMember)),
+  )
+
+  const unacked = events.filter(
+    (e) =>
+      e.status !== 'cancelled' &&
+      pbDate(e.end || e.start) >= now &&
+      (e.called.length === 0 ||
+        (myMember != null &&
+          (e.called.includes(myMember.id) ||
+            (!!myMember.claimedFrom && e.called.includes(myMember.claimedFrom)))) ||
+        myChildIds.some((id) => e.called.includes(id))) &&
+      !acks.some((a) => a.event === e.id && a.user === user?.id),
+  )
 
   function unitsLabel(e: EventRecord): string {
     if (!e.units?.length) return ''
@@ -135,6 +177,52 @@ export default function ScheduleTab() {
     <div>
       <section>
         <h2>Coming up</h2>
+        <div className="row no-print" style={{ alignItems: 'center' }}>
+          {isManager && members.filter((m) => m.user || m.minor).length > 0 && (
+            <select
+              aria-label="View schedule as"
+              value={viewAs}
+              onChange={(e) => setViewAs(e.target.value)}
+              style={{ width: 'auto' }}
+            >
+              <option value="">Everyone's schedule</option>
+              {members
+                .filter((m) => (m.user || m.minor) && m.role !== 'guardian')
+                .map((m) => (
+                  <option key={m.id} value={m.id}>
+                    View as {memberName(m)}
+                  </option>
+                ))}
+            </select>
+          )}
+          <Link
+            className="link"
+            to={`/production/${production.id}/schedule/print${
+              viewAsMember ? `/${viewAsMember.id}` : myMember ? `/${myMember.id}` : ''
+            }`}
+          >
+            🖨 Print{viewAsMember ? ` ${memberName(viewAsMember)}'s` : myMember ? ' my' : ' the'}{' '}
+            schedule
+          </Link>
+          {isManager && (
+            <Link className="link" to={`/production/${production.id}/schedule/print`}>
+              🖨 Print everything
+            </Link>
+          )}
+        </div>
+        {viewAsMember && (
+          <p className="hint" role="status">
+            Showing only what {memberName(viewAsMember)} is called to — switch back to
+            “Everyone's schedule” when you're done.
+          </p>
+        )}
+        {unacked.length > 1 && !viewAsMember && (
+          <p className="no-print">
+            <button className="link" onClick={() => ackAll(unacked)}>
+              👍 Got them all — acknowledge all {unacked.length} upcoming events
+            </button>
+          </p>
+        )}
         {visible.length === 0 && <p className="hint">Nothing on the schedule yet.</p>}
         <ul className="cards">
           {visible.map((e) => {

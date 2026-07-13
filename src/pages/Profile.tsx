@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { pb } from '../lib/pb.ts'
 import { useAuth } from '../lib/auth.tsx'
 import { useTitle } from '../lib/useTitle.ts'
-import type { ProfileRecord } from '../lib/types.ts'
+import type { CreditRow, ProfileRecord } from '../lib/types.ts'
 
 // The community acting profile: headshot + experience, shown to directors
 // alongside audition signups. Teens skip the headshot (youth-safety model).
@@ -14,6 +14,7 @@ export default function Profile() {
   const [pronouns, setPronouns] = useState('')
   const [experience, setExperience] = useState('')
   const [skills, setSkills] = useState('')
+  const [credits, setCredits] = useState<CreditRow[]>([])
   const [loaded, setLoaded] = useState(false)
   const [busy, setBusy] = useState(false)
   const [saved, setSaved] = useState('')
@@ -31,6 +32,7 @@ export default function Profile() {
         setPronouns(p.pronouns)
         setExperience(p.experience)
         setSkills(p.skills)
+        setCredits(Array.isArray(p.credits) ? p.credits : [])
       } catch {
         /* no profile yet */
       }
@@ -48,6 +50,10 @@ export default function Profile() {
       form.set('pronouns', pronouns.trim())
       form.set('experience', experience.trim())
       form.set('skills', skills.trim())
+      form.set(
+        'credits',
+        JSON.stringify(credits.filter((c) => c.year || c.company || c.show || c.role)),
+      )
       const file = fileRef.current?.files?.[0]
       if (file && !isTeen) form.set('headshot', file)
       const rec = profile
@@ -127,16 +133,79 @@ export default function Profile() {
             />
           </label>
 
+          <div>
+            <strong>Your stage history</strong>
+            <p className="hint" style={{ margin: 0 }}>
+              One row per show — directors see this with your audition signups.
+            </p>
+            {credits.length > 0 && (
+              <div className="edit-table">
+                <table>
+                  <thead>
+                    <tr>
+                      <th scope="col">Year</th>
+                      <th scope="col">Company</th>
+                      <th scope="col">Show</th>
+                      <th scope="col">Role</th>
+                      <th scope="col">
+                        <span className="sr-only">Actions</span>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {credits.map((c, i) => (
+                      <tr key={i}>
+                        {(['year', 'company', 'show', 'role'] as const).map((field) => (
+                          <td key={field}>
+                            <input
+                              aria-label={field}
+                              value={c[field]}
+                              maxLength={field === 'year' ? 9 : 120}
+                              style={field === 'year' ? { minWidth: '4.5rem' } : undefined}
+                              onChange={(e) =>
+                                setCredits((prev) =>
+                                  prev.map((row, j) =>
+                                    j === i ? { ...row, [field]: e.target.value } : row,
+                                  ),
+                                )
+                              }
+                            />
+                          </td>
+                        ))}
+                        <td>
+                          <button
+                            className="link"
+                            aria-label={`Remove row ${i + 1}`}
+                            onClick={() => setCredits((prev) => prev.filter((_, j) => j !== i))}
+                          >
+                            ✕
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            <button
+              type="button"
+              className="link"
+              onClick={() =>
+                setCredits((prev) => [...prev, { year: '', company: '', show: '', role: '' }])
+              }
+            >
+              + Add a show
+            </button>
+          </div>
+
           <label>
-            Experience
+            Anything else?
             <textarea
               rows={6}
               maxLength={2000}
               value={experience}
               onChange={(e) => setExperience(e.target.value)}
-              placeholder={
-                'Past roles and productions, training, backstage experience…\ne.g. Motel in Fiddler on the Roof (Driftwood, 2024); stage crew for Clue'
-              }
+              placeholder="Training, backstage skills, anything the table can’t hold…"
             />
           </label>
 

@@ -65,6 +65,13 @@ export interface ProductionRecord {
   expand?: { org?: OrgRecord }
 }
 
+export interface CreditRow {
+  year: string
+  company: string
+  show: string
+  role: string
+}
+
 export interface ProfileRecord {
   id: string
   user: string
@@ -72,7 +79,34 @@ export interface ProfileRecord {
   pronouns: string
   experience: string
   skills: string
+  credits: CreditRow[] | null
   expand?: { user?: UserRecord }
+}
+
+export interface CastDraftRecord {
+  id: string
+  production: string
+  assignments: Record<string, string> | null // role member id -> user id
+  status: '' | 'draft' | 'final'
+}
+
+export interface CommunityEvent {
+  id: string
+  title: string
+  kind: string
+  start: string
+  end: string
+  location: string
+  production: string
+  productionTitle: string
+  org: string
+  auditionOpen: boolean
+}
+
+// Event kinds that appear on the public community calendar.
+export function isCommunityKind(kind: string): boolean {
+  const k = kind.toLowerCase()
+  return k.includes('audition') || k.includes('performance')
 }
 
 export interface UnitRecord {
@@ -215,6 +249,8 @@ export interface MemberRecord {
   displayName: string // child's shown name (first name + last initial)
   guardians: string[] // guardian user ids — each sees everything this member sees
   noPhotos: boolean // photo-consent flag (guardian/manager set)
+  contactEmail: string // manager-entered, for members not on Glow Tape
+  contactPhone: string
   bio: string // program bio, editable by the member/guardian
   expand?: { user?: UserRecord; guardians?: UserRecord[] }
 }

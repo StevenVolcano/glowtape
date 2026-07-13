@@ -588,6 +588,38 @@ form.stack,
   min-height: 1.3rem;
 }
 
+.month-grid {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  background: var(--card);
+  margin-bottom: 1rem;
+}
+
+.month-grid th,
+.month-grid td {
+  border: 1px solid var(--line);
+  vertical-align: top;
+  padding: 0.15rem 0.25rem;
+  height: 3.6rem;
+  font-size: 0.72rem;
+  overflow: hidden;
+}
+
+.month-day {
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.month-event {
+  line-height: 1.2;
+}
+
+.month-block {
+  break-inside: avoid;
+  margin-top: 1rem;
+}
+
 .jump-chip {
   text-decoration: none;
   display: inline-flex;
