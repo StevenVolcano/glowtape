@@ -1001,6 +1001,7 @@ function AuditionsSection() {
   )
   const [signups, setSignups] = useState<AuditionRecord[]>([])
   const [profiles, setProfiles] = useState<Map<string, ProfileRecord>>(new Map())
+  const [emails, setEmails] = useState<Record<string, { email: string }>>({})
   const [openId, setOpenId] = useState('')
   const [busy, setBusy] = useState(false)
   const [saved, setSaved] = useState('')
@@ -1029,6 +1030,11 @@ function AuditionsSection() {
       expand: 'user',
       sort: 'created',
     })
+    pb.send(`/api/glowtape/contacts?production=${encodeURIComponent(production.id)}`, {
+      method: 'GET',
+    })
+      .then((res) => setEmails(res.users ?? {}))
+      .catch(() => {})
     setSignups(list)
     const userIds = [...new Set(list.map((a) => a.user))]
     if (userIds.length) {
@@ -1267,7 +1273,7 @@ function AuditionsSection() {
                       {!profile && <p className="hint">No community profile yet.</p>}
                       <p className="hint">
                         Signed up {pbDate(a.created).toLocaleDateString()} ·{' '}
-                        {a.expand?.user?.email}
+                        {emails[a.user]?.email}
                       </p>
                     </div>
                   )}

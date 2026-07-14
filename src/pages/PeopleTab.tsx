@@ -1,11 +1,32 @@
+import { useEffect, useState } from 'react'
+import { pb } from '../lib/pb.ts'
 import { useProduction } from './Production.tsx'
 import { MANAGER_ROLES, ROLE_LABELS } from '../lib/types.ts'
 import { memberName } from '../lib/types.ts'
 
+interface ContactInfo {
+  email: string
+  phone: string
+}
+
 // The contact sheet. Names and roles for everyone; email/phone columns are
-// production-team only — cast reach each other through Messages.
+// production-team only — enforced server-side: contact details come from a
+// manager-gated route, never from user expands (which no longer carry them).
 export default function PeopleTab() {
-  const { members, isManager } = useProduction()
+  const { production, members, isManager } = useProduction()
+  const [contacts, setContacts] = useState<Record<string, ContactInfo>>({})
+
+  useEffect(() => {
+    if (!isManager) return
+    pb.send(`/api/glowtape/contacts?production=${encodeURIComponent(production.id)}`, {
+      method: 'GET',
+    })
+      .then((res) => setContacts(res.users ?? {}))
+      .catch(() => {})
+  }, [production.id, isManager])
+
+  const emailOf = (userId?: string) => (userId ? contacts[userId]?.email ?? '' : '')
+  const phoneOf = (userId?: string) => (userId ? contacts[userId]?.phone ?? '' : '')
 
   const people = members.filter((m) => !(m.multi && !m.user))
   const sorted = [...people].sort((a, b) => {
@@ -62,12 +83,13 @@ export default function PeopleTab() {
               {isManager && (
                 <td>
                   {m.minor
-                    ? (m.expand?.guardians ?? []).map((g) => `${g.name} (${g.email})`).join(', ') ||
-                      '— via guardian —'
-                    : m.expand?.user?.email || m.contactEmail}
+                    ? (m.expand?.guardians ?? [])
+                        .map((g) => `${g.name} (${emailOf(g.id)})`)
+                        .join(', ') || '— via guardian —'
+                    : emailOf(m.user) || m.contactEmail}
                 </td>
               )}
-              {isManager && <td>{m.minor ? '' : m.expand?.user?.phone || m.contactPhone}</td>}
+              {isManager && <td>{m.minor ? '' : phoneOf(m.user) || m.contactPhone}</td>}
             </tr>
           ))}
         </tbody>

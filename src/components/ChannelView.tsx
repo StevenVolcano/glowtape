@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { pb } from '../lib/pb.ts'
 import { useAuth } from '../lib/auth.tsx'
+import { scrubImage } from '../lib/images.ts'
 import { chatName } from '../lib/types.ts'
 import type { MemberRecord, MessageRecord, ReactionRecord } from '../lib/types.ts'
 
@@ -147,7 +148,7 @@ export default function ChannelView({
         channel: channelId,
         author: user!.id,
         text: body,
-        ...(file ? { image: file } : {}),
+        ...(file ? { image: await scrubImage(file) } : {}),
       })
       setText('')
       setFile(null)

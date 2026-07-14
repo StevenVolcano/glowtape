@@ -69,7 +69,7 @@ routerAdd("POST", "/api/glowtape/signup", (e) => {
   record.set("email", email);
   record.set("name", data.name.trim());
   record.set("verified", true); // possession of the emailed OTP code proves the address
-  record.set("emailVisibility", true); // castmates need it on the contact sheet
+  // emailVisibility stays false: managers read contacts via the gated route.
   // Age band only — the age itself is deliberately NOT stored (issue #9).
   if (age < 18) {
     record.set("ageBand", "teen");

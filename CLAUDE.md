@@ -51,7 +51,7 @@ can pick up mid-project — read it fully before changing anything.
 | Production requests (director asks; operator edits+approves → org+production+manager membership created) | `pages/RequestProduction.tsx` | `pb_hooks/requests.pb.js` |
 | Community page `/community`: board + public calendar of audition/performance-kind events via `/api/glowtape/community-calendar` route (safe fields only); audition events link to the signup form; performance events show a 🎟 Buy-tickets link when set (`productions.ticketUrl` in Manage → Tickets wins, else the org's company box-office link resolved by `companies.org` relation id — no name matching; no link → no button); EventForm shows 🌍 notice on public kinds (`isCommunityKind`) + open-auditions nudge. Audition form is fed by `/api/glowtape/audition-info` (roles-on-offer checkboxes from uncast performer positions, audition-kind events, questions — auditioners aren't members, so a route, not rules) | `pages/Community.tsx`, `AuditionForm.tsx`, `AuditionPrint.tsx` | `pb_hooks/community.pb.js` |
 | Casting tab (manager-only): draft cast from audition signups in `cast_drafts` (manager-only collection), double-cast ⚠ + conflicts inline, finalize route assigns users to member rows after warning | `pages/CastingTab.tsx` | `pb_hooks/casting.pb.js`, migration `1754600000` |
-| Schedule extras: manager "View as member" filter, print view (list + month grids) at `schedule/print[/:memberId]`, ack-all with confirm; contact sheet columns manager-only (UI-level); members.contactEmail/Phone for offline folks (recipients() emails them, never SMS); profiles.credits table (Year/Company/Show/Role) | `pages/SchedulePrint.tsx`, `ScheduleTab.tsx`, `PeopleTab.tsx`, `Profile.tsx` | migration `1754600000`, `glowtape_lib.js` recipients |
+| Schedule extras: manager "View as member" filter, print view (list + month grids) at `schedule/print[/:memberId]`, ack-all with confirm; contact sheet columns manager-only — **API-level since migration `1755500000`**: users.phone/phoneVerified/smsOptIn are hidden fields, emailVisibility=false for all (signup no longer sets it); managers read contacts via GET `/api/glowtape/contacts?production=` and the operator via POST `/api/glowtape/operator/emails` (both in `contacts.pb.js`). CAVEAT: when SMS_READY flips, PhoneSettings can no longer read own phone/smsOptIn from the auth record — it needs a self-status route and an opt-in route first. members.contactEmail/Phone (offline folks, member-record fields) remain production-member-visible (recipients() emails them, never SMS); profiles.credits table (Year/Company/Show/Role) | `pages/SchedulePrint.tsx`, `ScheduleTab.tsx`, `PeopleTab.tsx`, `Profile.tsx` | migration `1754600000`, `glowtape_lib.js` recipients |
 | Accessibility: WCAG 2.2 AA pass done (labels, live regions, contrast tokens, per-view titles via `lib/useTitle.ts`) | throughout | — |
 
 Static docs in `public/`: `help.html` (the user manual — keep in sync with
@@ -162,8 +162,8 @@ Next up when SMS clears: flip `SMS_READY` in `lib/types.ts` to true + revert
 the two "coming soon" help.html paragraphs (sign-in + text reminders).
 Open: #4 tails (illustrated iOS install card, SM one-pager),
 #5 tail (attendance history view per member), #6 tails (schedule milestones,
-tracker rows→tasks), #7 gamification (exploratory, opt-in), #9 tails (EXIF
-stripping on photo upload, guardian self-service co-guardians). Not yet filed:
+tracker rows→tasks), #7 gamification (exploratory, opt-in), #9 tail (guardian self-service co-guardians;
+EXIF stripping DONE — `lib/images.ts` scrubImage canvas re-encode on chat photos + headshots). Not yet filed:
 rehearsal reports (nightly digest), script-room/annotation (phase 3), community
 hub extras (cross-org calendar, lend/borrow). Issues #1/#3/#5/#6-core are built
 but may still be open — close them when touching the tracker.

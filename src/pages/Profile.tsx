@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { pb } from '../lib/pb.ts'
 import { useAuth } from '../lib/auth.tsx'
+import { scrubImage } from '../lib/images.ts'
 import { useTitle } from '../lib/useTitle.ts'
 import type { CompanyRecord, CreditRow, ProfileRecord } from '../lib/types.ts'
 
@@ -60,7 +61,7 @@ export default function Profile() {
         JSON.stringify(credits.filter((c) => c.year || c.company || c.show || c.role)),
       )
       const file = fileRef.current?.files?.[0]
-      if (file && !isTeen) form.set('headshot', file)
+      if (file && !isTeen) form.set('headshot', await scrubImage(file))
       const rec = profile
         ? await pb.collection('profiles').update<ProfileRecord>(profile.id, form)
         : await pb.collection('profiles').create<ProfileRecord>(form)

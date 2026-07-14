@@ -12,12 +12,30 @@ import type {
   ProductionRequestRecord,
 } from '../lib/types.ts'
 
+// Emails are no longer readable via user expands (contact privacy) — the
+// console fetches them through the operator-gated route.
+async function fetchEmails(userIds: (string | undefined)[]): Promise<Record<string, string>> {
+  const ids = [...new Set(userIds.filter(Boolean))]
+  if (ids.length === 0) return {}
+  try {
+    const res = await pb.send('/api/glowtape/operator/emails', {
+      method: 'POST',
+      body: { users: ids },
+    })
+    return res.users ?? {}
+  } catch {
+    return {}
+  }
+}
+
 // The operator console: triage feedback and rotate community access codes
 // without touching the PocketBase dashboard. Visible only to accounts with
 // the operator flag (set once, in the dashboard).
 export default function Operator() {
   useTitle('Operator console')
   const { user } = useAuth()
+  // Bumped when orgs change so the companies section re-reads its org dropdown.
+  const [orgRev, setOrgRev] = useState(0)
 
   if (!user?.operator) return <Navigate to="/" replace />
 
@@ -33,8 +51,104 @@ export default function Operator() {
       <RequestsSection />
       <FeedbackInbox />
       <AccessCodesSection />
-      <CompaniesSection />
+      <OrgsSection onChanged={() => setOrgRev((r) => r + 1)} />
+      <CompaniesSection key={orgRev} />
     </main>
+  )
+}
+
+// Organizations are the umbrella productions live under. Approving a
+// production request creates one automatically; this section covers the rest
+// (add ahead of time, fix a name) without opening the PocketBase dashboard.
+function OrgsSection({ onChanged }: { onChanged: () => void }) {
+  const [orgs, setOrgs] = useState<OrgRecord[]>([])
+  const [counts, setCounts] = useState<Map<string, number>>(new Map())
+  const [name, setName] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [message, setMessage] = useState('')
+
+  async function load() {
+    const [list, prods] = await Promise.all([
+      pb.collection('orgs').getFullList<OrgRecord>({ sort: 'name' }),
+      pb.collection('productions').getFullList<{ org: string }>({ fields: 'org' }),
+    ])
+    setOrgs(list)
+    const c = new Map<string, number>()
+    for (const p of prods) c.set(p.org, (c.get(p.org) ?? 0) + 1)
+    setCounts(c)
+  }
+
+  useEffect(() => {
+    load().catch(() => {})
+  }, [])
+
+  async function add(e: FormEvent) {
+    e.preventDefault()
+    if (!name.trim()) return
+    setBusy(true)
+    setMessage('')
+    try {
+      await pb.collection('orgs').create({ name: name.trim() })
+      setName('')
+      await load()
+      onChanged()
+    } catch {
+      setMessage("Couldn't add that organization.")
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function rename(o: OrgRecord, value: string) {
+    const next = value.trim()
+    if (!next || next === o.name) return
+    try {
+      await pb.collection('orgs').update(o.id, { name: next })
+      await load()
+      onChanged()
+      setMessage(`Renamed to ${next}. ✓`)
+    } catch {
+      setMessage("Couldn't rename it — try again.")
+    }
+  }
+
+  return (
+    <section>
+      <h2>Organizations</h2>
+      <p className="hint">
+        The umbrella a production lives under — approving a request creates one automatically.
+        Edit a name right in its box; add one ahead of time below. (Deleting still takes the
+        PocketBase dashboard, since an organization can have productions attached.)
+      </p>
+      <ul className="plain-list">
+        {orgs.map((o) => (
+          <li key={o.id} className="row">
+            <input
+              aria-label={`Name of ${o.name}`}
+              defaultValue={o.name}
+              maxLength={120}
+              onBlur={(e) => rename(o, e.target.value)}
+            />
+            <span className="hint">
+              {counts.get(o.id) ?? 0} production{(counts.get(o.id) ?? 0) === 1 ? '' : 's'}
+            </span>
+          </li>
+        ))}
+      </ul>
+      <form onSubmit={add} className="row">
+        <input
+          aria-label="New organization"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          maxLength={120}
+          placeholder="Example: Grays Harbor College"
+        />
+        <button type="submit" disabled={busy || !name.trim()}>
+          Add organization
+        </button>
+      </form>
+      {message && <p className="acked" role="status">{message}</p>}
+    </section>
   )
 }
 
@@ -155,6 +269,7 @@ function CompaniesSection() {
 
 function FeedbackInbox() {
   const [items, setItems] = useState<FeedbackRecord[]>([])
+  const [emails, setEmails] = useState<Record<string, string>>({})
   const [showClosed, setShowClosed] = useState(false)
 
   async function load() {
@@ -163,6 +278,7 @@ function FeedbackInbox() {
       expand: 'user',
     })
     setItems(list)
+    setEmails(await fetchEmails(list.map((f) => f.user)))
   }
 
   useEffect(() => {
@@ -203,7 +319,7 @@ function FeedbackInbox() {
                 {f.expand?.user?.name || 'Unknown'}
               </strong>{' '}
               <span className="hint">
-                {f.expand?.user?.email} · {formatStamp(f.created)}
+                {emails[f.user]} · {formatStamp(f.created)}
                 {f.page && f.page !== '/' ? ` · from ${f.page}` : ''}
               </span>
             </div>
@@ -362,15 +478,22 @@ function AccessCodesSection() {
 // org, production, and their manager membership) or decline with a note.
 function RequestsSection() {
   const [requests, setRequests] = useState<ProductionRequestRecord[]>([])
+  const [orgNames, setOrgNames] = useState<string[]>([])
+  const [emails, setEmails] = useState<Record<string, string>>({})
   const [message, setMessage] = useState('')
   const [busyId, setBusyId] = useState('')
 
   async function load() {
-    const list = await pb.collection('production_requests').getFullList<ProductionRequestRecord>({
-      sort: '-created',
-      expand: 'user',
-    })
+    const [list, orgs] = await Promise.all([
+      pb.collection('production_requests').getFullList<ProductionRequestRecord>({
+        sort: '-created',
+        expand: 'user',
+      }),
+      pb.collection('orgs').getFullList<OrgRecord>({ sort: 'name', fields: 'id,name' }),
+    ])
     setRequests(list)
+    setOrgNames(orgs.map((o) => o.name))
+    setEmails(await fetchEmails(list.map((r) => r.user)))
   }
 
   useEffect(() => {
@@ -413,13 +536,23 @@ function RequestsSection() {
   return (
     <section>
       <h2>Production requests ({open.length} open)</h2>
+      <p className="hint">
+        Approving matches the organization <em>by exact name</em> — pick an existing one from
+        the suggestions to add this show under it, or type a new name to create a new
+        organization.
+      </p>
+      <datalist id="operator-org-names">
+        {orgNames.map((n) => (
+          <option key={n} value={n} />
+        ))}
+      </datalist>
       <ul className="plain-list">
         {requests.map((r) => (
           <li key={r.id} className="stack" style={{ marginBottom: '1rem' }}>
             <div>
               <strong>{r.expand?.user?.name}</strong>{' '}
               <span className="hint">
-                {r.expand?.user?.email} · {r.role} · {formatStamp(r.created)} ·{' '}
+                {emails[r.user]} · {r.role} · {formatStamp(r.created)} ·{' '}
                 {r.status || 'new'}
               </span>
             </div>
@@ -439,6 +572,7 @@ function RequestsSection() {
                 <div className="row">
                   <input
                     aria-label="Organization"
+                    list="operator-org-names"
                     defaultValue={r.org}
                     onBlur={(e) => saveField(r, 'org', e.target.value.trim())}
                   />
