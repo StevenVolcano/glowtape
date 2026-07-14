@@ -11,7 +11,7 @@ export default function CommunityBoard() {
   const [channels, setChannels] = useState<ChannelRecord[]>([])
   const [prefs, setPrefs] = useState<ChannelPrefRecord[]>([])
   const [active, setActive] = useState<string | null>(null)
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(true)
 
   useEffect(() => {
     pb.collection('channels')
