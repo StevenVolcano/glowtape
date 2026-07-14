@@ -47,7 +47,7 @@ routerAdd(
     const lib = require(`${__hooks}/glowtape_lib.js`);
     if (!e.auth.get("operator")) throw new BadRequestError("Operators only.");
 
-    const data = new DynamicModel({ request: "" });
+    const data = new DynamicModel({ request: "", orgId: "" });
     e.bindBody(data);
     let request;
     try {
@@ -60,14 +60,24 @@ routerAdd(
     }
     const requester = e.app.findRecordById("users", request.get("user"));
 
+    // The console workflow picks an existing org by id; falling back to
+    // find-or-create by the request's org text keeps old clients working.
     let org;
-    try {
-      org = e.app.findFirstRecordByFilter("orgs", "name = {:n}", { n: request.get("org") });
-    } catch {
-      const orgCol = e.app.findCollectionByNameOrId("orgs");
-      org = new Record(orgCol);
-      org.set("name", request.get("org"));
-      e.app.save(org);
+    if (data.orgId) {
+      try {
+        org = e.app.findRecordById("orgs", data.orgId);
+      } catch {
+        throw new BadRequestError("Unknown organization.");
+      }
+    } else {
+      try {
+        org = e.app.findFirstRecordByFilter("orgs", "name = {:n}", { n: request.get("org") });
+      } catch {
+        const orgCol = e.app.findCollectionByNameOrId("orgs");
+        org = new Record(orgCol);
+        org.set("name", request.get("org"));
+        e.app.save(org);
+      }
     }
 
     const prodCol = e.app.findCollectionByNameOrId("productions");
@@ -108,6 +118,130 @@ routerAdd(
     }
 
     return e.json(200, { ok: true, production: production.id, joinCode: saved.get("joinCode") });
+  },
+  $apis.requireAuth(),
+);
+
+// Operator sets up a production directly — for the director who asked by
+// phone or email and has no in-app request (or no account yet). Creates the
+// org and production, then either attaches the director's existing account
+// as manager or leaves a manager role placeholder whose claim code is
+// emailed to them; signing up with it lands them in the show with Manage.
+routerAdd(
+  "POST",
+  "/api/glowtape/operator/onboard",
+  (e) => {
+    const lib = require(`${__hooks}/glowtape_lib.js`);
+    if (!e.auth.get("operator")) throw new BadRequestError("Operators only.");
+
+    const data = new DynamicModel({
+      orgId: "",
+      org: "",
+      title: "",
+      name: "",
+      email: "",
+      role: "",
+    });
+    e.bindBody(data);
+    const title = String(data.title || "").trim();
+    const email = String(data.email || "").trim().toLowerCase();
+    const dirName = String(data.name || "").trim();
+    if (!title) throw new BadRequestError("The show needs a title.");
+    if (!email.includes("@")) throw new BadRequestError("Enter the director's email.");
+    if (!dirName) throw new BadRequestError("Enter the director's name.");
+
+    let org;
+    if (data.orgId) {
+      try {
+        org = e.app.findRecordById("orgs", data.orgId);
+      } catch {
+        throw new BadRequestError("Unknown organization.");
+      }
+    } else {
+      const orgName = String(data.org || "").trim();
+      if (!orgName) throw new BadRequestError("Pick or name an organization.");
+      try {
+        org = e.app.findFirstRecordByFilter("orgs", "name = {:n}", { n: orgName });
+      } catch {
+        const orgCol = e.app.findCollectionByNameOrId("orgs");
+        org = new Record(orgCol);
+        org.set("name", orgName);
+        e.app.save(org);
+      }
+    }
+
+    const prodCol = e.app.findCollectionByNameOrId("productions");
+    const production = new Record(prodCol);
+    production.set("org", org.id);
+    production.set("title", title);
+    production.set("status", "planning");
+    e.app.save(production); // create hook adds joinCode + default channels
+    const saved = e.app.findRecordById("productions", production.id);
+    const joinCode = saved.get("joinCode");
+
+    const role = ["director", "asst_director", "stage_manager"].includes(data.role)
+      ? data.role
+      : "director";
+
+    let existingUser = null;
+    try {
+      existingUser = e.app.findAuthRecordByEmail("users", email);
+    } catch {
+      /* no account yet */
+    }
+
+    const memberCol = e.app.findCollectionByNameOrId("members");
+    const member = new Record(memberCol);
+    member.set("production", production.id);
+    member.set("role", role);
+    member.set("manager", true);
+    let directorCode = "";
+    if (existingUser) {
+      member.set("user", existingUser.id);
+    } else {
+      directorCode = $security.randomStringWithAlphabet(2, "ABCDEFGHJKMNPQRSTUVWXYZ23456789");
+      member.set("roleCode", directorCode);
+      member.set("displayName", dirName);
+    }
+    e.app.save(member); // member hook syncs production.managers
+
+    try {
+      if (existingUser) {
+        lib.sendMail(
+          e.app,
+          [{ address: email, name: existingUser.get("name") }],
+          `${title} is ready on Glow Tape 🎭`,
+          [
+            `<h2>${title}</h2>`,
+            `<p>Your production is set up and your account has the Manage tab. The join code for your cast and crew is:</p>`,
+            `<p style="font-size:1.5em"><strong>${joinCode}</strong></p>`,
+            `<p>Sign in at glowtape.net and open the production — the setup checklist on the To-Do tab walks you through the rest.</p>`,
+          ].join("\n"),
+        );
+      } else {
+        lib.sendMail(
+          e.app,
+          [{ address: email, name: dirName }],
+          `${title} is ready for you on Glow Tape 🎭`,
+          [
+            `<h2>${title}</h2>`,
+            `<p>Your production is set up on Glow Tape — the free production hub for Grays Harbor theater. Create your account at <strong>glowtape.net</strong> using this code:</p>`,
+            `<p style="font-size:1.5em"><strong>${joinCode}-${directorCode}</strong></p>`,
+            `<p>You'll land straight in your show with the Manage tab. The join code for your cast and crew is <strong>${joinCode}</strong> — the setup checklist on the To-Do tab covers everything else. No password, ever: a 6-digit code arrives by email each time you sign in.</p>`,
+          ].join("\n"),
+        );
+      }
+    } catch (err) {
+      e.app.logger().error("glowtape: onboard mail failed", "error", String(err));
+    }
+
+    return e.json(200, {
+      ok: true,
+      production: production.id,
+      joinCode: joinCode,
+      directorCode: directorCode ? joinCode + "-" + directorCode : "",
+      existingAccount: !!existingUser,
+    });
   },
   $apis.requireAuth(),
 );

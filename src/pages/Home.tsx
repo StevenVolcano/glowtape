@@ -184,8 +184,9 @@ export default function Home() {
         <section>
           <h2>Operator</h2>
           <p className="hint">
-            <Link to="/operator">⚙ Open the operator console</Link> — production requests,
-            feedback triage, community access codes, and the theater-company list.
+            <Link to="/operator">⚙ Open the operator console</Link> — production requests
+            and direct show setup, feedback triage, access codes, organizations, and the
+            theater-company list.
           </p>
         </section>
       )}

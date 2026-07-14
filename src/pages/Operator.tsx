@@ -49,6 +49,7 @@ export default function Operator() {
       </header>
       <h1>Operator console</h1>
       <RequestsSection />
+      <OnboardSection />
       <FeedbackInbox />
       <AccessCodesSection />
       <OrgsSection onChanged={() => setOrgRev((r) => r + 1)} />
@@ -474,17 +475,20 @@ function AccessCodesSection() {
   )
 }
 
-// Production requests: edit the details in place, then approve (creates the
-// org, production, and their manager membership) or decline with a note.
+// Approving a request is a small workflow: confirm the ask, put the show
+// under the right organization (picked by id — no name-matching accidents),
+// confirm the title, create. The requester is emailed their join code.
 function RequestsSection() {
   const [requests, setRequests] = useState<ProductionRequestRecord[]>([])
-  const [orgNames, setOrgNames] = useState<string[]>([])
+  const [orgs, setOrgs] = useState<OrgRecord[]>([])
   const [emails, setEmails] = useState<Record<string, string>>({})
+  // Per-request org pick: an org id, or '' meaning "create from the typed name".
+  const [orgChoice, setOrgChoice] = useState<Record<string, string>>({})
   const [message, setMessage] = useState('')
   const [busyId, setBusyId] = useState('')
 
   async function load() {
-    const [list, orgs] = await Promise.all([
+    const [list, orgList] = await Promise.all([
       pb.collection('production_requests').getFullList<ProductionRequestRecord>({
         sort: '-created',
         expand: 'user',
@@ -492,7 +496,18 @@ function RequestsSection() {
       pb.collection('orgs').getFullList<OrgRecord>({ sort: 'name', fields: 'id,name' }),
     ])
     setRequests(list)
-    setOrgNames(orgs.map((o) => o.name))
+    setOrgs(orgList)
+    // Pre-match each request's org text against existing orgs so the common
+    // case ("Driftwood Players", exactly) needs zero clicks.
+    setOrgChoice((prev) => {
+      const next = { ...prev }
+      for (const r of list) {
+        if (next[r.id] !== undefined) continue
+        const hit = orgList.find((o) => o.name.toLowerCase() === (r.org ?? '').trim().toLowerCase())
+        next[r.id] = hit?.id ?? ''
+      }
+      return next
+    })
     setEmails(await fetchEmails(list.map((r) => r.user)))
   }
 
@@ -507,14 +522,22 @@ function RequestsSection() {
   }
 
   async function approve(r: ProductionRequestRecord) {
-    if (!window.confirm(`Create "${r.title}" at ${r.org} with ${r.expand?.user?.name} as manager?`))
+    const orgId = orgChoice[r.id] ?? ''
+    const orgName = orgId ? orgs.find((o) => o.id === orgId)?.name : r.org
+    if (
+      !window.confirm(
+        `Create "${r.title}" under ${orgName}${orgId ? '' : ' (a NEW organization)'} with ${
+          r.expand?.user?.name
+        } as manager? They'll be emailed the join code.`,
+      )
+    )
       return
     setBusyId(r.id)
     setMessage('')
     try {
       const res = await pb.send('/api/glowtape/requests/approve', {
         method: 'POST',
-        body: { request: r.id },
+        body: { request: r.id, orgId },
       })
       setMessage(`Created — join code ${res.joinCode}. The requester was emailed.`)
       await load()
@@ -536,19 +559,9 @@ function RequestsSection() {
   return (
     <section>
       <h2>Production requests ({open.length} open)</h2>
-      <p className="hint">
-        Approving matches the organization <em>by exact name</em> — pick an existing one from
-        the suggestions to add this show under it, or type a new name to create a new
-        organization.
-      </p>
-      <datalist id="operator-org-names">
-        {orgNames.map((n) => (
-          <option key={n} value={n} />
-        ))}
-      </datalist>
       <ul className="plain-list">
         {requests.map((r) => (
-          <li key={r.id} className="stack" style={{ marginBottom: '1rem' }}>
+          <li key={r.id} className="stack" style={{ marginBottom: '1.2rem' }}>
             <div>
               <strong>{r.expand?.user?.name}</strong>{' '}
               <span className="hint">
@@ -570,31 +583,56 @@ function RequestsSection() {
             {(!r.status || r.status === 'new') && (
               <>
                 <div className="row">
-                  <input
-                    aria-label="Organization"
-                    list="operator-org-names"
-                    defaultValue={r.org}
-                    onBlur={(e) => saveField(r, 'org', e.target.value.trim())}
-                  />
+                  <label>
+                    1. Organization
+                    <select
+                      aria-label="Organization"
+                      value={orgChoice[r.id] ?? ''}
+                      onChange={(e) => setOrgChoice((prev) => ({ ...prev, [r.id]: e.target.value }))}
+                    >
+                      <option value="">➕ New: “{r.org}”</option>
+                      {orgs.map((o) => (
+                        <option key={o.id} value={o.id}>
+                          {o.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  {(orgChoice[r.id] ?? '') === '' && (
+                    <label>
+                      New organization's name
+                      <input
+                        aria-label="New organization name"
+                        defaultValue={r.org}
+                        onBlur={(e) => saveField(r, 'org', e.target.value.trim())}
+                      />
+                    </label>
+                  )}
+                </div>
+                <label>
+                  2. Show title
                   <input
                     aria-label="Show title"
                     defaultValue={r.title}
                     onBlur={(e) => saveField(r, 'title', e.target.value.trim())}
                   />
-                </div>
+                </label>
                 <div className="row">
+                  <label style={{ flex: 2 }}>
+                    3. Note to the requester (optional)
+                    <input
+                      aria-label="Reply shown to the requester"
+                      defaultValue={r.reply ?? ''}
+                      onBlur={(e) => saveField(r, 'reply', e.target.value.trim())}
+                      placeholder="Short note they'll see (optional)"
+                    />
+                  </label>
                   <button onClick={() => approve(r)} disabled={busyId === r.id}>
                     {busyId === r.id ? 'Creating…' : '✓ Approve & create'}
                   </button>
                   <button className="link" onClick={() => decline(r)}>
                     Decline
                   </button>
-                  <input
-                    aria-label="Reply shown to the requester"
-                    defaultValue={r.reply ?? ''}
-                    onBlur={(e) => saveField(r, 'reply', e.target.value.trim())}
-                    placeholder="Short note they'll see (optional)"
-                  />
                 </div>
               </>
             )}
@@ -607,6 +645,174 @@ function RequestsSection() {
         ))}
       </ul>
       {message && <p className="acked" role="status">{message}</p>}
+    </section>
+  )
+}
+
+// Onboard a show that never came through the request form — the director who
+// asked at intermission or by email. Works whether or not they have an
+// account yet: existing accounts are attached as manager on the spot; anyone
+// else is emailed a manager claim code that drops them into the show with
+// the Manage tab when they sign up.
+function OnboardSection() {
+  const [orgs, setOrgs] = useState<OrgRecord[]>([])
+  const [orgId, setOrgId] = useState('')
+  const [orgName, setOrgName] = useState('')
+  const [title, setTitle] = useState('')
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [role, setRole] = useState('director')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const [result, setResult] = useState<{
+    joinCode: string
+    directorCode: string
+    existingAccount: boolean
+  } | null>(null)
+
+  useEffect(() => {
+    pb.collection('orgs')
+      .getFullList<OrgRecord>({ sort: 'name', fields: 'id,name' })
+      .then(setOrgs)
+      .catch(() => {})
+  }, [])
+
+  async function onboard(e: FormEvent) {
+    e.preventDefault()
+    const orgLabel = orgId ? orgs.find((o) => o.id === orgId)?.name : orgName.trim()
+    if (
+      !window.confirm(
+        `Set up "${title.trim()}" under ${orgLabel}${orgId ? '' : ' (a NEW organization)'} with ${name.trim()} (${email.trim()}) as ${
+          role === 'stage_manager' ? 'stage manager' : role === 'asst_director' ? 'assistant director' : 'director'
+        }? They'll be emailed everything they need.`,
+      )
+    )
+      return
+    setBusy(true)
+    setError('')
+    setResult(null)
+    try {
+      const res = await pb.send('/api/glowtape/operator/onboard', {
+        method: 'POST',
+        body: { orgId, org: orgName.trim(), title: title.trim(), name: name.trim(), email: email.trim(), role },
+      })
+      setResult(res)
+      setTitle('')
+      setName('')
+      setEmail('')
+      if (!orgId) {
+        setOrgName('')
+        const fresh = await pb
+          .collection('orgs')
+          .getFullList<OrgRecord>({ sort: 'name', fields: 'id,name' })
+        setOrgs(fresh)
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Something went wrong.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <section>
+      <h2>Set up a production directly</h2>
+      <p className="hint">
+        For the director who asked in person or by email — no request form needed. They get an
+        email with everything; if they're not on Glow Tape yet, their sign-up code lands them
+        in the show with the Manage tab.
+      </p>
+      <form onSubmit={onboard} className="stack">
+        <div className="row">
+          <label>
+            1. Organization
+            <select aria-label="Organization" value={orgId} onChange={(e) => setOrgId(e.target.value)}>
+              <option value="">➕ New organization…</option>
+              {orgs.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          {orgId === '' && (
+            <label>
+              New organization's name
+              <input
+                aria-label="New organization name"
+                value={orgName}
+                onChange={(e) => setOrgName(e.target.value)}
+                maxLength={120}
+                placeholder="Example: Aberdeen High School"
+              />
+            </label>
+          )}
+        </div>
+        <label>
+          2. Show title
+          <input
+            aria-label="Show title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            maxLength={200}
+            placeholder="Example: The Music Man"
+          />
+        </label>
+        <div className="row">
+          <label>
+            3. Who's running it
+            <input
+              aria-label="Director's name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              maxLength={120}
+              placeholder="Their name"
+            />
+          </label>
+          <label>
+            Their email
+            <input
+              aria-label="Director's email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Example: pat@gmail.com"
+            />
+          </label>
+          <label>
+            As
+            <select aria-label="Their role" value={role} onChange={(e) => setRole(e.target.value)}>
+              <option value="director">Director</option>
+              <option value="asst_director">Assistant Director</option>
+              <option value="stage_manager">Stage Manager</option>
+            </select>
+          </label>
+        </div>
+        <div className="row">
+          <button
+            type="submit"
+            disabled={busy || !title.trim() || !name.trim() || !email.includes('@') || (orgId === '' && !orgName.trim())}
+          >
+            {busy ? 'Setting up…' : '🎬 Create & email them'}
+          </button>
+        </div>
+        {error && <p className="error" role="alert">{error}</p>}
+        {result && (
+          <div className="golive">
+            <p style={{ margin: 0 }}>
+              🎉 Done. Cast &amp; crew join code: <strong>{result.joinCode}</strong>
+              {result.existingAccount ? (
+                <> — they already had an account, so the show is waiting in their Glow Tape now.</>
+              ) : (
+                <>
+                  {' '}— their personal sign-up code is <strong>{result.directorCode}</strong> (also
+                  emailed). Creating an account with it gives them the show and the Manage tab.
+                </>
+              )}
+            </p>
+          </div>
+        )}
+      </form>
     </section>
   )
 }
