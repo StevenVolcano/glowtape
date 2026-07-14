@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { pb } from '../lib/pb.ts'
 import { useAuth } from '../lib/auth.tsx'
+import { JumpNav } from '../components/ManageJumpNav.tsx'
 import { useTitle } from '../lib/useTitle.ts'
 import { formatDay, formatStamp, shareInvite } from '../lib/types.ts'
 import type {
@@ -48,6 +49,17 @@ export default function Operator() {
         <span className="brand-small">Glow Tape</span>
       </header>
       <h1>Operator console</h1>
+      <JumpNav
+        ariaLabel="Operator sections"
+        jumps={[
+          ['#requests', 'Requests'],
+          ['#onboard', 'Set up a show'],
+          ['#feedback', 'Feedback'],
+          ['#codes', 'Access codes'],
+          ['#orgs', 'Organizations'],
+          ['#companies', 'Companies'],
+        ]}
+      />
       <RequestsSection />
       <OnboardSection />
       <FeedbackInbox />
@@ -114,7 +126,7 @@ function OrgsSection({ onChanged }: { onChanged: () => void }) {
   }
 
   return (
-    <section>
+    <section id="orgs">
       <h2>Organizations</h2>
       <p className="hint">
         The umbrella a production lives under — approving a request creates one automatically.
@@ -206,7 +218,7 @@ function CompaniesSection() {
   }
 
   return (
-    <section>
+    <section id="companies">
       <h2>Theater companies</h2>
       <p className="hint">
         The dropdown people see in their profile's stage-history table (they can always type
@@ -308,7 +320,7 @@ function FeedbackInbox() {
   const openCount = items.filter(isOpen).length
 
   return (
-    <section>
+    <section id="feedback">
       <h2>Feedback ({openCount} open)</h2>
       {visible.length === 0 && <p className="hint">Inbox zero. 🎉</p>}
       <ul className="plain-list">
@@ -418,7 +430,7 @@ function AccessCodesSection() {
   const expired = (c: AccessCodeRecord) => !!c.expires && new Date(c.expires) < new Date()
 
   return (
-    <section>
+    <section id="codes">
       <h2>Community access codes</h2>
       <p className="hint">
         Signup codes for people who aren't joining through a production — rotate them monthly
@@ -557,7 +569,7 @@ function RequestsSection() {
   if (requests.length === 0) return null
 
   return (
-    <section>
+    <section id="requests">
       <h2>Production requests ({open.length} open)</h2>
       <ul className="plain-list">
         {requests.map((r) => (
@@ -715,7 +727,7 @@ function OnboardSection() {
   }
 
   return (
-    <section>
+    <section id="onboard">
       <h2>Set up a production directly</h2>
       <p className="hint">
         For the director who asked in person or by email — no request form needed. They get an
