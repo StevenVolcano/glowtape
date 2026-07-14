@@ -21,6 +21,11 @@ interface AuditionRole {
   notes: string
 }
 
+interface TeamMember {
+  name: string
+  role: string
+}
+
 interface AuditionInfo {
   open: boolean
   title: string
@@ -29,6 +34,7 @@ interface AuditionInfo {
   notes: string
   questions: string[]
   roles: AuditionRole[]
+  team: TeamMember[]
   events: AuditionEvent[]
   performances: AuditionEvent[]
 }
@@ -196,6 +202,18 @@ export default function AuditionForm() {
         <section>
           <h2>About the show</h2>
           <p style={{ whiteSpace: 'pre-wrap' }}>{info.description}</p>
+        </section>
+      )}
+      {info.team.length > 0 && (
+        <section>
+          <h2>Who's running the show</h2>
+          <ul className="plain-list">
+            {info.team.map((t, i) => (
+              <li key={i}>
+                <strong>{t.role}:</strong> {t.name}
+              </li>
+            ))}
+          </ul>
         </section>
       )}
       {info.notes && <p>{info.notes}</p>}

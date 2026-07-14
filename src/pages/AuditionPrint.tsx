@@ -7,6 +7,7 @@ import type { ProductionRecord } from '../lib/types.ts'
 
 interface PrintInfo {
   roles: { name: string; notes: string }[]
+  team: { name: string; role: string }[]
   events: { start: string; end: string; location: string }[]
   performances: { start: string; end: string; location: string; kind?: string }[]
 }
@@ -17,7 +18,12 @@ export default function AuditionPrint() {
   useTitle('Audition form')
   const { id } = useParams()
   const [production, setProduction] = useState<ProductionRecord | null>(null)
-  const [info, setInfo] = useState<PrintInfo>({ roles: [], events: [], performances: [] })
+  const [info, setInfo] = useState<PrintInfo>({
+    roles: [],
+    team: [],
+    events: [],
+    performances: [],
+  })
   const [failed, setFailed] = useState(false)
 
   useEffect(() => {
@@ -30,6 +36,7 @@ export default function AuditionPrint() {
       .then((res) =>
         setInfo({
           roles: res.roles ?? [],
+          team: res.team ?? [],
           events: res.events ?? [],
           performances: res.performances ?? [],
         }),
@@ -70,6 +77,12 @@ export default function AuditionPrint() {
       {production.writtenBy && <p className="hint">{production.writtenBy}</p>}
       {production.description && <p>{production.description}</p>}
       {production.auditionNotes && <p>{production.auditionNotes}</p>}
+      {info.team.length > 0 && (
+        <p>
+          <strong>Production team:</strong>{' '}
+          {info.team.map((t) => `${t.role} ${t.name}`).join(' · ')}
+        </p>
+      )}
       {info.events.length > 0 && (
         <p>
           <strong>Audition times:</strong>{' '}

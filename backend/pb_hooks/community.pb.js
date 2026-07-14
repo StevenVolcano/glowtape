@@ -154,6 +154,49 @@ routerAdd(
       kind: ev.get("kind"),
     });
 
+    // Who's running the show — so auditioners know who they'll be working
+    // with. Ordered by role (director first), not alphabetically. Only the
+    // name and role leave the server; no contact details.
+    const ROLE_RANK = { director: 0, asst_director: 1, stage_manager: 2 };
+    const ROLE_LABEL = {
+      director: "Director",
+      asst_director: "Assistant Director",
+      stage_manager: "Stage Manager",
+      performer: "Performer",
+      crew: "Crew",
+    };
+    const teamMembers = e.app.findRecordsByFilter(
+      "members",
+      "production = {:p} && role != 'guardian'",
+      "created",
+      200,
+      0,
+      { p: production.id },
+    );
+    const team = [];
+    for (const m of teamMembers) {
+      const roleKey = m.get("role");
+      const isTeam = roleKey in ROLE_RANK || m.get("manager");
+      if (!isTeam) continue;
+      let name = "";
+      if (m.get("user")) {
+        try {
+          name = e.app.findRecordById("users", m.get("user")).get("name");
+        } catch {
+          /* user gone */
+        }
+      } else {
+        name = m.get("displayName") || "";
+      }
+      if (!name) continue; // an unclaimed staff placeholder has no person yet
+      team.push({
+        name: name,
+        role: m.get("position") || ROLE_LABEL[roleKey] || "Production team",
+        rank: roleKey in ROLE_RANK ? ROLE_RANK[roleKey] : 3,
+      });
+    }
+    team.sort((a, b) => a.rank - b.rank);
+
     return e.json(200, {
       open: !!production.get("auditionOpen"),
       title: production.get("title"),
@@ -162,6 +205,7 @@ routerAdd(
       notes: production.get("auditionNotes"),
       questions: production.get("auditionQuestions") || [],
       roles,
+      team: team.map((t) => ({ name: t.name, role: t.role })),
       events: events.map(eventFields),
       performances: performances.map(eventFields),
     });
