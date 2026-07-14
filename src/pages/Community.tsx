@@ -21,15 +21,20 @@ export default function Community() {
       .finally(() => setLoaded(true))
   }, [])
 
-  // Group by month for scanning ("what's happening in August?").
-  const byMonth = new Map<string, CommunityEvent[]>()
+  const isAudition = (k: string) => k.toLowerCase().includes('audition')
+
+  // Group by month for scanning ("what's happening in August?"), then within a
+  // month collapse a show's run (or its audition nights) into one card with
+  // several dates, instead of a card per night. Events arrive sorted by start.
+  const byMonth = new Map<string, Map<string, CommunityEvent[]>>()
   for (const ev of events) {
     const d = pbDate(ev.start)
-    const key = d.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
-    byMonth.set(key, [...(byMonth.get(key) ?? []), ev])
+    const month = d.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
+    const groupKey = `${ev.production}|${isAudition(ev.kind) ? 'aud' : 'perf'}`
+    if (!byMonth.has(month)) byMonth.set(month, new Map())
+    const groups = byMonth.get(month)!
+    groups.set(groupKey, [...(groups.get(groupKey) ?? []), ev])
   }
-
-  const isAudition = (k: string) => k.toLowerCase().includes('audition')
 
   return (
     <main className="page">
@@ -56,42 +61,50 @@ export default function Community() {
         {loaded && events.length === 0 && (
           <p className="hint">Nothing on the community calendar yet — check back soon.</p>
         )}
-        {[...byMonth.entries()].map(([month, list]) => (
+        {[...byMonth.entries()].map(([month, groups]) => (
           <div key={month}>
             <h3 className="dept-heading">{month}</h3>
             <ul className="cards">
-              {list.map((ev) => (
-                <li key={ev.id} className="card">
-                  <div className="event-head">
-                    <strong>{ev.productionTitle}</strong>
-                    <span className="pill">{isAudition(ev.kind) ? '🎤 Auditions' : '🎭 Performance'}</span>
-                  </div>
-                  <div className="event-line">
-                    {formatWhen(ev.start, ev.end)}
-                    {ev.location ? ` · ${ev.location}` : ''}
-                    {ev.org ? ` · ${ev.org}` : ''}
-                  </div>
-                  {ev.title && ev.title !== ev.kind && <div className="event-line hint">{ev.title}</div>}
-                  {isAudition(ev.kind) &&
-                    (ev.auditionOpen ? (
-                      <Link className="link" to={`/audition/${ev.production}`}>
-                        📝 Sign up to audition
-                      </Link>
-                    ) : (
-                      <span className="hint">Signups aren't open yet — watch this space.</span>
-                    ))}
-                  {!isAudition(ev.kind) && ev.ticketUrl && (
-                    <a
-                      className="link"
-                      href={externalHref(ev.ticketUrl)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      🎟 Buy tickets
-                    </a>
-                  )}
-                </li>
-              ))}
+              {[...groups.entries()].map(([groupKey, dates]) => {
+                const first = dates[0]
+                const audition = isAudition(first.kind)
+                return (
+                  <li key={groupKey} className="card">
+                    <div className="event-head">
+                      <strong>{first.productionTitle}</strong>
+                      <span className="pill">{audition ? '🎤 Auditions' : '🎭 Performance'}</span>
+                    </div>
+                    {first.org && <div className="event-line hint">{first.org}</div>}
+                    <ul className="plain-list" style={{ marginTop: '0.4rem', gap: '0.3rem' }}>
+                      {dates.map((ev) => (
+                        <li key={ev.id}>
+                          📅 {formatWhen(ev.start, ev.end)}
+                          {ev.location ? ` · ${ev.location}` : ''}
+                          {ev.title && ev.title !== ev.kind ? ` · ${ev.title}` : ''}
+                        </li>
+                      ))}
+                    </ul>
+                    {audition &&
+                      (first.auditionOpen ? (
+                        <Link className="link" to={`/audition/${first.production}`}>
+                          📝 Sign up to audition
+                        </Link>
+                      ) : (
+                        <span className="hint">Signups aren't open yet — watch this space.</span>
+                      ))}
+                    {!audition && first.ticketUrl && (
+                      <a
+                        className="link"
+                        href={externalHref(first.ticketUrl)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        🎟 Buy tickets
+                      </a>
+                    )}
+                  </li>
+                )
+              })}
             </ul>
           </div>
         ))}
