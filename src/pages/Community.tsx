@@ -9,10 +9,26 @@ import type { CommunityEvent } from '../lib/types.ts'
 
 // The Grays Harbor theater commons: the message board plus a public calendar
 // of every audition and performance across all productions.
+type CalendarView = 'hide' | 'default' | 'all'
+
+const VIEW_LABELS: Record<CalendarView, string> = {
+  hide: 'Hide',
+  default: 'This month & next',
+  all: 'All dates',
+}
+
 export default function Community() {
   useTitle('Theater Community')
   const [events, setEvents] = useState<CommunityEvent[]>([])
+  const [view, setView] = useState<CalendarView>(
+    () => (localStorage.getItem('gt-community-view') as CalendarView) || 'default',
+  )
   const [loaded, setLoaded] = useState(false)
+
+  function pickView(v: CalendarView) {
+    setView(v)
+    localStorage.setItem('gt-community-view', v)
+  }
 
   useEffect(() => {
     pb.send('/api/glowtape/community-calendar', { method: 'GET' })
@@ -23,11 +39,22 @@ export default function Community() {
 
   const isAudition = (k: string) => k.toLowerCase().includes('audition')
 
+  // Default view: this calendar month and the next one.
+  const now = new Date()
+  const nowYm = now.getFullYear() * 12 + now.getMonth()
+  const inDefaultWindow = (ev: CommunityEvent) => {
+    const d = pbDate(ev.start)
+    const ym = d.getFullYear() * 12 + d.getMonth()
+    return ym === nowYm || ym === nowYm + 1
+  }
+  const shown = view === 'default' ? events.filter(inDefaultWindow) : view === 'all' ? events : []
+  const hiddenLater = view === 'default' ? events.length - shown.length : 0
+
   // Group by month for scanning ("what's happening in August?"), then within a
   // month collapse a show's run (or its audition nights) into one card with
   // several dates, instead of a card per night. Events arrive sorted by start.
   const byMonth = new Map<string, Map<string, CommunityEvent[]>>()
-  for (const ev of events) {
+  for (const ev of shown) {
     const d = pbDate(ev.start)
     const month = d.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
     const groupKey = `${ev.production}|${isAudition(ev.kind) ? 'aud' : 'perf'}`
@@ -57,9 +84,33 @@ export default function Community() {
           Every audition and performance across all productions. Directors: anything you
           schedule with an Auditions or Performance event type shows up here automatically.
         </p>
-        {!loaded && <p>Loading…</p>}
-        {loaded && events.length === 0 && (
+        <div className="chips" role="group" aria-label="Calendar view">
+          {(['hide', 'default', 'all'] as const).map((v) => (
+            <button
+              key={v}
+              type="button"
+              aria-pressed={view === v}
+              className={`chip ${view === v ? 'chip-active' : ''}`}
+              onClick={() => pickView(v)}
+            >
+              {VIEW_LABELS[v]}
+            </button>
+          ))}
+        </div>
+        {!loaded && view !== 'hide' && <p>Loading…</p>}
+        {loaded && view !== 'hide' && events.length === 0 && (
           <p className="hint">Nothing on the community calendar yet — check back soon.</p>
+        )}
+        {loaded && view === 'default' && events.length > 0 && shown.length === 0 && (
+          <p className="hint">
+            Nothing this month or next — tap <em>All dates</em> to see what's further out.
+          </p>
+        )}
+        {hiddenLater > 0 && shown.length > 0 && (
+          <p className="hint">
+            Showing this month and next — <em>All dates</em> has {hiddenLater} more further
+            out.
+          </p>
         )}
         {[...byMonth.entries()].map(([month, groups]) => (
           <div key={month}>
