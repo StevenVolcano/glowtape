@@ -10,13 +10,13 @@ import {
   matchMember,
   peopleLine,
   splitPeople,
+  resolveUnitMemberIds,
   unitInvolves,
-  unitMemberIds,
   type BreakdownStyle,
   type UnitGroup,
 } from '../lib/breakdown.ts'
 import { memberName, pbDate } from '../lib/types.ts'
-import type { EventRecord, MemberRecord, UnitRecord } from '../lib/types.ts'
+import type { EventRecord, GroupRecord, MemberRecord, UnitRecord } from '../lib/types.ts'
 
 // The show breakdown: songs, scenes, or page hunks, each knowing who's
 // involved. This is what "who's called" hangs off when scheduling.
@@ -24,6 +24,7 @@ export default function BreakdownView() {
   const { production, members, myMember, isManager, reload } = useProduction()
   const { user } = useAuth()
   const [units, setUnits] = useState<UnitRecord[]>([])
+  const [roleGroups, setRoleGroups] = useState<GroupRecord[]>([])
   const [openId, setOpenId] = useState('')
   const [onlyMine, setOnlyMine] = useState(false)
   const [status, setStatus] = useState('')
@@ -35,6 +36,16 @@ export default function BreakdownView() {
   // People the breakdown can reference: real roles, not guardians or the
   // claimed copies of shared roles.
   const pool = members.filter((m) => m.role !== 'guardian' && !m.claimedFrom)
+
+  useEffect(() => {
+    pb.collection('groups')
+      .getFullList<GroupRecord>({
+        filter: pb.filter('production = {:p}', { p: production.id }),
+        sort: 'order,created',
+      })
+      .then(setRoleGroups)
+      .catch(() => {})
+  }, [production.id])
   const myChildIds = members.filter((m) => m.guardians?.includes(user?.id ?? '')).map((m) => m.id)
 
   async function load() {
@@ -96,7 +107,7 @@ export default function BreakdownView() {
     for (const e of withUnits) {
       const ids = new Set<string>()
       for (const u of units) {
-        if (e.units.includes(u.id)) for (const m of unitMemberIds(u)) ids.add(m)
+        if (e.units.includes(u.id)) for (const m of resolveUnitMemberIds(u, members)) ids.add(m)
       }
       const next = [...ids].sort()
       const current = [...(e.called ?? [])].sort()
@@ -286,6 +297,7 @@ export default function BreakdownView() {
                 pool={pool}
                 members={members}
                 groups={BREAKDOWN_STYLES[style].groups as readonly UnitGroup[]}
+                roleGroups={roleGroups}
                 canEdit={isManager}
                 onSave={(patch) => saveUnit(u, patch)}
                 onDelete={() => removeUnit(u)}
@@ -339,6 +351,7 @@ function UnitEditor({
   pool,
   members,
   groups,
+  roleGroups,
   canEdit,
   onSave,
   onDelete,
@@ -347,6 +360,7 @@ function UnitEditor({
   pool: MemberRecord[]
   members: MemberRecord[]
   groups: readonly UnitGroup[]
+  roleGroups: GroupRecord[]
   canEdit: boolean
   onSave: (patch: Partial<UnitRecord>) => Promise<void>
   onDelete: () => Promise<void>
@@ -360,6 +374,7 @@ function UnitEditor({
     singing: unit.singing ?? [],
     dancing: unit.dancing ?? [],
   })
+  const [unitGroups, setUnitGroups] = useState<string[]>(unit.groups ?? [])
   const [busy, setBusy] = useState(false)
   const [saved, setSaved] = useState('')
 
@@ -376,7 +391,7 @@ function UnitEditor({
     setBusy(true)
     setSaved('')
     try {
-      await onSave({ name: name.trim() || unit.name, act, pages, notes, ...picks })
+      await onSave({ name: name.trim() || unit.name, act, pages, notes, groups: unitGroups, ...picks })
       setSaved('Saved. ✓')
       setTimeout(() => setSaved(''), 3000)
     } finally {
@@ -424,6 +439,29 @@ function UnitEditor({
           placeholder="Pages — for example: 12–18"
         />
       </div>
+      {roleGroups.length > 0 && (
+        <div>
+          <strong>Groups in this unit</strong>{' '}
+          <span className="hint">(everyone in a picked group counts as involved)</span>
+          <div className="chips">
+            {roleGroups.map((g) => (
+              <button
+                type="button"
+                key={g.id}
+                className={`chip ${unitGroups.includes(g.id) ? 'chip-active' : ''}`}
+                aria-pressed={unitGroups.includes(g.id)}
+                onClick={() =>
+                  setUnitGroups((prev) =>
+                    prev.includes(g.id) ? prev.filter((x) => x !== g.id) : [...prev, g.id],
+                  )
+                }
+              >
+                {g.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       {groups.map((g) => (
         <div key={g}>
           <strong>{GROUP_LABELS[g]}</strong>

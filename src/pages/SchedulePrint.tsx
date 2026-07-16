@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { pb } from '../lib/pb.ts'
 import { useProduction } from './Production.tsx'
 import { copyrightLine, memberName, pbDate } from '../lib/types.ts'
@@ -11,6 +11,8 @@ import type { EventRecord, MemberRecord } from '../lib/types.ts'
 export default function SchedulePrint() {
   const { production, members } = useProduction()
   const { memberId } = useParams()
+  const [searchParams] = useSearchParams()
+  const kindFilter = searchParams.get('kind') ?? ''
   const [events, setEvents] = useState<EventRecord[]>([])
   const [loaded, setLoaded] = useState(false)
   const [showPastOnScreen, setShowPastOnScreen] = useState(false)
@@ -23,10 +25,16 @@ export default function SchedulePrint() {
         filter: pb.filter("production = {:p} && status != 'cancelled'", { p: production.id }),
         sort: 'start',
       })
-      .then(setEvents)
+      .then((list) =>
+        setEvents(
+          kindFilter
+            ? list.filter((e) => e.kind.toLowerCase().includes(kindFilter.toLowerCase()))
+            : list,
+        ),
+      )
       .catch(() => {})
       .finally(() => setLoaded(true))
-  }, [production.id])
+  }, [production.id, kindFilter])
 
   const calledFor = (e: EventRecord, m: MemberRecord) =>
     e.called.length === 0 ||
@@ -72,7 +80,7 @@ export default function SchedulePrint() {
       </div>
 
       <h2>
-        {production.title} — schedule{member ? ` for ${memberName(member)}` : ''}
+        {production.title} — {kindFilter ? `${kindFilter} ` : ''}schedule{member ? ` for ${memberName(member)}` : ''}
       </h2>
       {pastCount > 0 && (
         <p className="hint no-print">

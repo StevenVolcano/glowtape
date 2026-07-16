@@ -19,6 +19,7 @@ export default function ScheduleTab() {
   const [units, setUnits] = useState<UnitRecord[]>([])
   const [showPast, setShowPast] = useState(false)
   const [viewAs, setViewAs] = useState('')
+  const [kindFilter, setKindFilter] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [rollFor, setRollFor] = useState<string | null>(null)
 
@@ -141,8 +142,17 @@ export default function ScheduleTab() {
   const visible = events.filter(
     (e) =>
       (showPast || pbDate(e.end || e.start) >= now) &&
-      (!viewAsMember || calledForMember(e, viewAsMember)),
+      (!viewAsMember || calledForMember(e, viewAsMember)) &&
+      (!kindFilter || e.kind.toLowerCase().includes(kindFilter.toLowerCase())),
   )
+
+  // Types that actually appear on this schedule (multi-type events like
+  // "Dance + Vocals" count toward each of their parts).
+  const kindOptions = [
+    ...new Set(
+      events.flatMap((e) => e.kind.split(/\s*\+\s*/).map((k) => k.trim()).filter(Boolean)),
+    ),
+  ]
 
   const unacked = events.filter(
     (e) =>
@@ -195,18 +205,38 @@ export default function ScheduleTab() {
                 ))}
             </select>
           )}
+          {kindOptions.length > 1 && (
+            <select
+              aria-label="Show only one rehearsal type"
+              value={kindFilter}
+              onChange={(e) => setKindFilter(e.target.value)}
+              style={{ width: 'auto' }}
+            >
+              <option value="">All types</option>
+              {kindOptions.map((k) => (
+                <option key={k} value={k}>
+                  Only {k}
+                </option>
+              ))}
+            </select>
+          )}
           <Link
             className="link"
             to={`/production/${production.id}/schedule/print${
               viewAsMember ? `/${viewAsMember.id}` : myMember ? `/${myMember.id}` : ''
-            }`}
+            }${kindFilter ? `?kind=${encodeURIComponent(kindFilter)}` : ''}`}
           >
             🖨 Print{viewAsMember ? ` ${memberName(viewAsMember)}'s` : myMember ? ' my' : ' the'}{' '}
             schedule
           </Link>
           {isManager && (
-            <Link className="link" to={`/production/${production.id}/schedule/print`}>
-              🖨 Print everything
+            <Link
+              className="link"
+              to={`/production/${production.id}/schedule/print${
+                kindFilter ? `?kind=${encodeURIComponent(kindFilter)}` : ''
+              }`}
+            >
+              🖨 Print everything{kindFilter ? ` (${kindFilter})` : ''}
             </Link>
           )}
         </div>
@@ -214,6 +244,12 @@ export default function ScheduleTab() {
           <p className="hint" role="status">
             Showing only what {memberName(viewAsMember)} is called to — switch back to
             “Everyone's schedule” when you're done.
+          </p>
+        )}
+        {kindFilter && (
+          <p className="hint" role="status">
+            Showing only <strong>{kindFilter}</strong> rehearsals (including combined nights) —
+            pick “All types” to see everything again.
           </p>
         )}
         {unacked.length > 1 && !viewAsMember && (

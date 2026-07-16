@@ -7,7 +7,7 @@ import EventForm from '../components/EventForm.tsx'
 import ManageJumpNav from '../components/ManageJumpNav.tsx'
 import QrCode from '../components/QrCode.tsx'
 import { MANAGER_ROLES, ROLE_LABELS } from '../lib/types.ts'
-import type { AttendanceRecord, AuditionRecord, ChannelRecord, ConflictRecord, EventRecord, MemberRecord, MemberRole, ProfileRecord, ResourceRecord } from '../lib/types.ts'
+import type { AttendanceRecord, AuditionRecord, ChannelRecord, ConflictRecord, EventRecord, GroupRecord, MemberRecord, MemberRole, ProfileRecord, ResourceRecord } from '../lib/types.ts'
 import { DEFAULT_EVENT_KINDS, memberName, normalizePlaces, pbDate, productionPlaces, shareInvite } from '../lib/types.ts'
 import type { Place } from '../lib/types.ts'
 
@@ -27,6 +27,7 @@ export default function AdminTab() {
       <NewAnnouncementSection />
       <ResourcesSection />
       <ChannelsSection />
+      <GroupsSection />
       <MembersSection />
     </div>
   )
@@ -656,9 +657,132 @@ function ChannelsSection() {
   )
 }
 
+// Named sets of roles ("Group A", "Leads", "Dancers"). Assign roles to
+// groups below in People & roles; pick groups on breakdown units and when
+// scheduling, and everyone in them is called.
+function GroupsSection() {
+  const { production } = useProduction()
+  const [groups, setGroups] = useState<GroupRecord[]>([])
+  const [name, setName] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [message, setMessage] = useState('')
+
+  async function load() {
+    const list = await pb.collection('groups').getFullList<GroupRecord>({
+      filter: pb.filter('production = {:p}', { p: production.id }),
+      sort: 'order,created',
+    })
+    setGroups(list)
+  }
+
+  useEffect(() => {
+    load().catch(() => {})
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [production.id])
+
+  async function add(e: FormEvent) {
+    e.preventDefault()
+    if (!name.trim()) return
+    setBusy(true)
+    setMessage('')
+    try {
+      await pb.collection('groups').create({
+        production: production.id,
+        name: name.trim(),
+        order: groups.length + 1,
+      })
+      setName('')
+      await load()
+    } catch {
+      setMessage("Couldn't add it — is that name already a group?")
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function rename(g: GroupRecord, value: string) {
+    const next = value.trim()
+    if (!next || next === g.name) return
+    try {
+      await pb.collection('groups').update(g.id, { name: next })
+      await load()
+    } catch {
+      setMessage("Couldn't rename it — try again.")
+    }
+  }
+
+  async function remove(g: GroupRecord) {
+    if (
+      !window.confirm(
+        `Delete the group ${g.name}? Roles stay; they just leave this group. Events already scheduled keep the people they called.`,
+      )
+    )
+      return
+    await pb.collection('groups').delete(g.id)
+    await load()
+  }
+
+  return (
+    <section id="groups">
+      <h2>Groups</h2>
+      <p className="hint">
+        Named sets of roles — <em>Group A</em>, <em>Leads</em>, <em>Dancers</em>, whatever fits
+        your show. Put roles into groups in <em>People &amp; roles</em> below, then pick a
+        group on a breakdown unit or when scheduling and everyone in it is called.
+      </p>
+      <ul className="plain-list">
+        {groups.map((g) => (
+          <li key={g.id} className="row">
+            <input
+              aria-label={`Name of group ${g.name}`}
+              defaultValue={g.name}
+              maxLength={80}
+              onBlur={(e) => rename(g, e.target.value)}
+            />
+            <button className="link" aria-label={`Delete group ${g.name}`} onClick={() => remove(g)}>
+              ✕
+            </button>
+          </li>
+        ))}
+      </ul>
+      <form onSubmit={add} className="row">
+        <input
+          aria-label="New group"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          maxLength={80}
+          placeholder="Example: Group A, or Dancers"
+        />
+        <button type="submit" disabled={busy || !name.trim()}>
+          Add group
+        </button>
+      </form>
+      {message && <p className="error" role="status">{message}</p>}
+    </section>
+  )
+}
+
 function MembersSection() {
   const { production, members, reload } = useProduction()
   const [busyId, setBusyId] = useState('')
+  const [groups, setGroups] = useState<GroupRecord[]>([])
+
+  useEffect(() => {
+    pb.collection('groups')
+      .getFullList<GroupRecord>({
+        filter: pb.filter('production = {:p}', { p: production.id }),
+        sort: 'order,created',
+      })
+      .then(setGroups)
+      .catch(() => {})
+  }, [production.id])
+
+  async function toggleMemberGroup(m: MemberRecord, gid: string) {
+    const cur = m.groups ?? []
+    const next = cur.includes(gid) ? cur.filter((x) => x !== gid) : [...cur, gid]
+    await pb.collection('members').update(m.id, { groups: next })
+    await reload()
+  }
 
   // The server keeps productions.managers in sync with member `manager`
   // flags; promoting to a manager role auto-checks the flag, demoting
@@ -776,6 +900,22 @@ function MembersSection() {
                   if (e.target.value !== (m.roleNotes ?? '')) setRoleNotes(m, e.target.value)
                 }}
               />
+            )}
+            {groups.length > 0 && !m.claimedFrom && m.role !== 'guardian' && (
+              <div className="chips" style={{ width: '100%' }}>
+                <span className="hint" style={{ alignSelf: 'center' }}>Groups:</span>
+                {groups.map((g) => (
+                  <button
+                    type="button"
+                    key={g.id}
+                    className={`chip ${(m.groups ?? []).includes(g.id) ? 'chip-active' : ''}`}
+                    aria-pressed={(m.groups ?? []).includes(g.id)}
+                    onClick={() => toggleMemberGroup(m, g.id)}
+                  >
+                    {g.name}
+                  </button>
+                ))}
+              </div>
             )}
             <label className="row manage-toggle">
               <input

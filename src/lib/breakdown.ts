@@ -35,11 +35,26 @@ export function unitMemberIds(unit: UnitRecord): string[] {
   return [...new Set([...(unit.onstage ?? []), ...(unit.singing ?? []), ...(unit.dancing ?? [])])]
 }
 
+// Members whose role belongs to any of the given role-groups.
+export function groupMemberIds(groupIds: string[], members: MemberRecord[]): string[] {
+  if (groupIds.length === 0) return []
+  return members.filter((m) => (m.groups ?? []).some((g) => groupIds.includes(g))).map((m) => m.id)
+}
+
+// unitMemberIds plus everyone pulled in by the unit's role-groups.
+export function resolveUnitMemberIds(unit: UnitRecord, members: MemberRecord[]): string[] {
+  return [...new Set([...unitMemberIds(unit), ...groupMemberIds(unit.groups ?? [], members)])]
+}
+
 // Does this unit involve the given member (directly or via a claimed shared
 // role)?
 export function unitInvolves(unit: UnitRecord, m: MemberRecord): boolean {
   const ids = unitMemberIds(unit)
-  return ids.includes(m.id) || (!!m.claimedFrom && ids.includes(m.claimedFrom))
+  return (
+    ids.includes(m.id) ||
+    (!!m.claimedFrom && ids.includes(m.claimedFrom)) ||
+    (unit.groups ?? []).some((g) => (m.groups ?? []).includes(g))
+  )
 }
 
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '')

@@ -37,6 +37,7 @@ const MANAGE_JUMPS = [
   ['#auditions', 'Auditions'],
   ['#tickets', 'Tickets'],
   ['#announce', 'Announce'],
+  ['#groups', 'Groups'],
   ['#people', 'People & roles'],
   ['#bios', 'Bios'],
   ['#resources', 'Docs & links'],

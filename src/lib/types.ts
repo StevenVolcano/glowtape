@@ -124,12 +124,20 @@ export function isCommunityKind(kind: string): boolean {
   return k.includes('audition') || k.includes('performance')
 }
 
+export interface GroupRecord {
+  id: string
+  production: string
+  name: string
+  order: number
+}
+
 export interface UnitRecord {
   id: string
   production: string
   name: string
   act: string
   pages: string
+  groups: string[] | null
   order: number
   onstage: string[]
   singing: string[]
@@ -268,6 +276,7 @@ export interface MemberRecord {
   production: string
   user: string // '' = pre-cast placeholder role
   role: MemberRole
+  groups: string[] | null
   roleNotes: string
   position: string
   roleCode: string
@@ -319,6 +328,7 @@ export interface EventRecord {
   calledNote: string
   status: '' | 'scheduled' | 'cancelled'
   kind: string
+  calledGroups: string[] | null
   units: string[] // breakdown units being rehearsed (called is still authoritative)
 }
 

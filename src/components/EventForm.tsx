@@ -1,9 +1,9 @@
 import { useEffect, useId, useState, type FormEvent } from 'react'
 import { pb } from '../lib/pb.ts'
 import { useProduction } from '../pages/Production.tsx'
-import { unitMemberIds } from '../lib/breakdown.ts'
+import { groupMemberIds, resolveUnitMemberIds } from '../lib/breakdown.ts'
 import { DEFAULT_EVENT_KINDS, isCommunityKind, memberName, pbDate, productionPlaces } from '../lib/types.ts'
-import type { EventRecord, UnitRecord } from '../lib/types.ts'
+import type { EventRecord, GroupRecord, UnitRecord } from '../lib/types.ts'
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
@@ -29,7 +29,12 @@ export default function EventForm({
   const locations = productionPlaces(production).map((pl) => pl.name)
 
   const [title, setTitle] = useState(event?.title ?? '')
-  const [kind, setKind] = useState(event?.kind ?? '')
+  // A rehearsal can be more than one thing (Dance + Vocals); kinds are picked
+  // as chips and stored joined, so every kind-substring check keeps working.
+  const [kindParts, setKindParts] = useState<string[]>(
+    event?.kind ? event.kind.split(/\s*\+\s*/).filter(Boolean) : [],
+  )
+  const kind = kindParts.join(' + ')
   const [date, setDate] = useState(event ? localDate(pbDate(event.start)) : '')
   const [startTime, setStartTime] = useState(event ? localTime(pbDate(event.start)) : '19:00')
   const [endTime, setEndTime] = useState(event?.end ? localTime(pbDate(event.end)) : '')
@@ -43,6 +48,8 @@ export default function EventForm({
   const [repeatDays, setRepeatDays] = useState<number[]>([])
   const [allUnits, setAllUnits] = useState<UnitRecord[]>([])
   const [units, setUnits] = useState<string[]>(event?.units ?? [])
+  const [allGroups, setAllGroups] = useState<GroupRecord[]>([])
+  const [calledGroups, setCalledGroups] = useState<string[]>(event?.calledGroups ?? [])
   const [busy, setBusy] = useState(false)
   const [done, setDone] = useState('')
   const [error, setError] = useState('')
@@ -55,25 +62,53 @@ export default function EventForm({
       })
       .then(setAllUnits)
       .catch(() => {})
+    pb.collection('groups')
+      .getFullList<GroupRecord>({
+        filter: pb.filter('production = {:p}', { p: production.id }),
+        sort: 'order,created',
+      })
+      .then(setAllGroups)
+      .catch(() => {})
   }, [production.id])
+
+  function toggleKind(k: string) {
+    setKindParts((prev) => {
+      const next = prev.includes(k) ? prev.filter((x) => x !== k) : [...prev, k]
+      if (!title.trim() || title === prev.join(' + ')) setTitle(next.join(' + '))
+      return next
+    })
+  }
 
   function toggleCalled(id: string) {
     setCalled((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
   }
 
-  // Picking units fills "who's called" from the breakdown: the union of
-  // everyone involved in the selected units. Manual chips still adjust after.
+  // Picking units or role-groups fills "who's called": the union of everyone
+  // involved in the selected units plus everyone whose role is in a selected
+  // group. Manual chips still adjust after.
+  function recomputeCalled(nextUnits: string[], nextGroups: string[]) {
+    if (nextUnits.length === 0 && nextGroups.length === 0) return
+    const ids = new Set<string>()
+    for (const u of allUnits) {
+      if (nextUnits.includes(u.id)) for (const m of resolveUnitMemberIds(u, members)) ids.add(m)
+    }
+    for (const m of groupMemberIds(nextGroups, members)) ids.add(m)
+    setEveryone(false)
+    setCalled([...ids])
+  }
+
   function toggleUnit(id: string) {
     const next = units.includes(id) ? units.filter((x) => x !== id) : [...units, id]
     setUnits(next)
-    if (next.length > 0) {
-      const ids = new Set<string>()
-      for (const u of allUnits) {
-        if (next.includes(u.id)) for (const m of unitMemberIds(u)) ids.add(m)
-      }
-      setEveryone(false)
-      setCalled([...ids])
-    }
+    recomputeCalled(next, calledGroups)
+  }
+
+  function toggleGroup(id: string) {
+    const next = calledGroups.includes(id)
+      ? calledGroups.filter((x) => x !== id)
+      : [...calledGroups, id]
+    setCalledGroups(next)
+    recomputeCalled(units, next)
   }
 
   function toggleDay(d: number) {
@@ -131,6 +166,7 @@ export default function EventForm({
                 calledNote,
                 called: calledIds,
                 units,
+                calledGroups,
                 start: new Date(`${date}T${startTime}`).toISOString(),
                 end: endTime ? new Date(`${date}T${endTime}`).toISOString() : '',
               },
@@ -149,6 +185,7 @@ export default function EventForm({
             calledNote,
             called: calledIds,
             units,
+            calledGroups,
             occurrences: buildOccurrences(),
           },
         })
@@ -174,29 +211,29 @@ export default function EventForm({
 
   return (
     <form onSubmit={submit} className="stack">
-      <div className="row">
-        <select
-          aria-label="Event type"
-          value={kind}
-          onChange={(e) => {
-            setKind(e.target.value)
-            if (!title.trim() && e.target.value) setTitle(e.target.value)
-          }}
-        >
-          <option value="">Type (optional)</option>
-          {kinds.map((k) => (
-            <option key={k} value={k}>
+      <div>
+        <strong>Type</strong>{' '}
+        <span className="hint">(pick all that apply — a night can be Dance + Vocals)</span>
+        <div className="chips" style={{ marginTop: '0.3rem' }}>
+          {[...new Set([...kinds, ...kindParts])].map((k) => (
+            <button
+              type="button"
+              key={k}
+              className={`chip ${kindParts.includes(k) ? 'chip-active' : ''}`}
+              aria-pressed={kindParts.includes(k)}
+              onClick={() => toggleKind(k)}
+            >
               {k}
-            </option>
+            </button>
           ))}
-        </select>
-        <input
-          aria-label="Event title"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Title — for example: Act II run-through"
-        />
+        </div>
       </div>
+      <input
+        aria-label="Event title"
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        placeholder="Title — for example: Act II run-through"
+      />
       {isCommunityKind(kind) && (
         <p className="hint" role="status">
           🌍 Heads up: <strong>{kind}</strong> events appear on the public community calendar
@@ -286,6 +323,27 @@ export default function EventForm({
         onChange={(e) => setNotes(e.target.value)}
         placeholder="Notes (optional)"
       />
+      {allGroups.length > 0 && (
+        <div>
+          <strong>Call a group</strong>
+          <div className="chips">
+            {allGroups.map((g) => (
+              <button
+                type="button"
+                key={g.id}
+                className={`chip ${calledGroups.includes(g.id) ? 'chip-active' : ''}`}
+                aria-pressed={calledGroups.includes(g.id)}
+                onClick={() => toggleGroup(g.id)}
+              >
+                {g.name}
+              </button>
+            ))}
+          </div>
+          <p className="hint">
+            Picking a group calls every role in it (set up groups in Manage → Groups).
+          </p>
+        </div>
+      )}
       {allUnits.length > 0 && (
         <div>
           <strong>Rehearsing (from the breakdown)</strong>
