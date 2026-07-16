@@ -7,7 +7,7 @@ import { formatDay, formatWhen, mapsUrl, memberName, pbDate, placeLine, producti
 import { downloadEventIcs, googleCalendarUrl } from '../lib/calendar.ts'
 import EventForm from '../components/EventForm.tsx'
 import ResourceList from '../components/ResourceList.tsx'
-import type { AckRecord, AttendanceRecord, ConflictRecord, EventRecord, MemberRecord, UnitRecord } from '../lib/types.ts'
+import type { AckRecord, AttendanceRecord, ConflictRecord, EventRecord, GroupRecord, MemberRecord, UnitRecord } from '../lib/types.ts'
 
 export default function ScheduleTab() {
   const { production, members, myMember, isManager } = useProduction()
@@ -17,6 +17,7 @@ export default function ScheduleTab() {
   const [conflicts, setConflicts] = useState<ConflictRecord[]>([])
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([])
   const [units, setUnits] = useState<UnitRecord[]>([])
+  const [groups, setGroups] = useState<GroupRecord[]>([])
   const [showPast, setShowPast] = useState(false)
   const [viewAs, setViewAs] = useState('')
   const [kindFilter, setKindFilter] = useState('')
@@ -24,7 +25,7 @@ export default function ScheduleTab() {
   const [rollFor, setRollFor] = useState<string | null>(null)
 
   async function load() {
-    const [ev, ak, cf, at, un] = await Promise.all([
+    const [ev, ak, cf, at, un, gr] = await Promise.all([
       pb.collection('events').getFullList<EventRecord>({
         filter: pb.filter('production = {:p}', { p: production.id }),
         sort: 'start',
@@ -44,12 +45,17 @@ export default function ScheduleTab() {
         filter: pb.filter('production = {:p}', { p: production.id }),
         sort: 'order,created',
       }),
+      pb.collection('groups').getFullList<GroupRecord>({
+        filter: pb.filter('production = {:p}', { p: production.id }),
+        sort: 'order,created',
+      }),
     ])
     setEvents(ev)
     setAcks(ak)
     setConflicts(cf)
     setAttendance(at)
     setUnits(un)
+    setGroups(gr)
   }
 
   useEffect(() => {
@@ -165,6 +171,14 @@ export default function ScheduleTab() {
         myChildIds.some((id) => e.called.includes(id))) &&
       !acks.some((a) => a.event === e.id && a.user === user?.id),
   )
+
+  function groupsLabel(e: EventRecord): string {
+    if (!e.calledGroups?.length) return ''
+    return e.calledGroups
+      .map((id) => groups.find((g) => g.id === id)?.name)
+      .filter(Boolean)
+      .join(' · ')
+  }
 
   function unitsLabel(e: EventRecord): string {
     if (!e.units?.length) return ''
@@ -293,6 +307,11 @@ export default function ScheduleTab() {
                 {unitsLabel(e) && (
                   <div className="event-line">
                     <strong>Rehearsing:</strong> {unitsLabel(e)}
+                  </div>
+                )}
+                {groupsLabel(e) && (
+                  <div className="event-line">
+                    <strong>Groups:</strong> {groupsLabel(e)}
                   </div>
                 )}
                 <div className="event-line">
