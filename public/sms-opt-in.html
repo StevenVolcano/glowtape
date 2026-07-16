@@ -9,11 +9,17 @@
          max-width: 680px; margin: 0 auto; padding: 2rem 1rem; color: #241f2e; line-height: 1.6; }
   h1 { font-size: 1.5rem; } h2 { font-size: 1.15rem; margin-top: 2rem; }
   .card { background: #fff; border: 1px solid #ddd8ce; border-radius: 12px; padding: 1rem; margin: 1rem 0; }
+  .screen { border: 2px solid #8a8478; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+  .screen h3 { margin: 0 0 .5rem; font-size: 1.05rem; }
+  .field { border: 2px solid #8a8478; border-radius: 10px; padding: .6rem .75rem; color: #6b6478;
+           font-style: italic; margin: .5rem 0; }
   .checkbox-row { display: flex; gap: .6rem; align-items: flex-start; margin: .75rem 0; }
   .checkbox-row input { width: 1.3rem; height: 1.3rem; margin-top: .2rem; }
   .btn { display: inline-block; background: #cdef55; color: #1c2405; font-weight: 600;
          border-radius: 10px; padding: .6rem 1.1rem; }
+  .fineprint { font-size: .85rem; color: #6b6478; }
   .quote { border-left: 4px solid #cdef55; padding-left: 1rem; color: #444; }
+  .caption { font-size: .85rem; color: #6b6478; margin: -0.5rem 0 1rem; }
   footer { margin-top: 3rem; font-size: .9rem; color: #6b6478; }
   .copyright { margin-top: 2rem; font-size: .85rem; color: #6b6478; }
 </style>
@@ -21,22 +27,34 @@
 <body>
 <h1>How Glow Tape collects SMS opt-in consent</h1>
 <p><strong>Glow Tape</strong> (glowtape.net) is a free scheduling app for community theater
-volunteers in Grays Harbor County, WA, operated by Zucchini Volcano LLC. SMS is strictly
-opt-in, and this page documents the exact consent flow inside the app.</p>
+volunteers in Grays Harbor County, WA, operated by Zucchini Volcano LLC. Text messaging is
+strictly opt-in, initiated by the end user inside their own signed-in account. This page
+documents the exact consent flow and the screens as they appear in the app.</p>
 
-<h2>The opt-in flow</h2>
-<ol>
-  <li>A user signs in to the app (passwordless, via emailed one-time code).</li>
-  <li>On their Home screen, an optional <strong>“Text reminders”</strong> card lets them enter
-      their own cell number.</li>
-  <li>The number is verified by a one-time code texted to that number — no texts are ever sent
-      to unverified numbers.</li>
-  <li>Consent is recorded via the checkbox below, which the user may un-check at any time in
-      the app. Replying <strong>STOP</strong> to any message also opts the user out.</li>
-</ol>
+<h2>Step 1 — The user enters their own number (point of collection)</h2>
+<p class="caption">Rendered exactly as in the app: Home screen → “Text reminders” card.</p>
+<div class="card screen">
+  <h3>Text reminders</h3>
+  <p>Add your cell number and Glow Tape will text you before your rehearsal calls — about
+  10 hours ahead, and again about 2 hours out. Email reminders happen either way.</p>
+  <div class="field">Example: (360) 555-0123</div>
+  <span class="btn">Text me a code</span>
+  <p class="fineprint">By tapping <em>Text me a code</em> you agree to receive a one-time
+  verification code and, once you confirm below, recurring rehearsal-reminder texts from
+  Glow Tape (up to 2 per rehearsal day; frequency varies with your schedule). Consent is not
+  a condition of any purchase. Message &amp; data rates may apply. Reply <strong>STOP</strong>
+  to cancel, <strong>HELP</strong> for help. See our
+  <a href="/privacy.html">privacy policy</a> and <a href="/terms.html">terms</a>.</p>
+</div>
 
-<h2>The exact point of consent (as shown in the app)</h2>
-<div class="card">
+<h2>Step 2 — Double opt-in: the number is verified</h2>
+<p>A 6-digit one-time code is texted to the number; the user must type it back into the app.
+No reminder texts are ever sent to a number that hasn't completed this verification.</p>
+
+<h2>Step 3 — Recorded consent, revocable anytime</h2>
+<p class="caption">Shown after verification; the user can un-check it at any time.</p>
+<div class="card screen">
+  <h3>Text reminders</h3>
   <p>📱 <strong>(360) 555-0123</strong> is verified.</p>
   <div class="checkbox-row">
     <input type="checkbox" checked disabled>
@@ -50,8 +68,16 @@ opt-in, and this page documents the exact consent flow inside the app.</p>
   Glow Tape: Act II run-through (Test Play) is today — Sat Jul 18, 7:00pm at the Driftwood
   Playhouse. Reply STOP to opt out.
 </p>
-<p>One-time sign-in / verification codes and rehearsal or performance reminders only.
-No marketing, promotional, or solicitation content is ever sent.</p>
+<ul>
+  <li>One-time sign-in / verification codes, and rehearsal or performance reminders only.</li>
+  <li>No marketing, promotional, or solicitation content — ever.</li>
+  <li>Frequency: typically 1–2 messages per rehearsal day the user is called to; none
+      otherwise. Quiet hours are enforced (no texts 9pm–7am Pacific).</li>
+  <li>Opt-out: reply <strong>STOP</strong> to any message, or un-check the box in the app.
+      Reply <strong>HELP</strong> or email callboard@glowtape.net for help.</li>
+  <li>Phone numbers and consent records are never sold or shared with third parties for
+      their marketing; see the <a href="/privacy.html">privacy policy</a>.</li>
+</ul>
 
 <footer>
   <a href="/privacy.html">Privacy policy</a> · <a href="/terms.html">Terms of use</a> ·

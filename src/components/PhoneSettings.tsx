@@ -101,20 +101,30 @@ export default function PhoneSettings({ user }: { user: UserRecord }) {
           and again about 2 hours out. Email reminders happen either way.
         </p>
         {step === 'phone' ? (
-          <form onSubmit={start} className="row">
-            <input
-              aria-label="Cell phone number"
-              type="tel"
-              inputMode="tel"
-              autoComplete="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="Example: (360) 555-0123"
-            />
-            <button type="submit" disabled={busy || phone.replace(/\D/g, '').length < 10}>
-              {busy ? 'Sending…' : 'Text me a code'}
-            </button>
-          </form>
+          <>
+            <form onSubmit={start} className="row">
+              <input
+                aria-label="Cell phone number"
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="Example: (360) 555-0123"
+              />
+              <button type="submit" disabled={busy || phone.replace(/\D/g, '').length < 10}>
+                {busy ? 'Sending…' : 'Text me a code'}
+              </button>
+            </form>
+            <p className="hint" style={{ fontSize: '0.85rem' }}>
+              By tapping <em>Text me a code</em> you agree to receive a one-time verification
+              code and, once you confirm, recurring rehearsal-reminder texts from Glow Tape
+              (up to 2 per rehearsal day; frequency varies with your schedule). Consent is not
+              a condition of any purchase. Message &amp; data rates may apply. Reply STOP to
+              cancel, HELP for help. See our <a href="/privacy.html">privacy policy</a> and{' '}
+              <a href="/terms.html">terms</a>.
+            </p>
+          </>
         ) : (
           <form onSubmit={confirm} className="row">
             <input
