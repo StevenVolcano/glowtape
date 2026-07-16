@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { Suspense, createContext, lazy, useContext, useEffect, useState } from 'react'
 import { Link, NavLink, Navigate, Route, Routes, useParams } from 'react-router-dom'
 import { pb } from '../lib/pb.ts'
 import { useAuth } from '../lib/auth.tsx'
@@ -15,6 +15,9 @@ import CastingTab from './CastingTab.tsx'
 import BiosView from './BiosView.tsx'
 import { useTitle } from '../lib/useTitle.ts'
 import AdminTab from './AdminTab.tsx'
+
+// pdf.js is heavy — the script room loads only when someone opens a document.
+const ScriptRoom = lazy(() => import('./ScriptRoom.tsx'))
 
 export interface ProductionContextValue {
   production: ProductionRecord
@@ -112,6 +115,14 @@ export default function Production() {
           <Route path="sheets" element={<TrackersTab />} />
           <Route path="notes" element={<NotesTab />} />
           <Route path="notes/:noteId" element={<NotesTab />} />
+          <Route
+            path="script/:resourceId"
+            element={
+              <Suspense fallback={<p>Opening the document…</p>}>
+                <ScriptRoom />
+              </Suspense>
+            }
+          />
           <Route path="people" element={<PeopleTab />} />
           {isManager && <Route path="casting" element={<CastingTab />} />}
           {isManager && <Route path="admin" element={<AdminTab />} />}

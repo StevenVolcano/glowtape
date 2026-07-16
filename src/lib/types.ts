@@ -124,6 +124,21 @@ export function isCommunityKind(kind: string): boolean {
   return k.includes('audition') || k.includes('performance')
 }
 
+export interface AnnotationRecord {
+  id: string
+  production: string
+  resource: string
+  user: string
+  page: number
+  x: number
+  y: number
+  text: string
+  scope: 'production' | 'personal'
+  done: boolean
+  created: string
+  expand?: { user?: UserRecord }
+}
+
 export interface GroupRecord {
   id: string
   production: string

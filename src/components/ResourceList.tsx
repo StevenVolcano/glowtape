@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { pb } from '../lib/pb.ts'
 import type { ResourceRecord } from '../lib/types.ts'
 
@@ -39,6 +40,14 @@ export default function ResourceList({
             >
               {r.file ? '📄' : '🔗'} {r.title}
             </a>
+            {area === 'show' && r.file?.toLowerCase().endsWith('.pdf') && (
+              <>
+                {' '}
+                <Link className="link" to={`/production/${productionId}/script/${r.id}`}>
+                  📖 Open with notes
+                </Link>
+              </>
+            )}
           </li>
         ))}
       </ul>
