@@ -40,7 +40,7 @@ export default function ScriptRoom() {
   // Highlight style: freehand, snapped-straight, or a filled box — phones
   // wobble, and a block of text wants one wash, not four passes.
   const [hlStyle, setHlStyle] = useState<'free' | 'straight' | 'box'>(
-    () => (localStorage.getItem('gt-highlight-style') as 'free' | 'straight' | 'box') || 'free',
+    () => (localStorage.getItem('gt-highlight-style') as 'free' | 'straight' | 'box') || 'straight',
   )
 
   function pickHlStyle(v: 'free' | 'straight' | 'box') {
@@ -436,9 +436,9 @@ export default function ScriptRoom() {
         <div className="chips no-print" role="group" aria-label="Highlighter style">
           {(
             [
-              ['free', '✍', 'Freehand'],
               ['straight', '📏', 'Straight line'],
               ['box', '▭', 'Box'],
+              ['free', '✍', 'Freehand'],
             ] as const
           ).map(([v, icon, label]) => (
             <button
