@@ -59,6 +59,10 @@ export default function ScriptRoom() {
     })
   }
   const [failed, setFailed] = useState('')
+  // Undo: ids of annotations created in THIS sitting, newest last.
+  const [undoStack, setUndoStack] = useState<string[]>([])
+  // Erase mode collects a selection; one tap of the erase button clears them all.
+  const [selected, setSelected] = useState<Set<string>>(new Set())
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const overlayRef = useRef<HTMLCanvasElement>(null)
   const holderRef = useRef<HTMLDivElement>(null)
@@ -184,6 +188,29 @@ export default function ScriptRoom() {
       if (n.page !== pageNum || !n.path?.length) continue
       if (n.done && !showDone) continue
       paintStroke(ctx, n.path, n.kind ?? 'draw', overlay.width, overlay.height, !!n.done, n.color)
+      if (selected.has(n.id)) {
+        // marked for erasing: dashed red outline
+        ctx.save()
+        ctx.strokeStyle = '#b3372f'
+        ctx.lineWidth = overlay.width * 0.003
+        ctx.setLineDash([overlay.width * 0.01, overlay.width * 0.008])
+        if (n.kind === 'box' && n.path.length >= 2) {
+          const x = Math.min(n.path[0].x, n.path[1].x) * overlay.width
+          const y = Math.min(n.path[0].y, n.path[1].y) * overlay.height
+          ctx.strokeRect(
+            x,
+            y,
+            Math.abs(n.path[1].x - n.path[0].x) * overlay.width,
+            Math.abs(n.path[1].y - n.path[0].y) * overlay.height,
+          )
+        } else {
+          ctx.beginPath()
+          ctx.moveTo(n.path[0].x * overlay.width, n.path[0].y * overlay.height)
+          for (const pt of n.path.slice(1)) ctx.lineTo(pt.x * overlay.width, pt.y * overlay.height)
+          ctx.stroke()
+        }
+        ctx.restore()
+      }
     }
   }
 
@@ -191,7 +218,7 @@ export default function ScriptRoom() {
   useEffect(() => {
     repaintOverlay()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [notes, pageNum, renderTick, showDone])
+  }, [notes, pageNum, renderTick, showDone, selected])
 
   const pointFromEvent = (e: React.PointerEvent) => {
     const rect = holderRef.current!.getBoundingClientRect()
@@ -253,7 +280,7 @@ export default function ScriptRoom() {
       kind = 'box'
       pts = [pts[0], pts[pts.length - 1]]
     }
-    await pb.collection('annotations').create({
+    const rec = await pb.collection('annotations').create({
       production: production.id,
       resource: resourceId,
       user: user!.id,
@@ -267,6 +294,7 @@ export default function ScriptRoom() {
       scope: isManager ? draftScope : 'personal',
       done: false,
     })
+    setUndoStack((prev) => [...prev, rec.id].slice(-50))
     await loadNotes()
   }
 
@@ -298,13 +326,53 @@ export default function ScriptRoom() {
                 Math.hypot(pt.x - x, (pt.y - y) * aspect) < threshold,
             )
       if (hit) {
-        if (window.confirm(`Erase this ${n.kind === 'highlight' || n.kind === 'box' ? 'highlight' : 'drawing'}?`)) {
-          await pb.collection('annotations').delete(n.id)
-          await loadNotes()
-        }
+        setSelected((prev) => {
+          const next = new Set(prev)
+          if (next.has(n.id)) next.delete(n.id)
+          else next.add(n.id)
+          return next
+        })
         return
       }
     }
+  }
+
+  async function eraseSelected() {
+    if (selected.size === 0) return
+    if (
+      !window.confirm(
+        `Erase ${selected.size === 1 ? 'this mark' : `these ${selected.size} marks`}? This can't be undone.`,
+      )
+    )
+      return
+    for (const id of selected) {
+      try {
+        await pb.collection('annotations').delete(id)
+      } catch {
+        /* already gone */
+      }
+    }
+    setSelected(new Set())
+    setUndoStack((prev) => prev.filter((id) => !selected.has(id)))
+    await loadNotes()
+  }
+
+  async function undoLast() {
+    const id = undoStack[undoStack.length - 1]
+    if (!id) return
+    setUndoStack((prev) => prev.slice(0, -1))
+    try {
+      await pb.collection('annotations').delete(id)
+    } catch {
+      /* already erased another way */
+    }
+    setSelected((prev) => {
+      if (!prev.has(id)) return prev
+      const next = new Set(prev)
+      next.delete(id)
+      return next
+    })
+    await loadNotes()
   }
 
   function pageClick(e: React.MouseEvent<HTMLDivElement>) {
@@ -322,7 +390,7 @@ export default function ScriptRoom() {
 
   async function saveDraft() {
     if (!draft || !draftText.trim() || !resourceId) return
-    await pb.collection('annotations').create({
+    const rec = await pb.collection('annotations').create({
       production: production.id,
       resource: resourceId,
       user: user!.id,
@@ -334,6 +402,7 @@ export default function ScriptRoom() {
       scope: isManager ? draftScope : 'personal',
       done: false,
     })
+    setUndoStack((prev) => [...prev, rec.id].slice(-50))
     setDraft(null)
     setDraftText('')
     setMode('read')
@@ -420,11 +489,22 @@ export default function ScriptRoom() {
             onClick={() => {
               setMode(m)
               setDraft(null)
+              if (m !== 'erase') setSelected(new Set())
             }}
           >
             {compact ? label.split(' ')[0] : label}
           </button>
         ))}
+        {undoStack.length > 0 && (
+          <button
+            type="button"
+            className="chip"
+            aria-label="Undo my last note or mark"
+            onClick={undoLast}
+          >
+            ↩{compact ? '' : ' Undo'}
+          </button>
+        )}
         {compact && isManager && draftScope === 'production' && (
           <span className="pill" title="New notes and marks are production-wide">📌 all</span>
         )}
@@ -491,7 +571,20 @@ export default function ScriptRoom() {
         </p>
       )}
       {mode === 'erase' && !compact && (
-        <p className="hint no-print">Tap a drawing or highlight to erase it (only your own).</p>
+        <p className="hint no-print">
+          Tap your drawings and highlights to mark them — tap again to unmark — then erase
+          them all at once.
+        </p>
+      )}
+      {mode === 'erase' && selected.size > 0 && (
+        <div className="row no-print" style={{ alignItems: 'center' }}>
+          <button type="button" onClick={eraseSelected}>
+            🧽 Erase {selected.size === 1 ? 'the marked one' : `all ${selected.size} marked`}
+          </button>
+          <button type="button" className="link" onClick={() => setSelected(new Set())}>
+            Unmark all
+          </button>
+        </div>
       )}
       {!compact && (
       <div className="row no-print" style={{ alignItems: 'center' }}>
