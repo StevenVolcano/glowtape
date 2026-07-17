@@ -143,10 +143,15 @@ export default function CheckIn() {
 
 // A one-page poster for the door: big QR, big title. The print stylesheet
 // already strips the app chrome, so the browser's print dialog does the rest.
+// Doubles as a kiosk screen for an old phone propped by the door: it holds a
+// screen wake lock while visible, and kiosk mode hides the app chrome so
+// there's nothing to wander into (pair it with the phone's screen pinning /
+// Guided Access to really lock it down).
 export function CheckInPoster() {
   const { eventId } = useParams()
   const { production } = useProduction()
   const [event, setEvent] = useState<EventRecord | null>(null)
+  const [kiosk, setKiosk] = useState(false)
 
   useEffect(() => {
     if (!eventId) return
@@ -155,6 +160,54 @@ export function CheckInPoster() {
       .then(setEvent)
       .catch(() => {})
   }, [eventId])
+
+  // Keep the door phone's screen awake while this page is showing. The lock
+  // is dropped by the OS when the tab hides, so re-grab it on return.
+  useEffect(() => {
+    type WakeLockSentinel = { release: () => Promise<void> }
+    let lock: WakeLockSentinel | null = null
+    const wl = (navigator as { wakeLock?: { request: (t: 'screen') => Promise<WakeLockSentinel> } })
+      .wakeLock
+    const acquire = () => {
+      wl?.request('screen')
+        .then((l) => {
+          lock = l
+        })
+        .catch(() => {})
+    }
+    acquire()
+    const onVis = () => {
+      if (document.visibilityState === 'visible') acquire()
+    }
+    document.addEventListener('visibilitychange', onVis)
+    return () => {
+      document.removeEventListener('visibilitychange', onVis)
+      lock?.release().catch(() => {})
+    }
+  }, [])
+
+  // Kiosk mode: fullscreen + a body class the stylesheet uses to hide the
+  // production header/tabs. Exiting fullscreen (or leaving) restores both.
+  useEffect(() => {
+    document.body.classList.toggle('kiosk', kiosk)
+    const onFsChange = () => {
+      if (!document.fullscreenElement) setKiosk(false)
+    }
+    document.addEventListener('fullscreenchange', onFsChange)
+    return () => {
+      document.body.classList.remove('kiosk')
+      document.removeEventListener('fullscreenchange', onFsChange)
+    }
+  }, [kiosk])
+
+  async function enterKiosk() {
+    setKiosk(true)
+    try {
+      await document.documentElement.requestFullscreen()
+    } catch {
+      /* fullscreen unsupported (e.g. iPhone Safari) — the body class still hides the chrome */
+    }
+  }
 
   if (!event) return <p>Loading…</p>
   if (!event.signinCode) {
@@ -177,10 +230,25 @@ export function CheckInPoster() {
         {event.title} — {formatWhen(event.start, event.end)}
       </p>
       <QrCode text={url} label="Scan with your phone camera, then tap I'm here" size={320} />
-      <p className="hint">Scan with your phone's camera and tap the big button.</p>
-      <button type="button" onClick={() => window.print()}>
-        🖨 Print this poster
-      </button>
+      <p className="hint no-print">Scan with your phone's camera and tap the big button.</p>
+      {!kiosk && (
+        <div className="row no-print" style={{ justifyContent: 'center' }}>
+          <button type="button" onClick={() => window.print()}>
+            🖨 Print this poster
+          </button>
+          <button type="button" onClick={enterKiosk}>
+            📺 Kiosk mode
+          </button>
+        </div>
+      )}
+      {!kiosk && (
+        <p className="hint no-print" style={{ maxWidth: '34rem' }}>
+          Leaving an old phone by the door? Tap <em>Kiosk mode</em> — the screen stays awake
+          and the rest of the app hides. Then pin the screen so taps can't leave it: on
+          Android, Settings → Security → App pinning; on iPhone, Guided Access. And keep it
+          plugged in.
+        </p>
+      )}
     </section>
   )
 }

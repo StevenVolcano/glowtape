@@ -441,6 +441,14 @@ form.stack,
   margin: 0 0 0.5rem;
 }
 
+/* --- Kiosk: a door phone showing the check-in poster — nothing but the poster --- */
+body.kiosk .topbar,
+body.kiosk .tabs,
+body.kiosk .production > h1,
+body.kiosk .legal-links {
+  display: none !important;
+}
+
 /* --- Print: the contact sheet should look like paper was always the plan --- */
 @media print {
   .topbar,

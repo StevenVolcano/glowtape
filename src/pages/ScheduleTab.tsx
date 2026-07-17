@@ -565,31 +565,122 @@ function CalendarSubscribeSection() {
   )
 }
 
+const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+const NTH_LABELS = ['1st', '2nd', '3rd', '4th', 'Last'] as const
+
+// Expand a repeat rule into concrete dates (as YYYY-MM-DD), capped so a typo
+// in "until" can't create hundreds of rows. Monthly repeats keep the weekday
+// of the first date and land on the checked weeks of each month.
+function repeatDates(
+  startStr: string,
+  untilStr: string,
+  repeat: 'weekly' | 'biweekly' | 'monthly',
+  nths: Set<string>,
+): string[] {
+  const iso = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  const start = new Date(`${startStr}T12:00:00`)
+  const until = new Date(`${untilStr}T12:00:00`)
+  const out: string[] = []
+  if (repeat === 'weekly' || repeat === 'biweekly') {
+    const step = repeat === 'weekly' ? 7 : 14
+    for (let d = new Date(start); d <= until && out.length < 60; d.setDate(d.getDate() + step)) {
+      out.push(iso(d))
+    }
+    return out
+  }
+  // monthly: every checked "nth <weekday>" of each month from start to until
+  const weekday = start.getDay()
+  for (
+    let month = new Date(start.getFullYear(), start.getMonth(), 1);
+    month <= until && out.length < 60;
+    month = new Date(month.getFullYear(), month.getMonth() + 1, 1)
+  ) {
+    const days: Date[] = []
+    for (
+      let d = new Date(month);
+      d.getMonth() === month.getMonth();
+      d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1)
+    ) {
+      if (d.getDay() === weekday) days.push(new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12))
+    }
+    days.forEach((d, i) => {
+      const wanted = (i < 4 && nths.has(NTH_LABELS[i])) || (i === days.length - 1 && nths.has('Last'))
+      if (wanted && d >= start && d <= until && out.length < 60) out.push(iso(d))
+    })
+  }
+  return [...new Set(out)]
+}
+
 function ConflictsSection({ conflicts, reload }: { conflicts: ConflictRecord[]; reload: () => Promise<void> }) {
   const { production, isManager } = useProduction()
   const { user } = useAuth()
   const [start, setStart] = useState('')
   const [end, setEnd] = useState('')
   const [note, setNote] = useState('')
+  const [repeat, setRepeat] = useState<'' | 'weekly' | 'biweekly' | 'monthly'>('')
+  const [nths, setNths] = useState<Set<string>>(new Set())
+  const [until, setUntil] = useState('')
   const [busy, setBusy] = useState(false)
 
   const mine = conflicts.filter((c) => c.user === user?.id)
   const shown = isManager ? conflicts : mine
 
+  // Series rows collapse to one line; loose rows stay individual.
+  const seriesGroups = new Map<string, ConflictRecord[]>()
+  const loose: ConflictRecord[] = []
+  for (const c of shown) {
+    if (c.series) {
+      const g = seriesGroups.get(c.series) ?? []
+      g.push(c)
+      seriesGroups.set(c.series, g)
+    } else {
+      loose.push(c)
+    }
+  }
+
+  const weekdayName = start ? WEEKDAY_NAMES[new Date(`${start}T12:00:00`).getDay()] : ''
+
   async function add(e: FormEvent) {
     e.preventDefault()
     setBusy(true)
     try {
-      await pb.collection('conflicts').create({
-        production: production.id,
-        user: user!.id,
-        start,
-        end: end || start,
-        note,
-      })
+      if (repeat && until) {
+        const dates = repeatDates(start, until, repeat, nths)
+        const series = Math.random().toString(36).slice(2, 10)
+        // multi-day spans keep their length on every occurrence
+        const lenMs =
+          end && end > start
+            ? new Date(`${end}T12:00:00`).getTime() - new Date(`${start}T12:00:00`).getTime()
+            : 0
+        for (const d of dates) {
+          const occEnd = lenMs
+            ? new Date(new Date(`${d}T12:00:00`).getTime() + lenMs).toISOString().slice(0, 10)
+            : d
+          await pb.collection('conflicts').create({
+            production: production.id,
+            user: user!.id,
+            start: d,
+            end: occEnd,
+            note,
+            series,
+          })
+        }
+      } else {
+        await pb.collection('conflicts').create({
+          production: production.id,
+          user: user!.id,
+          start,
+          end: end || start,
+          note,
+        })
+      }
       setStart('')
       setEnd('')
       setNote('')
+      setRepeat('')
+      setNths(new Set())
+      setUntil('')
       await reload()
     } finally {
       setBusy(false)
@@ -601,6 +692,12 @@ function ConflictsSection({ conflicts, reload }: { conflicts: ConflictRecord[]; 
     await reload()
   }
 
+  async function removeSeries(rows: ConflictRecord[]) {
+    if (!window.confirm(`Remove all ${rows.length} dates of this repeating conflict?`)) return
+    for (const c of rows) await pb.collection('conflicts').delete(c.id)
+    await reload()
+  }
+
   return (
     <section>
       <h2>{isManager ? 'Conflicts (everyone)' : 'My conflicts'}</h2>
@@ -608,7 +705,24 @@ function ConflictsSection({ conflicts, reload }: { conflicts: ConflictRecord[]; 
         Tell your stage manager when you're <em>not</em> available, before the schedule is built.
       </p>
       <ul className="plain-list">
-        {shown.map((c) => (
+        {[...seriesGroups.values()].map((rows) => {
+          const c = rows[0]
+          const sorted = [...rows].sort((a, b) => a.start.localeCompare(b.start))
+          const preview = sorted.slice(0, 3).map((r) => formatDay(r.start))
+          return (
+            <li key={c.series}>
+              <strong>{isManager ? `${c.expand?.user?.name ?? '?'}: ` : ''}</strong>
+              🔁 {c.note || 'Repeating conflict'} — {sorted.length} dates: {preview.join(', ')}
+              {sorted.length > 3 ? `, +${sorted.length - 3} more` : ''}
+              {c.user === user?.id && (
+                <button className="link" onClick={() => removeSeries(rows)}>
+                  remove the whole series
+                </button>
+              )}
+            </li>
+          )
+        })}
+        {loose.map((c) => (
           <li key={c.id}>
             <strong>{isManager ? `${c.expand?.user?.name ?? '?'}: ` : ''}</strong>
             {formatDay(c.start)}
@@ -632,16 +746,73 @@ function ConflictsSection({ conflicts, reload }: { conflicts: ConflictRecord[]; 
             To (optional)
             <input type="date" value={end} onChange={(e) => setEnd(e.target.value)} />
           </label>
+          <label>
+            Repeats
+            <select
+              aria-label="How this conflict repeats"
+              value={repeat}
+              onChange={(e) => setRepeat(e.target.value as typeof repeat)}
+            >
+              <option value="">One time</option>
+              <option value="weekly">Every week</option>
+              <option value="biweekly">Every other week</option>
+              <option value="monthly">Monthly (by day of week)</option>
+            </select>
+          </label>
         </div>
+        {repeat === 'monthly' && start && (
+          <div className="row" style={{ alignItems: 'center' }}>
+            <span className="hint">Which {weekdayName}s each month?</span>
+            <div className="chips">
+              {NTH_LABELS.map((n) => (
+                <button
+                  type="button"
+                  key={n}
+                  className={`chip ${nths.has(n) ? 'chip-active' : ''}`}
+                  aria-pressed={nths.has(n)}
+                  onClick={() =>
+                    setNths((prev) => {
+                      const next = new Set(prev)
+                      if (next.has(n)) next.delete(n)
+                      else next.add(n)
+                      return next
+                    })
+                  }
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        {repeat && (
+          <label>
+            Repeat until
+            <input
+              type="date"
+              value={until}
+              onChange={(e) => setUntil(e.target.value)}
+              required
+            />
+          </label>
+        )}
         <input
           aria-label="Conflict reason"
           value={note}
           onChange={(e) => setNote(e.target.value)}
-          placeholder="Reason (optional) — for example: work trip"
+          placeholder="Reason (optional) — for example: city council, 2nd & 4th Mondays"
         />
-        <button type="submit" disabled={busy || !start}>
-          Add conflict
+        <button
+          type="submit"
+          disabled={busy || !start || (!!repeat && !until) || (repeat === 'monthly' && nths.size === 0)}
+        >
+          {busy ? 'Adding…' : repeat ? 'Add all the dates' : 'Add conflict'}
         </button>
+        {repeat === 'monthly' && start && nths.size > 0 && (
+          <p className="hint" style={{ margin: 0 }}>
+            Adds a conflict on the {[...nths].join(' and ')} {weekdayName} of each month.
+          </p>
+        )}
       </form>
     </section>
   )

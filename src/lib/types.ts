@@ -425,6 +425,7 @@ export interface ConflictRecord {
   start: string
   end: string
   note: string
+  series: string // shared id across a recurring series' materialized rows
   expand?: { user?: UserRecord }
 }
 
