@@ -200,6 +200,11 @@ function LineNotesSection() {
                     <span className="hint"> · {memberName(who)}</span>
                   )}
                   {n.text && <span className="hint"> · {n.text}</span>}
+                  {n.snippet && (
+                    <span className="hint" style={{ display: 'block', fontStyle: 'italic' }}>
+                      “{n.snippet.split('\n').join(' / ')}”
+                    </span>
+                  )}
                 </span>
               </label>
               <Link

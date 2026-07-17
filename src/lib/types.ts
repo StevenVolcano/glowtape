@@ -163,6 +163,7 @@ export interface LineNoteRecord {
   y: number
   kind: LineNoteKind
   text: string
+  snippet: string
   done: boolean
   notified: boolean
   created: string

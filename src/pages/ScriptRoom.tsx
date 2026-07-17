@@ -459,8 +459,54 @@ export default function ScriptRoom() {
     await loadNotes()
   }
 
+  // Pull the printed lines around the tapped spot from the PDF's embedded
+  // text — the tapped line plus one above and one below, so the actor can
+  // read the moment without even opening the script. Digital scripts have
+  // real text; scanned photocopies yield nothing and we quietly skip it.
+  async function snippetAround(yFrac: number): Promise<string> {
+    if (!pdf) return ''
+    try {
+      const page = await pdf.getPage(pageNum)
+      const vp = page.getViewport({ scale: 1 })
+      const content = await page.getTextContent()
+      type TextLine = { y: number; parts: { x: number; str: string }[] }
+      const lines: TextLine[] = []
+      for (const item of content.items) {
+        if (!('str' in item) || !item.str.trim()) continue
+        const [vx, vy] = vp.convertToViewportPoint(item.transform[4], item.transform[5])
+        const x = vx / vp.width
+        const y = vy / vp.height
+        const near = lines.find((l) => Math.abs(l.y - y) < 0.008)
+        if (near) near.parts.push({ x, str: item.str })
+        else lines.push({ y, parts: [{ x, str: item.str }] })
+      }
+      if (lines.length === 0) return ''
+      lines.sort((a, b) => a.y - b.y)
+      let nearest = 0
+      for (let i = 1; i < lines.length; i++) {
+        if (Math.abs(lines[i].y - yFrac) < Math.abs(lines[nearest].y - yFrac)) nearest = i
+      }
+      const joinLine = (l: TextLine) =>
+        l.parts
+          .sort((a, b) => a.x - b.x)
+          .map((p) => p.str)
+          .join(' ')
+          .replace(/\s+/g, ' ')
+          .trim()
+      return lines
+        .slice(Math.max(0, nearest - 1), nearest + 2)
+        .map(joinLine)
+        .filter(Boolean)
+        .join('\n')
+        .slice(0, 400)
+    } catch {
+      return ''
+    }
+  }
+
   async function saveLineNote() {
     if (!lineDraft || !lineMember || !resourceId) return
+    const snippet = await snippetAround(lineDraft.y)
     await pb.collection('line_notes').create({
       production: production.id,
       resource: resourceId,
@@ -471,6 +517,7 @@ export default function ScriptRoom() {
       y: lineDraft.y,
       kind: lineKind,
       text: lineText.trim(),
+      snippet,
       done: false,
     })
     setLineDraft(null)
@@ -966,21 +1013,65 @@ export default function ScriptRoom() {
           const n = lineNotes.find((x) => x.id === openLineNote)
           if (!n) return null
           const canMark = isManager || n.expand?.member?.user === user?.id || n.expand?.member?.guardians?.includes(user?.id ?? '')
+          // Step through open notes in page order without leaving the script.
+          const cycle = lineNotes.filter((x) => !x.done)
+          const idx = cycle.findIndex((x) => x.id === n.id)
+          const step = (dir: 1 | -1) => {
+            const next = cycle[(idx + dir + cycle.length) % cycle.length]
+            setPageNum(next.page)
+            setOpenLineNote(next.id)
+          }
           return (
             <div className="card stack" role="dialog" aria-label="Line note details">
               <p style={{ margin: 0 }}>
                 🎯 <strong>{LINE_NOTE_LABELS[n.kind]}</strong> — {lineWho(n)}
               </p>
+              {n.snippet && (
+                <blockquote
+                  className="hint"
+                  style={{
+                    margin: 0,
+                    borderLeft: '3px solid var(--accent, #888)',
+                    paddingLeft: '0.6rem',
+                    whiteSpace: 'pre-wrap',
+                    fontStyle: 'italic',
+                  }}
+                >
+                  {n.snippet}
+                </blockquote>
+              )}
               {n.text && <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{n.text}</p>}
               <p className="hint" style={{ margin: 0 }}>
                 page {n.page} · from {n.expand?.author?.name ? firstLastInitial(n.expand.author.name) : 'the team'}
-                {n.done ? ' · done ✓' : ''}
+                {n.done ? ' · done ✓' : idx >= 0 && cycle.length > 1 ? ` · note ${idx + 1} of ${cycle.length} open` : ''}
               </p>
               <div className="row">
                 {canMark && (
-                  <button type="button" onClick={() => toggleLineDone(n)}>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      // Fixing a note flows straight to the next open one, so
+                      // working through the night's notes never loses its place.
+                      const next = !n.done && cycle.length > 1 ? cycle[(idx + 1) % cycle.length] : null
+                      await toggleLineDone(n)
+                      if (next && next.id !== n.id) {
+                        setPageNum(next.page)
+                        setOpenLineNote(next.id)
+                      }
+                    }}
+                  >
                     {n.done ? '↩ Not fixed yet' : "✓ Got it — it's fixed"}
                   </button>
+                )}
+                {idx >= 0 && cycle.length > 1 && (
+                  <>
+                    <button type="button" className="link" onClick={() => step(-1)}>
+                      ◂ Previous
+                    </button>
+                    <button type="button" className="link" onClick={() => step(1)}>
+                      Next ▸
+                    </button>
+                  </>
                 )}
                 {isManager && (
                   <button type="button" className="link" onClick={() => removeLineNote(n)}>
@@ -990,6 +1081,11 @@ export default function ScriptRoom() {
                 <button type="button" className="link" onClick={() => setOpenLineNote('')}>
                   Close
                 </button>
+                {!isManager && (
+                  <Link className="link" to={`/production/${production.id}/todo`}>
+                    ← My To-Do list
+                  </Link>
+                )}
               </div>
             </div>
           )
