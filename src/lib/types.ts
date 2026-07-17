@@ -426,6 +426,11 @@ export interface ConflictRecord {
   end: string
   note: string
   series: string // shared id across a recurring series' materialized rows
+  // Weekly busy hours ("work Mon–Fri 9–5"): days + both times present makes
+  // this a weekly pattern; start/end become the effective from/until dates.
+  days: number[] | null // 0=Sunday … 6=Saturday
+  fromTime: string // "17:00"
+  toTime: string // "21:00"
   expand?: { user?: UserRecord }
 }
 

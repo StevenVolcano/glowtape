@@ -7,6 +7,7 @@ import { formatDay, formatWhen, mapsUrl, memberName, pbDate, placeLine, producti
 import { downloadEventIcs, googleCalendarUrl } from '../lib/calendar.ts'
 import EventForm from '../components/EventForm.tsx'
 import QrCode from '../components/QrCode.tsx'
+import { DAY_SHORT, isWeekly, weeklyLabel } from '../lib/conflicts.ts'
 import type { AckRecord, AttendanceRecord, ConflictRecord, EventRecord, GroupRecord, MemberRecord, UnitRecord } from '../lib/types.ts'
 
 export default function ScheduleTab() {
@@ -626,11 +627,15 @@ function ConflictsSection({ conflicts, reload }: { conflicts: ConflictRecord[]; 
   const mine = conflicts.filter((c) => c.user === user?.id)
   const shown = isManager ? conflicts : mine
 
-  // Series rows collapse to one line; loose rows stay individual.
+  // Weekly busy-hours rows and series rows each collapse to one line;
+  // loose date rows stay individual.
+  const weekly: ConflictRecord[] = []
   const seriesGroups = new Map<string, ConflictRecord[]>()
   const loose: ConflictRecord[] = []
   for (const c of shown) {
-    if (c.series) {
+    if (isWeekly(c)) {
+      weekly.push(c)
+    } else if (c.series) {
       const g = seriesGroups.get(c.series) ?? []
       g.push(c)
       seriesGroups.set(c.series, g)
@@ -705,6 +710,18 @@ function ConflictsSection({ conflicts, reload }: { conflicts: ConflictRecord[]; 
         Tell your stage manager when you're <em>not</em> available, before the schedule is built.
       </p>
       <ul className="plain-list">
+        {weekly.map((c) => (
+          <li key={c.id}>
+            <strong>{isManager ? `${c.expand?.user?.name ?? '?'}: ` : ''}</strong>
+            ⏰ {c.note || 'Busy'} — {weeklyLabel(c)}
+            {c.end ? ` (until ${formatDay(c.end)})` : ''}
+            {c.user === user?.id && (
+              <button className="link" onClick={() => remove(c.id)}>
+                remove
+              </button>
+            )}
+          </li>
+        ))}
         {[...seriesGroups.values()].map((rows) => {
           const c = rows[0]
           const sorted = [...rows].sort((a, b) => a.start.localeCompare(b.start))
@@ -814,6 +831,106 @@ function ConflictsSection({ conflicts, reload }: { conflicts: ConflictRecord[]; 
           </p>
         )}
       </form>
+      <WeeklyHoursForm reload={reload} />
     </section>
+  )
+}
+
+// "I work Mon–Fri 9–5" / "class Tue & Thu 6–9pm": one row that means busy
+// during those hours every week — free before and after, so evening
+// rehearsals on those days can still work.
+function WeeklyHoursForm({ reload }: { reload: () => Promise<void> }) {
+  const { production } = useProduction()
+  const { user } = useAuth()
+  const [days, setDays] = useState<Set<number>>(new Set())
+  const [fromTime, setFromTime] = useState('')
+  const [toTime, setToTime] = useState('')
+  const [note, setNote] = useState('')
+  const [until, setUntil] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  async function add(e: FormEvent) {
+    e.preventDefault()
+    setBusy(true)
+    try {
+      const today = new Date()
+      const iso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+      await pb.collection('conflicts').create({
+        production: production.id,
+        user: user!.id,
+        start: iso,
+        end: until || '',
+        note,
+        days: [...days].sort(),
+        fromTime,
+        toTime,
+      })
+      setDays(new Set())
+      setFromTime('')
+      setToTime('')
+      setNote('')
+      setUntil('')
+      await reload()
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <form onSubmit={add} className="stack" style={{ marginTop: '1rem' }}>
+      <h3>⏰ My weekly busy hours</h3>
+      <p className="hint" style={{ margin: 0 }}>
+        Work or class schedule? Enter the hours you're busy each week — you stay available
+        the rest of those days, so an evening rehearsal can still work.
+      </p>
+      <div className="chips">
+        {DAY_SHORT.map((d, i) => (
+          <button
+            type="button"
+            key={d}
+            className={`chip ${days.has(i) ? 'chip-active' : ''}`}
+            aria-pressed={days.has(i)}
+            onClick={() =>
+              setDays((prev) => {
+                const next = new Set(prev)
+                if (next.has(i)) next.delete(i)
+                else next.add(i)
+                return next
+              })
+            }
+          >
+            {d}
+          </button>
+        ))}
+      </div>
+      <div className="row">
+        <label>
+          Busy from
+          <input type="time" value={fromTime} onChange={(e) => setFromTime(e.target.value)} />
+        </label>
+        <label>
+          Until
+          <input type="time" value={toTime} onChange={(e) => setToTime(e.target.value)} />
+        </label>
+        <label>
+          Ends (optional)
+          <input
+            type="date"
+            value={until}
+            onChange={(e) => setUntil(e.target.value)}
+            aria-label="Date this schedule ends, if it does"
+          />
+        </label>
+      </div>
+      <input
+        aria-label="What keeps you busy"
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+        placeholder="What is it — for example: work, night class"
+      />
+      <button type="submit" disabled={busy || days.size === 0 || !fromTime || !toTime}>
+        Add my busy hours
+      </button>
+    </form>
   )
 }

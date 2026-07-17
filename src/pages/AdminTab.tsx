@@ -8,6 +8,7 @@ import { openResourceFile, pbErrorMessage } from '../lib/files.ts'
 import ManageJumpNav from '../components/ManageJumpNav.tsx'
 import QrCode from '../components/QrCode.tsx'
 import { MANAGER_ROLES, ROLE_LABELS } from '../lib/types.ts'
+import { conflictHitsEvent, isWeekly, weeklyLabel } from '../lib/conflicts.ts'
 import type { AttendanceRecord, AuditionRecord, ChannelRecord, ConflictRecord, EventRecord, GroupRecord, MemberRecord, MemberRole, ProfileRecord, ResourceRecord } from '../lib/types.ts'
 import { DEFAULT_EVENT_KINDS, memberName, normalizePlaces, pbDate, productionPlaces, shareInvite } from '../lib/types.ts'
 import type { Place } from '../lib/types.ts'
@@ -1128,13 +1129,12 @@ function ConflictAlertsSection() {
                 .map((m) => m.user)
         for (const c of conflicts) {
           if (!calledUsers.includes(c.user)) continue
-          const from = String(c.start).slice(0, 10)
-          const to = String(c.end || c.start).slice(0, 10)
-          if (evDay >= from && evDay <= to) {
+          if (conflictHitsEvent(c, ev)) {
             const who = c.expand?.user?.name || 'Someone'
-            out.push(
-              `${who} has a conflict${c.note ? ` (${c.note})` : ''} but is called to “${ev.title}” on ${evDay}`,
-            )
+            const what = isWeekly(c)
+              ? `${c.note || 'busy hours'} (${weeklyLabel(c)})`
+              : `a conflict${c.note ? ` (${c.note})` : ''}`
+            out.push(`${who} has ${what} but is called to “${ev.title}” on ${evDay}`)
           }
         }
       }
