@@ -4,7 +4,7 @@ import { pb } from '../lib/pb.ts'
 import { useAuth } from '../lib/auth.tsx'
 import { useProduction } from './Production.tsx'
 import EventForm from '../components/EventForm.tsx'
-import { openResourceFile } from '../lib/files.ts'
+import { openResourceFile, pbErrorMessage } from '../lib/files.ts'
 import ManageJumpNav from '../components/ManageJumpNav.tsx'
 import QrCode from '../components/QrCode.tsx'
 import { MANAGER_ROLES, ROLE_LABELS } from '../lib/types.ts'
@@ -1510,7 +1510,7 @@ function ResourcesSection() {
       setMessage('Added. ✓')
       await load()
     } catch (err) {
-      setMessage(err instanceof Error ? err.message : 'Something went wrong.')
+      setMessage(pbErrorMessage(err, "Couldn't add it — try again."))
     } finally {
       setBusy(false)
     }
@@ -1626,7 +1626,11 @@ function ResourcesSection() {
         <button type="submit" disabled={busy || !title.trim() || (!url.trim() && !file)}>
           Add {area === 'show' ? 'show' : 'audition'} resource
         </button>
-        {message && <p className="acked" role="status">{message}</p>}
+        {message && (
+          <p className={message.includes('✓') ? 'acked' : 'error'} role="status">
+            {message}
+          </p>
+        )}
       </form>
     </section>
   )
