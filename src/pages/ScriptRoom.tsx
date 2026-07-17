@@ -39,6 +39,15 @@ export default function ScriptRoom() {
   const [color, setColor] = useState<keyof typeof HIGHLIGHT_COLORS>('yellow')
   const [openNote, setOpenNote] = useState('')
   const [showDone, setShowDone] = useState(false)
+  // Compact mode: once the tools are familiar, give the page the screen.
+  const [compact, setCompact] = useState(() => localStorage.getItem('gt-script-compact') === '1')
+
+  function toggleCompact() {
+    setCompact((prev) => {
+      localStorage.setItem('gt-script-compact', prev ? '0' : '1')
+      return !prev
+    })
+  }
   const [failed, setFailed] = useState('')
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const overlayRef = useRef<HTMLCanvasElement>(null)
@@ -304,17 +313,29 @@ export default function ScriptRoom() {
   return (
     <section>
       <div className="row space-between">
-        <h2>📖 {resource?.title ?? 'Script'}</h2>
-        <Link className="link" to={`${base}/docs`}>
-          ← Back
-        </Link>
+        {!compact && <h2>📖 {resource?.title ?? 'Script'}</h2>}
+        <div className="row" style={{ alignItems: 'center' }}>
+          <button
+            type="button"
+            className="link"
+            aria-pressed={compact}
+            onClick={toggleCompact}
+          >
+            {compact ? '↙ Full controls' : '⛶ Compact view'}
+          </button>
+          <Link className="link" to={`${base}/docs`}>
+            ← Back
+          </Link>
+        </div>
       </div>
-      <p className="hint">
-        Pick a tool, then use the page: 📝 notes pin to a spot you tap, ✏️ draws, 🖍
-        highlights, 🧽 erases your marks. 📌 notes and marks from the production team are
-        seen by everyone; yours are yours alone. Everything saves by itself the moment you
-        make it — there's nothing to save manually.
-      </p>
+      {!compact && (
+        <p className="hint">
+          Pick a tool, then use the page: 📝 notes pin to a spot you tap, ✏️ draws, 🖍
+          highlights, 🧽 erases your marks. 📌 notes and marks from the production team are
+          seen by everyone; yours are yours alone. Everything saves by itself the moment you
+          make it — there's nothing to save manually.
+        </p>
+      )}
 
       <div className="chips no-print">
         {(
@@ -331,16 +352,22 @@ export default function ScriptRoom() {
             key={m}
             className={`chip ${mode === m ? 'chip-active' : ''}`}
             aria-pressed={mode === m}
+            aria-label={label.replace(/^\S+\s/, '')}
             onClick={() => {
               setMode(m)
               setDraft(null)
             }}
           >
-            {label}
+            {compact ? label.split(' ')[0] : label}
           </button>
         ))}
+        {compact && isManager && draftScope === 'production' && (
+          <span className="pill" title="New notes and marks are production-wide">📌 all</span>
+        )}
       </div>
-      {mode === 'pin' && <p className="hint no-print">Tap the spot on the page where the note goes.</p>}
+      {mode === 'pin' && !compact && (
+        <p className="hint no-print">Tap the spot on the page where the note goes.</p>
+      )}
       {mode === 'highlight' && (
         <div className="chips no-print" role="group" aria-label="Highlighter color">
           {Object.entries(HIGHLIGHT_COLORS).map(([key, c]) => (
@@ -349,26 +376,27 @@ export default function ScriptRoom() {
               key={key}
               className={`chip ${color === key ? 'chip-active' : ''}`}
               aria-pressed={color === key}
+              aria-label={c.label}
               onClick={() => setColor(key)}
             >
               <span
                 aria-hidden="true"
                 style={{
                   display: 'inline-block',
-                  width: '0.9rem',
-                  height: '0.9rem',
+                  width: compact ? '1.2rem' : '0.9rem',
+                  height: compact ? '1.2rem' : '0.9rem',
                   borderRadius: '3px',
                   background: c.swatch,
-                  marginRight: '0.35rem',
+                  marginRight: compact ? 0 : '0.35rem',
                   verticalAlign: '-0.1rem',
                 }}
               />
-              {c.label}
+              {!compact && c.label}
             </button>
           ))}
         </div>
       )}
-      {(mode === 'draw' || mode === 'highlight') && (
+      {(mode === 'draw' || mode === 'highlight') && !compact && (
         <p className="hint no-print">
           Drag on the page to {mode === 'highlight' ? 'highlight' : 'draw'}
           {isManager && draftScope === 'production'
@@ -376,9 +404,10 @@ export default function ScriptRoom() {
             : ' — only you see your marks.'}
         </p>
       )}
-      {mode === 'erase' && (
+      {mode === 'erase' && !compact && (
         <p className="hint no-print">Tap a drawing or highlight to erase it (only your own).</p>
       )}
+      {!compact && (
       <div className="row no-print" style={{ alignItems: 'center' }}>
         {isManager && (
           <label className="row" style={{ alignItems: 'center' }}>
@@ -401,13 +430,14 @@ export default function ScriptRoom() {
           Show done notes
         </label>
       </div>
+      )}
 
       <div className="row no-print" style={{ alignItems: 'center' }}>
         <button type="button" disabled={pageNum <= 1} onClick={() => setPageNum(pageNum - 1)}>
-          ← Page
+          {compact ? '←' : '← Page'}
         </button>
         <span>
-          Page{' '}
+          {!compact && 'Page '}
           <input
             aria-label="Page number"
             type="number"
@@ -418,16 +448,16 @@ export default function ScriptRoom() {
               const v = Number(e.target.value)
               if (v >= 1 && v <= pageCount) setPageNum(v)
             }}
-            style={{ width: '5rem', display: 'inline-block' }}
+            style={{ width: compact ? '4rem' : '5rem', display: 'inline-block' }}
           />{' '}
-          of {pageCount || '…'}
+          {compact ? `/ ${pageCount || '…'}` : `of ${pageCount || '…'}`}
         </span>
         <button
           type="button"
           disabled={pageNum >= pageCount}
           onClick={() => setPageNum(pageNum + 1)}
         >
-          Page →
+          {compact ? '→' : 'Page →'}
         </button>
       </div>
 
