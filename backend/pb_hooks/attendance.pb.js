@@ -112,3 +112,76 @@ routerAdd(
   },
   $apis.requireAuth(),
 );
+
+// Door check-in: cast scan the event's QR and mark themselves (and their
+// kids) present. Attendance rules stay manager-only, so this route is the
+// only self-service path in — it checks the event's signinCode and a sane
+// time window, then upserts 'present' rows with the arrival time. No alerts:
+// this is roll data, not an emergency.
+routerAdd(
+  "POST",
+  "/api/glowtape/attendance/signin",
+  (e) => {
+    const lib = require(`${__hooks}/glowtape_lib.js`);
+    const data = new DynamicModel({ event: "", code: "", members: [] });
+    e.bindBody(data);
+
+    let event;
+    try {
+      event = e.app.findRecordById("events", data.event);
+    } catch {
+      throw new BadRequestError("Unknown event.");
+    }
+    const code = String(event.get("signinCode") || "");
+    if (!code || code !== String(data.code || "")) {
+      throw new BadRequestError("Check-in isn't on for this event — ask your stage manager.");
+    }
+    if (event.get("status") === "cancelled") {
+      throw new BadRequestError("This event was cancelled.");
+    }
+
+    // Generous window: from 3 hours before start to 12 hours after. Outside
+    // it, the QR on the door is probably left over from another day.
+    const startMs = new Date(String(event.get("start")).replace(" ", "T")).getTime();
+    const nowMs = Date.now();
+    if (nowMs < startMs - 3 * 3600e3 || nowMs > startMs + 12 * 3600e3) {
+      throw new BadRequestError("Check-in isn't open right now — this code is for " +
+        lib.formatPacific(event.get("start")) + ".");
+    }
+
+    const production = e.app.findRecordById("productions", event.get("production"));
+    const time = lib.formatPacific(new Date(nowMs).toISOString()).split(", ").pop();
+    const checked = [];
+    for (const memberId of lib.toIdArray(data.members).slice(0, 20)) {
+      let member;
+      try {
+        member = e.app.findRecordById("members", memberId);
+      } catch {
+        continue;
+      }
+      const isSelf = member.get("user") === e.auth.id;
+      const isGuardian = lib.toIdArray(member.get("guardians")).includes(e.auth.id);
+      if (member.get("production") !== production.id || (!isSelf && !isGuardian)) {
+        throw new BadRequestError("You can only check in yourself or your child.");
+      }
+      let row;
+      try {
+        row = e.app.findFirstRecordByFilter("attendance", "event = {:ev} && member = {:m}", {
+          ev: event.id,
+          m: member.id,
+        });
+      } catch {
+        const col = e.app.findCollectionByNameOrId("attendance");
+        row = new Record(col);
+        row.set("event", event.id);
+        row.set("member", member.id);
+      }
+      row.set("status", "present");
+      row.set("note", "checked in " + time);
+      e.app.save(row);
+      checked.push(member.id);
+    }
+    return e.json(200, { ok: true, checked: checked });
+  },
+  $apis.requireAuth(),
+);

@@ -377,6 +377,7 @@ export interface EventRecord {
   kind: string
   calledGroups: string[] | null
   units: string[] // breakdown units being rehearsed (called is still authoritative)
+  signinCode: string // non-empty = door check-in is on for this event
 }
 
 export interface TaskRecord {

@@ -12,6 +12,7 @@ import TrackersTab from './TrackersTab.tsx'
 import NotesTab from './NotesTab.tsx'
 import DocsTab from './DocsTab.tsx'
 import SchedulePrint from './SchedulePrint.tsx'
+import CheckIn, { CheckInPoster } from './CheckIn.tsx'
 import CastingTab from './CastingTab.tsx'
 import BiosView from './BiosView.tsx'
 import { useTitle } from '../lib/useTitle.ts'
@@ -112,6 +113,8 @@ export default function Production() {
           <Route path="schedule" element={<ScheduleTab />} />
           <Route path="schedule/print" element={<SchedulePrint />} />
           <Route path="schedule/print/:memberId" element={<SchedulePrint />} />
+          <Route path="signin/:eventId" element={<CheckIn />} />
+          <Route path="signin/:eventId/poster" element={<CheckInPoster />} />
           <Route path="messages" element={<MessagesTab />} />
           <Route path="todo" element={<TasksTab />} />
           <Route path="sheets" element={<TrackersTab />} />

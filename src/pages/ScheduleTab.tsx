@@ -6,6 +6,7 @@ import { useProduction } from './Production.tsx'
 import { formatDay, formatWhen, mapsUrl, memberName, pbDate, placeLine, productionPlaces } from '../lib/types.ts'
 import { downloadEventIcs, googleCalendarUrl } from '../lib/calendar.ts'
 import EventForm from '../components/EventForm.tsx'
+import QrCode from '../components/QrCode.tsx'
 import type { AckRecord, AttendanceRecord, ConflictRecord, EventRecord, GroupRecord, MemberRecord, UnitRecord } from '../lib/types.ts'
 
 export default function ScheduleTab() {
@@ -100,6 +101,15 @@ export default function ScheduleTab() {
           event.called.includes(m.id) ||
           (!!m.claimedFrom && event.called.includes(m.claimedFrom))),
     )
+  }
+
+  // Door check-in: a per-event code cast scan at the door. Turning it on just
+  // stamps a random code on the event; turning it off clears it (the server
+  // route rejects an empty or mismatched code, so old posters go dead).
+  async function toggleSignin(event: EventRecord) {
+    const code = event.signinCode ? '' : Math.random().toString(36).slice(2, 8)
+    await pb.collection('events').update(event.id, { signinCode: code })
+    await load()
   }
 
   async function cycleRoll(event: EventRecord, member: MemberRecord) {
@@ -397,10 +407,39 @@ export default function ScheduleTab() {
                   <button
                     className="link"
                     aria-expanded={rollFor === e.id}
-                    onClick={() => setRollFor(rollFor === e.id ? null : e.id)}
+                    onClick={() => {
+                      setRollFor(rollFor === e.id ? null : e.id)
+                      // pick up any door check-ins since the page loaded
+                      if (rollFor !== e.id) load().catch(() => {})
+                    }}
                   >
                     {rollFor === e.id ? 'Close roll call' : 'Roll call'}
                   </button>
+                )}
+                {isManager && rollFor === e.id && e.status !== 'cancelled' && (
+                  <div className="stack">
+                    <div className="row" style={{ alignItems: 'center' }}>
+                      <button className="link" onClick={() => toggleSignin(e)}>
+                        {e.signinCode ? '📲 Turn off door check-in' : '📲 Turn on door check-in'}
+                      </button>
+                      {e.signinCode && (
+                        <Link className="link" to={`/production/${production.id}/signin/${e.id}/poster`}>
+                          🖨 Door poster
+                        </Link>
+                      )}
+                      <button className="link" onClick={() => load()}>
+                        ↻ Refresh roll
+                      </button>
+                    </div>
+                    {e.signinCode && (
+                      <>
+                        <QrCode
+                          text={`${window.location.origin}/production/${production.id}/signin/${e.id}?c=${e.signinCode}`}
+                          label="Cast scan this to check themselves in — or print the door poster."
+                        />
+                      </>
+                    )}
+                  </div>
                 )}
                 {isManager && rollFor === e.id && e.status !== 'cancelled' && (
                   <ul className="plain-list roll-call">
