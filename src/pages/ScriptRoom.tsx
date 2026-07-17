@@ -287,8 +287,8 @@ export default function ScriptRoom() {
     return (
       <section>
         <p className="error">{failed}</p>
-        <Link className="link" to={`${base}/schedule`}>
-          ← Back to the schedule
+        <Link className="link" to={`${base}/docs`}>
+          ← Back to Docs
         </Link>
       </section>
     )
@@ -298,7 +298,7 @@ export default function ScriptRoom() {
     <section>
       <div className="row space-between">
         <h2>📖 {resource?.title ?? 'Script'}</h2>
-        <Link className="link" to={`${base}/schedule`}>
+        <Link className="link" to={`${base}/docs`}>
           ← Back
         </Link>
       </div>
