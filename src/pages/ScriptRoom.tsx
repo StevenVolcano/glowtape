@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import * as pdfjsLib from 'pdfjs-dist'
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import type { PDFDocumentProxy } from 'pdfjs-dist'
 import { pb } from '../lib/pb.ts'
 import { useAuth } from '../lib/auth.tsx'
 import { useProduction } from './Production.tsx'
-import { chatName, firstLastInitial } from '../lib/types.ts'
-import type { AnnotationRecord, ResourceRecord } from '../lib/types.ts'
+import { LINE_NOTE_LABELS, chatName, firstLastInitial, memberName } from '../lib/types.ts'
+import type { AnnotationRecord, LineNoteKind, LineNoteRecord, ResourceRecord } from '../lib/types.ts'
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl
 
@@ -29,10 +29,11 @@ export default function ScriptRoom() {
   const { user } = useAuth()
   const [resource, setResource] = useState<ResourceRecord | null>(null)
   const [pdf, setPdf] = useState<PDFDocumentProxy | null>(null)
-  const [pageNum, setPageNum] = useState(1)
+  const [searchParams] = useSearchParams()
+  const [pageNum, setPageNum] = useState(() => Math.max(1, Number(searchParams.get('page')) || 1))
   const [pageCount, setPageCount] = useState(0)
   const [notes, setNotes] = useState<AnnotationRecord[]>([])
-  const [mode, setMode] = useState<'read' | 'pin' | 'draw' | 'highlight' | 'erase'>('read')
+  const [mode, setMode] = useState<'read' | 'pin' | 'draw' | 'highlight' | 'erase' | 'line'>('read')
   const [draft, setDraft] = useState<{ x: number; y: number } | null>(null)
   const [draftText, setDraftText] = useState('')
   const [draftScope, setDraftScope] = useState<'personal' | 'production'>('personal')
@@ -59,6 +60,12 @@ export default function ScriptRoom() {
     })
   }
   const [failed, setFailed] = useState('')
+  const [lineNotes, setLineNotes] = useState<LineNoteRecord[]>([])
+  const [lineDraft, setLineDraft] = useState<{ x: number; y: number } | null>(null)
+  const [lineMember, setLineMember] = useState('')
+  const [lineKind, setLineKind] = useState<LineNoteKind>('dropped')
+  const [lineText, setLineText] = useState('')
+  const [openLineNote, setOpenLineNote] = useState('')
   // Undo: ids of annotations created in THIS sitting, newest last.
   const [undoStack, setUndoStack] = useState<string[]>([])
   // Erase mode collects a selection; one tap of the erase button clears them all.
@@ -81,6 +88,12 @@ export default function ScriptRoom() {
       sort: 'page,created',
     })
     setNotes(list)
+    const lns = await pb.collection('line_notes').getFullList<LineNoteRecord>({
+      filter: pb.filter('resource = {:r}', { r: resourceId }),
+      expand: 'member,member.user,author',
+      sort: 'page,created',
+    })
+    setLineNotes(lns)
   }
 
   useEffect(() => {
@@ -376,6 +389,14 @@ export default function ScriptRoom() {
   }
 
   function pageClick(e: React.MouseEvent<HTMLDivElement>) {
+    if (mode === 'line' && isManager && holderRef.current) {
+      const rect = holderRef.current.getBoundingClientRect()
+      setLineDraft({
+        x: Math.min(Math.max((e.clientX - rect.left) / rect.width, 0), 1),
+        y: Math.min(Math.max((e.clientY - rect.top) / rect.height, 0), 1),
+      })
+      return
+    }
     if (mode === 'erase' && holderRef.current) {
       const rect = holderRef.current.getBoundingClientRect()
       eraseAt((e.clientX - rect.left) / rect.width, (e.clientY - rect.top) / rect.height)
@@ -419,6 +440,44 @@ export default function ScriptRoom() {
     await pb.collection('annotations').delete(n.id)
     setOpenNote('')
     await loadNotes()
+  }
+
+  async function saveLineNote() {
+    if (!lineDraft || !lineMember || !resourceId) return
+    await pb.collection('line_notes').create({
+      production: production.id,
+      resource: resourceId,
+      member: lineMember,
+      author: user!.id,
+      page: pageNum,
+      x: lineDraft.x,
+      y: lineDraft.y,
+      kind: lineKind,
+      text: lineText.trim(),
+      done: false,
+    })
+    setLineDraft(null)
+    setLineText('')
+    await loadNotes()
+  }
+
+  async function toggleLineDone(n: LineNoteRecord) {
+    await pb.collection('line_notes').update(n.id, { done: !n.done })
+    await loadNotes()
+  }
+
+  async function removeLineNote(n: LineNoteRecord) {
+    if (!window.confirm('Delete this line note?')) return
+    await pb.collection('line_notes').delete(n.id)
+    setOpenLineNote('')
+    await loadNotes()
+  }
+
+  const lineWho = (n: LineNoteRecord) => {
+    const m = n.expand?.member
+    if (!m) return 'someone'
+    const full = m.expand?.user?.name
+    return full ? chatName(full, m) : memberName(m)
   }
 
   const authorName = (n: AnnotationRecord) => {
@@ -478,7 +537,8 @@ export default function ScriptRoom() {
             ['draw', '✏️ Draw'],
             ['highlight', '🖍 Highlight'],
             ['erase', '🧽 Erase'],
-          ] as const
+            ...((isManager ? [['line', '🎯 Line note']] : []) as ['line', string][]),
+          ] as readonly (readonly [string, string])[]
         ).map(([m, label]) => (
           <button
             type="button"
@@ -487,8 +547,9 @@ export default function ScriptRoom() {
             aria-pressed={mode === m}
             aria-label={label.replace(/^\S+\s/, '')}
             onClick={() => {
-              setMode(m)
+              setMode(m as typeof mode)
               setDraft(null)
+              setLineDraft(null)
               if (m !== 'erase') setSelected(new Set())
             }}
           >
@@ -511,6 +572,12 @@ export default function ScriptRoom() {
       </div>
       {mode === 'pin' && !compact && (
         <p className="hint no-print">Tap the spot on the page where the note goes.</p>
+      )}
+      {mode === 'line' && !compact && (
+        <p className="hint no-print">
+          Tap the line in the script, then say whose it was and what happened — they get it
+          instantly and check it off once it's solid. Only they (and the team) see it.
+        </p>
       )}
       {mode === 'highlight' && (
         <div className="chips no-print" role="group" aria-label="Highlighter style">
@@ -689,6 +756,35 @@ export default function ScriptRoom() {
             {n.scope === 'production' ? '📌' : '📝'}
           </button>
         ))}
+        {lineNotes
+          .filter((n) => n.page === pageNum && (showDone || !n.done))
+          .map((n) => (
+            <button
+              key={n.id}
+              type="button"
+              aria-label={`Line note for ${lineWho(n)}: ${LINE_NOTE_LABELS[n.kind]}`}
+              onClick={(e) => {
+                e.stopPropagation()
+                setOpenLineNote(openLineNote === n.id ? '' : n.id)
+                setOpenNote('')
+              }}
+              style={{
+                position: 'absolute',
+                left: `${n.x * 100}%`,
+                top: `${n.y * 100}%`,
+                transform: 'translate(-50%, -90%)',
+                background: 'none',
+                border: 'none',
+                padding: 0,
+                minHeight: 0,
+                fontSize: '1.4rem',
+                opacity: n.done ? 0.45 : 1,
+                filter: n.done ? 'grayscale(1)' : 'none',
+              }}
+            >
+              🎯
+            </button>
+          ))}
         {draft && (
           <span
             style={{
@@ -700,6 +796,19 @@ export default function ScriptRoom() {
             }}
           >
             📍
+          </span>
+        )}
+        {lineDraft && (
+          <span
+            style={{
+              position: 'absolute',
+              left: `${lineDraft.x * 100}%`,
+              top: `${lineDraft.y * 100}%`,
+              transform: 'translate(-50%, -90%)',
+              fontSize: '1.4rem',
+            }}
+          >
+            🎯
           </span>
         )}
       </div>
@@ -742,6 +851,104 @@ export default function ScriptRoom() {
         </div>
       )}
 
+      {lineDraft && (
+        <div className="card stack">
+          <strong>🎯 Line note — page {pageNum}</strong>
+          <label>
+            Whose line?
+            <select
+              aria-label="Who the line note is for"
+              value={lineMember}
+              onChange={(e) => setLineMember(e.target.value)}
+            >
+              <option value="">— pick a person —</option>
+              {members
+                .filter((m) => m.role !== 'guardian' && !m.claimedFrom)
+                .map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {memberName(m)}
+                  </option>
+                ))}
+            </select>
+          </label>
+          <div className="chips">
+            {(Object.keys(LINE_NOTE_LABELS) as LineNoteKind[]).map((k) => (
+              <button
+                type="button"
+                key={k}
+                className={`chip ${lineKind === k ? 'chip-active' : ''}`}
+                aria-pressed={lineKind === k}
+                onClick={() => setLineKind(k)}
+              >
+                {LINE_NOTE_LABELS[k]}
+              </button>
+            ))}
+          </div>
+          <label>
+            The line, or what happened (optional)
+            <input
+              maxLength={500}
+              value={lineText}
+              onChange={(e) => setLineText(e.target.value)}
+              placeholder={'Example: "We were somewhere in the middle of nowhere" — jumped to verse 2'}
+            />
+          </label>
+          <div className="row">
+            <button type="button" onClick={saveLineNote} disabled={!lineMember}>
+              Send the line note
+            </button>
+            <button
+              type="button"
+              className="link"
+              onClick={() => {
+                setLineDraft(null)
+                setLineText('')
+              }}
+            >
+              Never mind
+            </button>
+          </div>
+          <p className="hint" style={{ margin: 0 }}>
+            They get a notification now, it lands on their To-Do tab, and only they (and the
+            production team) can see it.
+          </p>
+        </div>
+      )}
+
+      {openLineNote &&
+        (() => {
+          const n = lineNotes.find((x) => x.id === openLineNote)
+          if (!n) return null
+          const canMark = isManager || n.expand?.member?.user === user?.id || n.expand?.member?.guardians?.includes(user?.id ?? '')
+          return (
+            <div className="card stack" role="dialog" aria-label="Line note details">
+              <p style={{ margin: 0 }}>
+                🎯 <strong>{LINE_NOTE_LABELS[n.kind]}</strong> — {lineWho(n)}
+              </p>
+              {n.text && <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{n.text}</p>}
+              <p className="hint" style={{ margin: 0 }}>
+                page {n.page} · from {n.expand?.author?.name ? firstLastInitial(n.expand.author.name) : 'the team'}
+                {n.done ? ' · done ✓' : ''}
+              </p>
+              <div className="row">
+                {canMark && (
+                  <button type="button" onClick={() => toggleLineDone(n)}>
+                    {n.done ? '↩ Not fixed yet' : "✓ Got it — it's fixed"}
+                  </button>
+                )}
+                {isManager && (
+                  <button type="button" className="link" onClick={() => removeLineNote(n)}>
+                    Delete
+                  </button>
+                )}
+                <button type="button" className="link" onClick={() => setOpenLineNote('')}>
+                  Close
+                </button>
+              </div>
+            </div>
+          )
+        })()}
+
       {openNote &&
         (() => {
           const n = notes.find((x) => x.id === openNote)
@@ -774,6 +981,53 @@ export default function ScriptRoom() {
             </div>
           )
         })()}
+
+      {lineNotes.length > 0 && (
+        <>
+          <h3 className="dept-heading">
+            🎯 Line notes ({lineNotes.filter((n) => !n.done).length} open)
+          </h3>
+          <ul className="plain-list">
+            {lineNotes
+              .filter((n) => showDone || !n.done)
+              .map((n) => {
+                const canMark =
+                  isManager ||
+                  n.expand?.member?.user === user?.id ||
+                  n.expand?.member?.guardians?.includes(user?.id ?? '')
+                return (
+                  <li key={n.id} className="row" style={{ alignItems: 'center' }}>
+                    {canMark ? (
+                      <input
+                        type="checkbox"
+                        aria-label={`Mark fixed: ${LINE_NOTE_LABELS[n.kind]} p. ${n.page}`}
+                        checked={n.done}
+                        onChange={() => toggleLineDone(n)}
+                        style={{ width: '1.3rem', minHeight: '1.3rem', flexShrink: 0 }}
+                      />
+                    ) : (
+                      <span style={{ width: '1.3rem', flexShrink: 0 }}>{n.done ? '✓' : ''}</span>
+                    )}
+                    <button
+                      type="button"
+                      className="link"
+                      style={{ textAlign: 'left', textDecoration: n.done ? 'line-through' : 'underline' }}
+                      onClick={() => {
+                        setPageNum(n.page)
+                        setOpenLineNote(n.id)
+                        setOpenNote('')
+                      }}
+                    >
+                      p. {n.page} — {LINE_NOTE_LABELS[n.kind]}
+                      {isManager ? ` — ${lineWho(n)}` : ''}
+                      {n.text ? ` — ${n.text.slice(0, 60)}${n.text.length > 60 ? '…' : ''}` : ''}
+                    </button>
+                  </li>
+                )
+              })}
+          </ul>
+        </>
+      )}
 
       <h3 className="dept-heading">
         Notes in this document ({openCount} open)

@@ -142,6 +142,32 @@ export interface AnnotationRecord {
   expand?: { user?: UserRecord }
 }
 
+export type LineNoteKind = 'dropped' | 'paraphrased' | 'skipped' | 'jumped' | 'called'
+
+export const LINE_NOTE_LABELS: Record<LineNoteKind, string> = {
+  dropped: 'Dropped line',
+  paraphrased: 'Paraphrased',
+  skipped: 'Skipped ahead',
+  jumped: 'Jumped a cue',
+  called: 'Called for line',
+}
+
+export interface LineNoteRecord {
+  id: string
+  production: string
+  resource: string
+  member: string
+  author: string
+  page: number
+  x: number
+  y: number
+  kind: LineNoteKind
+  text: string
+  done: boolean
+  created: string
+  expand?: { author?: UserRecord; member?: MemberRecord; resource?: ResourceRecord }
+}
+
 export interface GroupRecord {
   id: string
   production: string

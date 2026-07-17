@@ -1,10 +1,11 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 import SetupGuide from '../components/SetupGuide.tsx'
 import { pb } from '../lib/pb.ts'
 import { useAuth } from '../lib/auth.tsx'
 import { useProduction } from './Production.tsx'
-import { formatDay, memberName } from '../lib/types.ts'
-import type { MemberRecord, TaskRecord } from '../lib/types.ts'
+import { formatDay, memberName, LINE_NOTE_LABELS } from '../lib/types.ts'
+import type { LineNoteRecord, MemberRecord, TaskRecord } from '../lib/types.ts'
 
 const DEFAULT_DEPARTMENTS = [
   'Set',
@@ -72,6 +73,7 @@ export default function TasksTab() {
       {myEditable.map((m) => (
         <BioEditor key={m.id} member={m} onSaved={load} />
       ))}
+      <LineNotesSection />
       <section>
         <h2>To-do</h2>
         <div className="chips">
@@ -140,6 +142,74 @@ export default function TasksTab() {
 
       {isManager && <NewTaskForm members={members} onAdded={load} />}
     </div>
+  )
+}
+
+// Open line notes for your own members (or your kids'), delivered from the
+// script room. The server only sends an actor their own notes; a guardian
+// sees their child's. Checking one off marks it fixed for the team too.
+function LineNotesSection() {
+  const { production, members } = useProduction()
+  const { user } = useAuth()
+  const [notes, setNotes] = useState<LineNoteRecord[]>([])
+
+  const myMemberIds = members
+    .filter((m) => m.user === user?.id || m.guardians?.includes(user?.id ?? ''))
+    .map((m) => m.id)
+
+  async function load() {
+    const list = await pb.collection('line_notes').getFullList<LineNoteRecord>({
+      filter: pb.filter('production = {:p} && done = false', { p: production.id }),
+      sort: 'page,created',
+    })
+    setNotes(list)
+  }
+
+  useEffect(() => {
+    load().catch(() => {})
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [production.id])
+
+  const mine = notes.filter((n) => myMemberIds.includes(n.member))
+  if (mine.length === 0) return null
+
+  async function markDone(n: LineNoteRecord) {
+    await pb.collection('line_notes').update(n.id, { done: true })
+    await load()
+  }
+
+  const base = `/production/${production.id}`
+
+  return (
+    <section>
+      <h2>🎯 Line notes ({mine.length})</h2>
+      <p className="hint">
+        Notes from the team about lines to look at before next time. Check one off once
+        you've got it down.
+      </p>
+      <ul className="plain-list">
+        {mine.map((n) => {
+          const who = members.find((m) => m.id === n.member)
+          return (
+            <li key={n.id} className="task-row">
+              <label className="row task-main">
+                <input type="checkbox" checked={false} onChange={() => markDone(n)} />
+                <span>
+                  <strong>{LINE_NOTE_LABELS[n.kind] ?? n.kind}</strong> — p. {n.page}
+                  {myMemberIds.length > 1 && who && (
+                    <span className="hint"> · {memberName(who)}</span>
+                  )}
+                  {n.text && <span className="hint"> · {n.text}</span>}
+                </span>
+              </label>
+              <Link className="link" to={`${base}/script/${n.resource}?page=${n.page}`}>
+                Open the script
+              </Link>
+            </li>
+          )
+        })}
+      </ul>
+    </section>
   )
 }
 

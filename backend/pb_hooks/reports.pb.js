@@ -124,6 +124,45 @@ cronAdd("glowtape_rehearsal_reports", "0 * * * *", () => {
         );
       }
 
+      // Line notes given today, tallied per person (open count matters most).
+      const todaysLineNotes = $app.findRecordsByFilter(
+        "line_notes",
+        "production = {:p} && created >= {:from}",
+        "created",
+        200,
+        0,
+        { p: pid, from },
+      );
+      if (todaysLineNotes.length > 0) {
+        const perMember = {};
+        for (const ln of todaysLineNotes) {
+          const mid = String(ln.get("member"));
+          if (!perMember[mid]) perMember[mid] = { total: 0, open: 0 };
+          perMember[mid].total++;
+          if (!ln.get("done")) perMember[mid].open++;
+        }
+        const rows = [];
+        for (const mid of Object.keys(perMember)) {
+          let who = "someone";
+          try {
+            const m = $app.findRecordById("members", mid);
+            who = m.get("displayName") || m.get("position") || "someone";
+            if (m.get("user")) {
+              try {
+                who = $app.findRecordById("users", m.get("user")).get("name") || who;
+              } catch {
+                /* keep */
+              }
+            }
+          } catch {
+            /* keep */
+          }
+          const c = perMember[mid];
+          rows.push(`<li>${who}: ${c.total} note${c.total === 1 ? "" : "s"}${c.open ? ` (${c.open} still open)` : " — all cleared"}</li>`);
+        }
+        sections.push(`<h3>Line notes given today</h3><ul>${rows.join("")}</ul>`);
+      }
+
       lib.sendMail(
         $app,
         contacts.emails,

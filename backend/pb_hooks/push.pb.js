@@ -189,3 +189,44 @@ onRecordAfterUpdateSuccess((e) => {
   }
   e.next();
 }, "events");
+
+// Line note delivered: the actor (and their guardians) hear about it the
+// moment the SM writes it — quiet hours are handled by the push layer's
+// absence of urgency; these arrive with rehearsal already in progress.
+onRecordAfterCreateSuccess((e) => {
+  const lib = require(`${__hooks}/glowtape_lib.js`);
+  try {
+    if (!lib.pushConfigured()) {
+      e.next();
+      return;
+    }
+    const member = e.app.findRecordById("members", e.record.get("member"));
+    const targets = [];
+    if (member.get("user")) targets.push(String(member.get("user")));
+    for (const g of lib.toIdArray(member.get("guardians"))) targets.push(g);
+    const authorId = String(e.record.get("author"));
+    const finalTargets = targets.filter((t) => t && t !== authorId);
+    if (finalTargets.length === 0) {
+      e.next();
+      return;
+    }
+    const KINDS = {
+      dropped: "Dropped line",
+      paraphrased: "Paraphrased",
+      skipped: "Skipped ahead",
+      jumped: "Jumped a cue",
+      called: "Called for line",
+    };
+    const kind = KINDS[e.record.get("kind")] || "Line note";
+    const productionId = String(e.record.get("production"));
+    lib.sendPush(e.app, finalTargets, {
+      title: `🎯 Line note — p. ${e.record.get("page")}`,
+      body: kind + (e.record.get("text") ? `: ${String(e.record.get("text")).slice(0, 90)}` : ""),
+      url: `/production/${productionId}/script/${e.record.get("resource")}?page=${e.record.get("page")}`,
+      tag: `linenote-${e.record.id}`,
+    });
+  } catch (err) {
+    e.app.logger().error("glowtape: line note push failed", "error", String(err));
+  }
+  e.next();
+}, "line_notes");
