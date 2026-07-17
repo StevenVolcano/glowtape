@@ -1611,7 +1611,26 @@ function ResourcesSection() {
             <input
               type="file"
               hidden
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+              onChange={async (e) => {
+                // Android cloud pickers (Drive) hand over a stale reference
+                // that dies mid-upload with no server contact — read the
+                // bytes NOW, while the permission is fresh.
+                const f = e.target.files?.[0] ?? null
+                if (!f) {
+                  setFile(null)
+                  return
+                }
+                setMessage('')
+                try {
+                  const buf = await f.arrayBuffer()
+                  setFile(new File([buf], f.name, { type: f.type }))
+                } catch {
+                  setFile(null)
+                  setMessage(
+                    "Couldn't read that file from your phone. Save it to your device first (Files or Downloads), then attach it from there.",
+                  )
+                }
+              }}
             />
           </label>
         </div>
