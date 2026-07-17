@@ -7,6 +7,7 @@ import { formatDay, formatWhen, mapsUrl, memberName, pbDate, placeLine, producti
 import { downloadEventIcs, googleCalendarUrl } from '../lib/calendar.ts'
 import EventForm from '../components/EventForm.tsx'
 import QrCode from '../components/QrCode.tsx'
+import FindTime from '../components/FindTime.tsx'
 import { DAY_SHORT, isWeekly, weeklyLabel } from '../lib/conflicts.ts'
 import type { AckRecord, AttendanceRecord, ConflictRecord, EventRecord, GroupRecord, MemberRecord, UnitRecord } from '../lib/types.ts'
 
@@ -512,6 +513,7 @@ export default function ScheduleTab() {
       </section>
 
       <ConflictsSection conflicts={conflicts} reload={load} />
+      {isManager && <FindTime conflicts={conflicts} events={events} groups={groups} />}
       <CalendarSubscribeSection />
     </div>
   )
