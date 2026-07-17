@@ -202,8 +202,11 @@ function LineNotesSection() {
                   {n.text && <span className="hint"> · {n.text}</span>}
                 </span>
               </label>
-              <Link className="link" to={`${base}/script/${n.resource}?page=${n.page}`}>
-                Open the script
+              <Link
+                className="link"
+                to={`${base}/script/${n.resource}?page=${n.page}&note=${n.id}`}
+              >
+                Show me in the script
               </Link>
             </li>
           )

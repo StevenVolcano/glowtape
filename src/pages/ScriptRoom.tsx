@@ -98,6 +98,21 @@ export default function ScriptRoom() {
     setLineNotes(lns)
   }
 
+  // Deep link from a To-Do line note: ?note=<id> jumps to its page and opens
+  // it, so the 🎯 pin marks the exact spot without hunting. One-shot — after
+  // arrival the reader navigates freely.
+  const jumpedToNote = useRef(false)
+  useEffect(() => {
+    if (jumpedToNote.current) return
+    const target = searchParams.get('note')
+    if (!target) return
+    const n = lineNotes.find((x) => x.id === target)
+    if (!n) return
+    jumpedToNote.current = true
+    setPageNum(n.page)
+    setOpenLineNote(n.id)
+  }, [lineNotes, searchParams])
+
   useEffect(() => {
     if (!resourceId) return
     let cancelled = false
@@ -803,9 +818,13 @@ export default function ScriptRoom() {
                 border: 'none',
                 padding: 0,
                 minHeight: 0,
-                fontSize: '1.4rem',
+                fontSize: openLineNote === n.id ? '2rem' : '1.4rem',
                 opacity: n.done ? 0.45 : 1,
-                filter: n.done ? 'grayscale(1)' : 'none',
+                filter: n.done
+                  ? 'grayscale(1)'
+                  : openLineNote === n.id
+                    ? 'drop-shadow(0 0 6px rgba(255, 200, 0, 0.9))'
+                    : 'none',
               }}
             >
               🎯
