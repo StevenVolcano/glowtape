@@ -46,12 +46,24 @@ onRecordAfterCreateSuccess((e) => {
       where = production.get("title");
       url = `/production/${productionId}/messages`;
       const memberId = String(channel.get("member") || "");
+      const groupId = String(channel.get("group") || "");
       if (memberId) {
         // Semi-private team channel: the member + guardians + managers.
         const member = e.app.findRecordById("members", memberId);
         targets = [String(member.get("user") || "")]
           .concat(lib.toIdArray(member.get("guardians")))
           .concat(lib.toIdArray(production.get("managers")));
+      } else if (groupId) {
+        // Group channel: the group's members (+ their guardians) + managers.
+        targets = lib.toIdArray(production.get("managers"));
+        const rows = e.app.findRecordsByFilter("members", "production = {:p}", "", 500, 0, {
+          p: productionId,
+        });
+        for (const m of rows) {
+          if (!lib.toIdArray(m.get("groups")).includes(groupId)) continue;
+          if (m.get("user")) targets.push(String(m.get("user")));
+          for (const g of lib.toIdArray(m.get("guardians"))) targets.push(g);
+        }
       } else {
         targets = lib.recipientUserIds(e.app, productionId, null);
       }

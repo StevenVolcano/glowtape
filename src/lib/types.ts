@@ -403,6 +403,7 @@ export interface ChannelRecord {
   id: string
   production: string
   name: string
+  group?: string
   audience: 'all' | 'cast' | 'crew' | 'team'
   archived: boolean
   defaultMuted: boolean

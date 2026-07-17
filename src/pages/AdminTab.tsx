@@ -559,8 +559,10 @@ function BiosSection() {
 function ChannelsSection() {
   const { production } = useProduction()
   const [channels, setChannels] = useState<ChannelRecord[]>([])
+  const [groups, setGroups] = useState<GroupRecord[]>([])
   const [name, setName] = useState('')
-  const [audience, setAudience] = useState<'all' | 'cast' | 'crew' | 'team'>('all')
+  // 'all'|'cast'|'crew'|'team', or 'group:<id>' for a group + team channel.
+  const [audience, setAudience] = useState('all')
   const [busy, setBusy] = useState(false)
 
   const AUDIENCE_LABELS = {
@@ -571,11 +573,18 @@ function ChannelsSection() {
   } as const
 
   async function load() {
-    const list = await pb.collection('channels').getFullList<ChannelRecord>({
-      filter: pb.filter('production = {:p}', { p: production.id }),
-      sort: 'created',
-    })
+    const [list, gr] = await Promise.all([
+      pb.collection('channels').getFullList<ChannelRecord>({
+        filter: pb.filter('production = {:p}', { p: production.id }),
+        sort: 'created',
+      }),
+      pb.collection('groups').getFullList<GroupRecord>({
+        filter: pb.filter('production = {:p}', { p: production.id }),
+        sort: 'order,created',
+      }),
+    ])
     setChannels(list)
+    setGroups(gr)
   }
 
   useEffect(() => {
@@ -587,7 +596,19 @@ function ChannelsSection() {
     e.preventDefault()
     setBusy(true)
     try {
-      await pb.collection('channels').create({ production: production.id, name, audience })
+      if (audience.startsWith('group:')) {
+        const groupId = audience.slice(6)
+        const groupName = groups.find((g) => g.id === groupId)?.name ?? 'Group'
+        const finalName = name.trim() || groupName
+        await pb.collection('channels').create({
+          production: production.id,
+          name: finalName.startsWith('🔒') ? finalName : `🔒 ${finalName}`,
+          audience: 'all',
+          group: groupId,
+        })
+      } else {
+        await pb.collection('channels').create({ production: production.id, name, audience })
+      }
       setName('')
       await load()
     } finally {
@@ -617,7 +638,11 @@ function ChannelsSection() {
               defaultValue={c.name}
               onBlur={(e) => rename(c, e.target.value)}
             />
-            <span className="hint">{AUDIENCE_LABELS[c.audience]}</span>
+            <span className="hint">
+              {c.group
+                ? `🔒 ${groups.find((g) => g.id === c.group)?.name ?? 'group'} + production team`
+                : AUDIENCE_LABELS[c.audience]}
+            </span>
             {c.archived ? (
               <button className="link" onClick={() => setArchived(c, false)}>
                 restore
@@ -646,13 +671,21 @@ function ChannelsSection() {
           <option value="cast">Cast</option>
           <option value="crew">Crew</option>
           <option value="team">Production team</option>
+          {groups.map((g) => (
+            <option key={g.id} value={`group:${g.id}`}>
+              🔒 {g.name} + production team only
+            </option>
+          ))}
         </select>
-        <button type="submit" disabled={busy || !name.trim()}>
+        <button type="submit" disabled={busy || (!name.trim() && !audience.startsWith('group:'))}>
           Add
         </button>
       </form>
       <p className="hint">
-        Archiving hides a channel without deleting its messages; restore it any time.
+        Archiving hides a channel without deleting its messages; restore it any time. A 🔒
+        group channel is visible only to that group's members (parents of any children in it
+        included) and the production team — enforced on the server. Set up groups under{' '}
+        <em>Groups</em> above.
       </p>
     </section>
   )
