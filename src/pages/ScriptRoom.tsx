@@ -109,9 +109,16 @@ export default function ScriptRoom() {
       const ctx = canvas.getContext('2d')
       if (!ctx) return
       renderTask.current?.cancel()
-      const task = page.render({ canvasContext: ctx, viewport, canvas })
+      const task = page.render({ canvasContext: ctx, viewport })
       renderTask.current = task
-      task.promise.then(() => setRenderTick((t) => t + 1)).catch(() => {})
+      task.promise
+        .then(() => setRenderTick((t) => t + 1))
+        .catch((err: unknown) => {
+          // page flips cancel the old render — that's routine, not failure
+          if ((err as { name?: string })?.name !== 'RenderingCancelledException') {
+            setFailed("Couldn't draw the page — try reloading, and tell the operator if it keeps happening.")
+          }
+        })
     })
     return () => {
       cancelled = true
@@ -303,9 +310,10 @@ export default function ScriptRoom() {
         </Link>
       </div>
       <p className="hint">
-        Pick a tool, then use the page: 📝 notes pin to a spot, ✏️ draws, 🖍 highlights,
-        🧽 erases your marks. 📌 notes and marks from the production team are seen by
-        everyone; yours are yours alone. Check notes off when they're taken care of.
+        Pick a tool, then use the page: 📝 notes pin to a spot you tap, ✏️ draws, 🖍
+        highlights, 🧽 erases your marks. 📌 notes and marks from the production team are
+        seen by everyone; yours are yours alone. Everything saves by itself the moment you
+        make it — there's nothing to save manually.
       </p>
 
       <div className="chips no-print">
