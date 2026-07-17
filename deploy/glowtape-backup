@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-# Nightly backup of pb_data (database + uploaded files). Stops the service
-# for a few seconds so the SQLite file is copied in a consistent state.
-# Keeps 14 local archives; if an rclone remote named "offsite" exists, also
-# copies there (e.g. Backblaze B2: rclone config, name it "offsite").
+# Nightly backup. The database changes daily but is small; uploaded files are
+# big but change rarely — so: DB-only archive every night (14 kept), full
+# archive including uploads once a week on Sundays (4 kept). Stops the
+# service for a few seconds so the SQLite file copies in a consistent state.
+# If an rclone remote named "offsite" exists, fresh archives copy there too.
 set -euo pipefail
 
 STAMP=$(date +%F)
@@ -10,11 +11,17 @@ DEST=/var/backups/glowtape
 
 systemctl stop glowtape
 trap 'systemctl start glowtape' EXIT
-tar czf "$DEST/pb_data-$STAMP.tgz" -C /opt/glowtape/backend pb_data
+tar czf "$DEST/pb_data-db-$STAMP.tgz" --exclude='pb_data/storage' -C /opt/glowtape/backend pb_data
+if [ "$(date +%u)" = "7" ]; then
+  tar czf "$DEST/pb_data-full-$STAMP.tgz" -C /opt/glowtape/backend pb_data
+fi
 systemctl start glowtape
 trap - EXIT
 
-ls -1t "$DEST"/pb_data-*.tgz 2>/dev/null | tail -n +15 | xargs -r rm
+ls -1t "$DEST"/pb_data-db-*.tgz 2>/dev/null | tail -n +15 | xargs -r rm
+ls -1t "$DEST"/pb_data-full-*.tgz 2>/dev/null | tail -n +5 | xargs -r rm
+# pre-split archives from the old scheme age out here too
+ls -1t "$DEST"/pb_data-2*.tgz 2>/dev/null | tail -n +3 | xargs -r rm
 
 if command -v rclone >/dev/null && rclone listremotes 2>/dev/null | grep -q '^offsite:'; then
   rclone copy "$DEST" offsite:glowtape-backups --max-age 48h
