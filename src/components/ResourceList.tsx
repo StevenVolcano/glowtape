@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { pb } from '../lib/pb.ts'
+import { openResourceFile } from '../lib/files.ts'
 import type { ResourceRecord } from '../lib/types.ts'
 
 // Read-only list of a production's documents and links for one area
@@ -32,14 +33,16 @@ export default function ResourceList({
       <ul className="plain-list">
         {resources.map((r) => (
           <li key={r.id}>
-            <a
-              className="link"
-              href={r.file ? pb.files.getURL(r, r.file) : r.url}
-              target="_blank"
-              rel="noreferrer"
-            >
-              {r.file ? '📄' : '🔗'} {r.title}
-            </a>
+            {r.file ? (
+              <button className="link" onClick={() => openResourceFile(r)}>
+                📄 {r.title}
+              </button>
+            ) : (
+              <a className="link" href={r.url} target="_blank" rel="noreferrer">
+                🔗 {r.title}
+              </a>
+            )}
+            {r.audience === 'team' && <span className="pill">🔒 team</span>}
             {area === 'show' && r.file?.toLowerCase().endsWith('.pdf') && (
               <>
                 {' '}

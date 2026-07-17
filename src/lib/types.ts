@@ -134,6 +134,8 @@ export interface AnnotationRecord {
   y: number
   text: string
   scope: 'production' | 'personal'
+  kind?: 'pin' | 'draw' | 'highlight'
+  path?: { x: number; y: number }[] | null
   done: boolean
   created: string
   expand?: { user?: UserRecord }
@@ -178,6 +180,7 @@ export interface ResourceRecord {
   title: string
   url: string
   file: string
+  audience?: 'everyone' | 'team'
   order: number
 }
 

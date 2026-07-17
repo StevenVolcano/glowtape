@@ -4,6 +4,7 @@ import { pb } from '../lib/pb.ts'
 import { useAuth } from '../lib/auth.tsx'
 import { useProduction } from './Production.tsx'
 import EventForm from '../components/EventForm.tsx'
+import { openResourceFile } from '../lib/files.ts'
 import ManageJumpNav from '../components/ManageJumpNav.tsx'
 import QrCode from '../components/QrCode.tsx'
 import { MANAGER_ROLES, ROLE_LABELS } from '../lib/types.ts'
@@ -1436,6 +1437,7 @@ function ResourcesSection() {
   const { production } = useProduction()
   const [resources, setResources] = useState<ResourceRecord[]>([])
   const [area, setArea] = useState<'show' | 'audition'>('show')
+  const [audience, setAudience] = useState<'everyone' | 'team'>('everyone')
   const [title, setTitle] = useState('')
   const [url, setUrl] = useState('')
   const [file, setFile] = useState<File | null>(null)
@@ -1467,6 +1469,7 @@ function ResourcesSection() {
       form.set('title', title.trim())
       if (file) form.set('file', file)
       else form.set('url', url.trim())
+      form.set('audience', audience)
       await pb.collection('resources').create(form)
       setTitle('')
       setUrl('')
@@ -1505,14 +1508,27 @@ function ResourcesSection() {
               <ul className="plain-list">
                 {byArea(a).map((r) => (
                   <li key={r.id} className="row">
-                    <a
+                    {r.file ? (
+                      <button className="link" onClick={() => openResourceFile(r)}>
+                        📄 {r.title}
+                      </button>
+                    ) : (
+                      <a className="link" href={r.url} target="_blank" rel="noreferrer">
+                        🔗 {r.title}
+                      </a>
+                    )}
+                    <button
                       className="link"
-                      href={r.file ? pb.files.getURL(r, r.file) : r.url}
-                      target="_blank"
-                      rel="noreferrer"
+                      aria-label={`${r.title}: ${r.audience === 'team' ? 'production team only — tap to open to everyone' : 'everyone can open it — tap to restrict to the production team'}`}
+                      onClick={async () => {
+                        await pb.collection('resources').update(r.id, {
+                          audience: r.audience === 'team' ? 'everyone' : 'team',
+                        })
+                        await load()
+                      }}
                     >
-                      {r.file ? '📄' : '🔗'} {r.title}
-                    </a>
+                      {r.audience === 'team' ? '🔒 team only' : '🌐 everyone'}
+                    </button>
                     <button
                       className="link"
                       aria-label={`Remove ${r.title}`}
@@ -1532,6 +1548,14 @@ function ResourcesSection() {
           <select aria-label="Resource area" value={area} onChange={(e) => setArea(e.target.value as typeof area)}>
             <option value="show">For the show</option>
             <option value="audition">For auditions</option>
+          </select>
+          <select
+            aria-label="Who can open it"
+            value={audience}
+            onChange={(e) => setAudience(e.target.value as typeof audience)}
+          >
+            <option value="everyone">Everyone in the show</option>
+            <option value="team">🔒 Production team only</option>
           </select>
           <input
             aria-label="Resource title"

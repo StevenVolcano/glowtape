@@ -24,7 +24,7 @@ export default function ScriptRoom() {
   const [pageNum, setPageNum] = useState(1)
   const [pageCount, setPageCount] = useState(0)
   const [notes, setNotes] = useState<AnnotationRecord[]>([])
-  const [adding, setAdding] = useState(false)
+  const [mode, setMode] = useState<'read' | 'pin' | 'draw' | 'highlight' | 'erase'>('read')
   const [draft, setDraft] = useState<{ x: number; y: number } | null>(null)
   const [draftText, setDraftText] = useState('')
   const [draftScope, setDraftScope] = useState<'personal' | 'production'>('personal')
@@ -32,8 +32,12 @@ export default function ScriptRoom() {
   const [showDone, setShowDone] = useState(false)
   const [failed, setFailed] = useState('')
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const overlayRef = useRef<HTMLCanvasElement>(null)
   const holderRef = useRef<HTMLDivElement>(null)
   const renderTask = useRef<{ cancel: () => void } | null>(null)
+  const strokeRef = useRef<{ x: number; y: number }[]>([])
+  const drawingRef = useRef(false)
+  const [renderTick, setRenderTick] = useState(0)
 
   const base = `/production/${production.id}`
 
@@ -55,7 +59,8 @@ export default function ScriptRoom() {
       .then(async (r) => {
         if (cancelled) return
         setResource(r)
-        const url = pb.files.getURL(r, r.file)
+        const token = await pb.files.getToken()
+        const url = pb.files.getURL(r, r.file, { token })
         const doc = await pdfjsLib.getDocument({ url }).promise
         if (cancelled) return
         setPdf(doc)
@@ -85,20 +90,140 @@ export default function ScriptRoom() {
       canvas.height = viewport.height
       canvas.style.width = `${width}px`
       canvas.style.height = `${viewport.height / dpr}px`
+      const overlay = overlayRef.current
+      if (overlay) {
+        overlay.width = viewport.width
+        overlay.height = viewport.height
+        overlay.style.width = `${width}px`
+        overlay.style.height = `${viewport.height / dpr}px`
+      }
       const ctx = canvas.getContext('2d')
       if (!ctx) return
       renderTask.current?.cancel()
       const task = page.render({ canvasContext: ctx, viewport, canvas })
       renderTask.current = task
-      task.promise.catch(() => {})
+      task.promise.then(() => setRenderTick((t) => t + 1)).catch(() => {})
     })
     return () => {
       cancelled = true
     }
   }, [pdf, pageNum])
 
+  const strokeStyle = (kind: string, ctx: CanvasRenderingContext2D, w: number) => {
+    if (kind === 'highlight') {
+      ctx.strokeStyle = 'rgba(255, 220, 0, 0.4)'
+      ctx.lineWidth = w * 0.025
+    } else {
+      ctx.strokeStyle = '#b3372f'
+      ctx.lineWidth = w * 0.004
+    }
+    ctx.lineCap = 'round'
+    ctx.lineJoin = 'round'
+  }
+
+  function paintStroke(ctx: CanvasRenderingContext2D, pts: { x: number; y: number }[], kind: string, w: number, h: number, faded: boolean) {
+    if (pts.length < 2) return
+    ctx.save()
+    strokeStyle(kind, ctx, w)
+    if (faded) ctx.globalAlpha = 0.35
+    ctx.beginPath()
+    ctx.moveTo(pts[0].x * w, pts[0].y * h)
+    for (const pt of pts.slice(1)) ctx.lineTo(pt.x * w, pt.y * h)
+    ctx.stroke()
+    ctx.restore()
+  }
+
+  // Repaint saved strokes whenever the page (re)renders or notes change.
+  useEffect(() => {
+    const overlay = overlayRef.current
+    const ctx = overlay?.getContext('2d')
+    if (!overlay || !ctx) return
+    ctx.clearRect(0, 0, overlay.width, overlay.height)
+    for (const n of notes) {
+      if (n.page !== pageNum || !n.path?.length) continue
+      if (n.done && !showDone) continue
+      paintStroke(ctx, n.path, n.kind ?? 'draw', overlay.width, overlay.height, !!n.done)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [notes, pageNum, renderTick, showDone])
+
+  const pointFromEvent = (e: React.PointerEvent) => {
+    const rect = holderRef.current!.getBoundingClientRect()
+    return {
+      x: Math.min(Math.max((e.clientX - rect.left) / rect.width, 0), 1),
+      y: Math.min(Math.max((e.clientY - rect.top) / rect.height, 0), 1),
+    }
+  }
+
+  function pointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    if (mode !== 'draw' && mode !== 'highlight') return
+    e.preventDefault()
+    ;(e.target as Element).setPointerCapture?.(e.pointerId)
+    drawingRef.current = true
+    strokeRef.current = [pointFromEvent(e)]
+  }
+
+  function pointerMove(e: React.PointerEvent<HTMLDivElement>) {
+    if (!drawingRef.current || !holderRef.current) return
+    e.preventDefault()
+    const pt = pointFromEvent(e)
+    const last = strokeRef.current[strokeRef.current.length - 1]
+    if (last && Math.hypot(pt.x - last.x, pt.y - last.y) < 0.004) return
+    strokeRef.current.push(pt)
+    // live feedback: repaint saved strokes' overlay plus the one in progress
+    const overlay = overlayRef.current
+    const ctx = overlay?.getContext('2d')
+    if (overlay && ctx) paintStroke(ctx, strokeRef.current.slice(-2), mode, overlay.width, overlay.height, false)
+  }
+
+  async function pointerUp() {
+    if (!drawingRef.current) return
+    drawingRef.current = false
+    const pts = strokeRef.current
+    strokeRef.current = []
+    if (pts.length < 2 || !resourceId) return
+    await pb.collection('annotations').create({
+      production: production.id,
+      resource: resourceId,
+      user: user!.id,
+      page: pageNum,
+      x: pts[0].x,
+      y: pts[0].y,
+      text: '',
+      kind: mode === 'highlight' ? 'highlight' : 'draw',
+      path: pts,
+      scope: isManager ? draftScope : 'personal',
+      done: false,
+    })
+    await loadNotes()
+  }
+
+  async function eraseAt(x: number, y: number) {
+    const rect = holderRef.current?.getBoundingClientRect()
+    if (!rect) return
+    const threshold = 18 / rect.width // ~18px in normalized units
+    for (const n of notes) {
+      if (n.page !== pageNum || !n.path?.length) continue
+      const mine = n.user === user?.id || (n.scope === 'production' && isManager)
+      if (!mine) continue
+      const hit = n.path.some((pt) => Math.hypot(pt.x - x, (pt.y - y) * (rect.height / rect.width)) < threshold)
+      if (hit) {
+        if (window.confirm(`Erase this ${n.kind === 'highlight' ? 'highlight' : 'drawing'}?`)) {
+          await pb.collection('annotations').delete(n.id)
+          await loadNotes()
+        }
+        return
+      }
+    }
+  }
+
   function pageClick(e: React.MouseEvent<HTMLDivElement>) {
-    if (!adding || !holderRef.current) return
+    if (mode === 'erase' && holderRef.current) {
+      const rect = holderRef.current.getBoundingClientRect()
+      eraseAt((e.clientX - rect.left) / rect.width, (e.clientY - rect.top) / rect.height)
+      return
+    }
+    if (mode !== 'pin' || !holderRef.current) return
     const rect = holderRef.current.getBoundingClientRect()
     const x = (e.clientX - rect.left) / rect.width
     const y = (e.clientY - rect.top) / rect.height
@@ -115,12 +240,13 @@ export default function ScriptRoom() {
       x: draft.x,
       y: draft.y,
       text: draftText.trim(),
+      kind: 'pin',
       scope: isManager ? draftScope : 'personal',
       done: false,
     })
     setDraft(null)
     setDraftText('')
-    setAdding(false)
+    setMode('read')
     await loadNotes()
   }
 
@@ -142,9 +268,10 @@ export default function ScriptRoom() {
     return member ? chatName(full, member) : firstLastInitial(full)
   }
 
-  const visibleNotes = notes.filter((n) => showDone || !n.done)
+  const pins = notes.filter((n) => !n.path?.length)
+  const visibleNotes = pins.filter((n) => showDone || !n.done)
   const pageNotes = visibleNotes.filter((n) => n.page === pageNum)
-  const openCount = notes.filter((n) => !n.done).length
+  const openCount = pins.filter((n) => !n.done).length
 
   if (failed) {
     return (
@@ -166,23 +293,59 @@ export default function ScriptRoom() {
         </Link>
       </div>
       <p className="hint">
-        Tap <em>➕ Add a note</em>, then tap the spot on the page. 📌 notes are from the
-        production team (everyone sees them); 📝 notes are yours alone. Check a note off when
-        it's taken care of.
+        Pick a tool, then use the page: 📝 notes pin to a spot, ✏️ draws, 🖍 highlights,
+        🧽 erases your marks. 📌 notes and marks from the production team are seen by
+        everyone; yours are yours alone. Check notes off when they're taken care of.
       </p>
 
+      <div className="chips no-print">
+        {(
+          [
+            ['read', '👆 Read'],
+            ['pin', '📝 Note'],
+            ['draw', '✏️ Draw'],
+            ['highlight', '🖍 Highlight'],
+            ['erase', '🧽 Erase'],
+          ] as const
+        ).map(([m, label]) => (
+          <button
+            type="button"
+            key={m}
+            className={`chip ${mode === m ? 'chip-active' : ''}`}
+            aria-pressed={mode === m}
+            onClick={() => {
+              setMode(m)
+              setDraft(null)
+            }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      {mode === 'pin' && <p className="hint no-print">Tap the spot on the page where the note goes.</p>}
+      {(mode === 'draw' || mode === 'highlight') && (
+        <p className="hint no-print">
+          Drag on the page to {mode === 'highlight' ? 'highlight' : 'draw'}
+          {isManager && draftScope === 'production'
+            ? ' — as a 📌 production mark everyone sees.'
+            : ' — only you see your marks.'}
+        </p>
+      )}
+      {mode === 'erase' && (
+        <p className="hint no-print">Tap a drawing or highlight to erase it (only your own).</p>
+      )}
       <div className="row no-print" style={{ alignItems: 'center' }}>
-        <button
-          type="button"
-          className={adding ? '' : 'link'}
-          aria-pressed={adding}
-          onClick={() => {
-            setAdding(!adding)
-            setDraft(null)
-          }}
-        >
-          {adding ? 'Tap the page where the note goes…' : '➕ Add a note'}
-        </button>
+        {isManager && (
+          <label className="row" style={{ alignItems: 'center' }}>
+            <input
+              type="checkbox"
+              checked={draftScope === 'production'}
+              onChange={(e) => setDraftScope(e.target.checked ? 'production' : 'personal')}
+              style={{ width: '1.2rem', minHeight: '1.2rem' }}
+            />
+            📌 New notes &amp; marks are production-wide (everyone sees them)
+          </label>
+        )}
         <label className="row" style={{ alignItems: 'center' }}>
           <input
             type="checkbox"
@@ -226,9 +389,14 @@ export default function ScriptRoom() {
       <div
         ref={holderRef}
         onClick={pageClick}
+        onPointerDown={pointerDown}
+        onPointerMove={pointerMove}
+        onPointerUp={pointerUp}
+        onPointerCancel={pointerUp}
         style={{
           position: 'relative',
-          cursor: adding ? 'crosshair' : 'default',
+          cursor: mode === 'read' ? 'default' : 'crosshair',
+          touchAction: mode === 'draw' || mode === 'highlight' ? 'none' : 'auto',
           border: '1px solid var(--line)',
           borderRadius: '8px',
           overflow: 'hidden',
@@ -236,6 +404,11 @@ export default function ScriptRoom() {
         }}
       >
         <canvas ref={canvasRef} style={{ display: 'block', maxWidth: '100%' }} />
+        <canvas
+          ref={overlayRef}
+          aria-hidden="true"
+          style={{ position: 'absolute', left: 0, top: 0, maxWidth: '100%', pointerEvents: 'none' }}
+        />
         {pageNotes.map((n) => (
           <button
             key={n.id}
@@ -291,15 +464,11 @@ export default function ScriptRoom() {
             />
           </label>
           {isManager && (
-            <label className="row" style={{ alignItems: 'center' }}>
-              <input
-                type="checkbox"
-                checked={draftScope === 'production'}
-                onChange={(e) => setDraftScope(e.target.checked ? 'production' : 'personal')}
-                style={{ width: '1.2rem', minHeight: '1.2rem' }}
-              />
-              📌 Production note — everyone in the show sees it
-            </label>
+            <p className="hint" style={{ margin: 0 }}>
+              {draftScope === 'production'
+                ? '📌 Saving as a production note — everyone sees it.'
+                : '📝 Saving as a personal note — only you see it. (The checkbox above switches.)'}
+            </p>
           )}
           <div className="row">
             <button type="button" onClick={saveDraft} disabled={!draftText.trim()}>
