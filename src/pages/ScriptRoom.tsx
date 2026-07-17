@@ -11,6 +11,14 @@ import type { AnnotationRecord, ResourceRecord } from '../lib/types.ts'
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl
 
+// Highlighter shades — translucent so the text stays readable underneath.
+const HIGHLIGHT_COLORS: Record<string, { label: string; swatch: string; stroke: string }> = {
+  yellow: { label: 'Yellow', swatch: '#ffdc00', stroke: 'rgba(255, 220, 0, 0.4)' },
+  cyan: { label: 'Cyan', swatch: '#00c8e6', stroke: 'rgba(0, 200, 230, 0.35)' },
+  lime: { label: 'Lime green', swatch: '#7ede3f', stroke: 'rgba(126, 222, 63, 0.4)' },
+  pink: { label: 'Pink', swatch: '#ff7bc2', stroke: 'rgba(255, 123, 194, 0.4)' },
+}
+
 // The script room: read a PDF (script, libretto, score) with sticky-note
 // pins. Production notes come from the staff and everyone sees them;
 // personal notes are yours alone. Notes can be marked off when fixed —
@@ -28,6 +36,7 @@ export default function ScriptRoom() {
   const [draft, setDraft] = useState<{ x: number; y: number } | null>(null)
   const [draftText, setDraftText] = useState('')
   const [draftScope, setDraftScope] = useState<'personal' | 'production'>('personal')
+  const [color, setColor] = useState<keyof typeof HIGHLIGHT_COLORS>('yellow')
   const [openNote, setOpenNote] = useState('')
   const [showDone, setShowDone] = useState(false)
   const [failed, setFailed] = useState('')
@@ -109,9 +118,9 @@ export default function ScriptRoom() {
     }
   }, [pdf, pageNum])
 
-  const strokeStyle = (kind: string, ctx: CanvasRenderingContext2D, w: number) => {
+  const strokeStyle = (kind: string, ctx: CanvasRenderingContext2D, w: number, colorKey?: string) => {
     if (kind === 'highlight') {
-      ctx.strokeStyle = 'rgba(255, 220, 0, 0.4)'
+      ctx.strokeStyle = (HIGHLIGHT_COLORS[colorKey ?? 'yellow'] ?? HIGHLIGHT_COLORS.yellow).stroke
       ctx.lineWidth = w * 0.025
     } else {
       ctx.strokeStyle = '#b3372f'
@@ -121,10 +130,10 @@ export default function ScriptRoom() {
     ctx.lineJoin = 'round'
   }
 
-  function paintStroke(ctx: CanvasRenderingContext2D, pts: { x: number; y: number }[], kind: string, w: number, h: number, faded: boolean) {
+  function paintStroke(ctx: CanvasRenderingContext2D, pts: { x: number; y: number }[], kind: string, w: number, h: number, faded: boolean, colorKey?: string) {
     if (pts.length < 2) return
     ctx.save()
-    strokeStyle(kind, ctx, w)
+    strokeStyle(kind, ctx, w, colorKey)
     if (faded) ctx.globalAlpha = 0.35
     ctx.beginPath()
     ctx.moveTo(pts[0].x * w, pts[0].y * h)
@@ -142,7 +151,7 @@ export default function ScriptRoom() {
     for (const n of notes) {
       if (n.page !== pageNum || !n.path?.length) continue
       if (n.done && !showDone) continue
-      paintStroke(ctx, n.path, n.kind ?? 'draw', overlay.width, overlay.height, !!n.done)
+      paintStroke(ctx, n.path, n.kind ?? 'draw', overlay.width, overlay.height, !!n.done, n.color)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [notes, pageNum, renderTick, showDone])
@@ -173,7 +182,7 @@ export default function ScriptRoom() {
     // live feedback: repaint saved strokes' overlay plus the one in progress
     const overlay = overlayRef.current
     const ctx = overlay?.getContext('2d')
-    if (overlay && ctx) paintStroke(ctx, strokeRef.current.slice(-2), mode, overlay.width, overlay.height, false)
+    if (overlay && ctx) paintStroke(ctx, strokeRef.current.slice(-2), mode, overlay.width, overlay.height, false, color)
   }
 
   async function pointerUp() {
@@ -191,6 +200,7 @@ export default function ScriptRoom() {
       y: pts[0].y,
       text: '',
       kind: mode === 'highlight' ? 'highlight' : 'draw',
+      color: mode === 'highlight' ? color : '',
       path: pts,
       scope: isManager ? draftScope : 'personal',
       done: false,
@@ -323,6 +333,33 @@ export default function ScriptRoom() {
         ))}
       </div>
       {mode === 'pin' && <p className="hint no-print">Tap the spot on the page where the note goes.</p>}
+      {mode === 'highlight' && (
+        <div className="chips no-print" role="group" aria-label="Highlighter color">
+          {Object.entries(HIGHLIGHT_COLORS).map(([key, c]) => (
+            <button
+              type="button"
+              key={key}
+              className={`chip ${color === key ? 'chip-active' : ''}`}
+              aria-pressed={color === key}
+              onClick={() => setColor(key)}
+            >
+              <span
+                aria-hidden="true"
+                style={{
+                  display: 'inline-block',
+                  width: '0.9rem',
+                  height: '0.9rem',
+                  borderRadius: '3px',
+                  background: c.swatch,
+                  marginRight: '0.35rem',
+                  verticalAlign: '-0.1rem',
+                }}
+              />
+              {c.label}
+            </button>
+          ))}
+        </div>
+      )}
       {(mode === 'draw' || mode === 'highlight') && (
         <p className="hint no-print">
           Drag on the page to {mode === 'highlight' ? 'highlight' : 'draw'}

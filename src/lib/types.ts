@@ -135,6 +135,7 @@ export interface AnnotationRecord {
   text: string
   scope: 'production' | 'personal'
   kind?: 'pin' | 'draw' | 'highlight'
+  color?: string
   path?: { x: number; y: number }[] | null
   done: boolean
   created: string
