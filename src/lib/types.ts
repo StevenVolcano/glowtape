@@ -164,6 +164,7 @@ export interface LineNoteRecord {
   kind: LineNoteKind
   text: string
   done: boolean
+  notified: boolean
   created: string
   expand?: { author?: UserRecord; member?: MemberRecord; resource?: ResourceRecord }
 }

@@ -66,6 +66,8 @@ export default function ScriptRoom() {
   const [lineKind, setLineKind] = useState<LineNoteKind>('dropped')
   const [lineText, setLineText] = useState('')
   const [openLineNote, setOpenLineNote] = useState('')
+  const [sendBusy, setSendBusy] = useState(false)
+  const [sendStatus, setSendStatus] = useState('')
   // Undo: ids of annotations created in THIS sitting, newest last.
   const [undoStack, setUndoStack] = useState<string[]>([])
   // Erase mode collects a selection; one tap of the erase button clears them all.
@@ -459,6 +461,30 @@ export default function ScriptRoom() {
     setLineDraft(null)
     setLineText('')
     await loadNotes()
+  }
+
+  // One push per rehearsal, not per note: send everything not yet notified.
+  async function sendLineNotes() {
+    setSendBusy(true)
+    setSendStatus('')
+    try {
+      const res = await pb.send<{ notes: number; people: number }>(
+        '/api/glowtape/line-notes/send',
+        { method: 'POST', body: { production: production.id } },
+      )
+      setSendStatus(
+        res.notes === 0
+          ? 'Nothing new to send.'
+          : `Sent — ${res.notes} note${res.notes === 1 ? '' : 's'} to ${res.people} ${
+              res.people === 1 ? 'person' : 'people'
+            }.`,
+      )
+      await loadNotes()
+    } catch {
+      setSendStatus('Sending failed — try again.')
+    } finally {
+      setSendBusy(false)
+    }
   }
 
   async function toggleLineDone(n: LineNoteRecord) {
@@ -895,7 +921,7 @@ export default function ScriptRoom() {
           </label>
           <div className="row">
             <button type="button" onClick={saveLineNote} disabled={!lineMember}>
-              Send the line note
+              Save the line note
             </button>
             <button
               type="button"
@@ -909,8 +935,9 @@ export default function ScriptRoom() {
             </button>
           </div>
           <p className="hint" style={{ margin: 0 }}>
-            They get a notification now, it lands on their To-Do tab, and only they (and the
-            production team) can see it.
+            It lands on their To-Do tab, and only they (and the production team) can see it.
+            No phones buzz yet — when you're done for the night, tap 📣 in the list below to
+            send everyone their notes in one notification each.
           </p>
         </div>
       )}
@@ -987,6 +1014,21 @@ export default function ScriptRoom() {
           <h3 className="dept-heading">
             🎯 Line notes ({lineNotes.filter((n) => !n.done).length} open)
           </h3>
+          {isManager && lineNotes.some((n) => !n.notified) && (
+            <div className="row" style={{ alignItems: 'center' }}>
+              <button type="button" onClick={sendLineNotes} disabled={sendBusy}>
+                {sendBusy
+                  ? 'Sending…'
+                  : `📣 Send tonight's line notes (${lineNotes.filter((n) => !n.notified).length})`}
+              </button>
+              <span className="hint">One notification per person, covering all their notes.</span>
+            </div>
+          )}
+          {sendStatus && (
+            <p className="acked" role="status">
+              {sendStatus}
+            </p>
+          )}
           <ul className="plain-list">
             {lineNotes
               .filter((n) => showDone || !n.done)

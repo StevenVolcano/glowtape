@@ -190,43 +190,78 @@ onRecordAfterUpdateSuccess((e) => {
   e.next();
 }, "events");
 
-// Line note delivered: the actor (and their guardians) hear about it the
-// moment the SM writes it — quiet hours are handled by the push layer's
-// absence of urgency; these arrive with rehearsal already in progress.
-onRecordAfterCreateSuccess((e) => {
-  const lib = require(`${__hooks}/glowtape_lib.js`);
-  try {
-    if (!lib.pushConfigured()) {
-      e.next();
-      return;
+// Line notes are NOT pushed one by one — a run-through would buzz an actor's
+// phone a dozen times while they're on stage. They accumulate quietly; when
+// the SM taps "Send tonight's line notes" this route sends each actor ONE
+// push covering all their un-sent notes and marks them notified, so a second
+// tap later in the evening only covers what's new.
+routerAdd(
+  "POST",
+  "/api/glowtape/line-notes/send",
+  (e) => {
+    const lib = require(`${__hooks}/glowtape_lib.js`);
+    const data = new DynamicModel({ production: "" });
+    e.bindBody(data);
+    let production;
+    try {
+      production = e.app.findRecordById("productions", data.production);
+    } catch {
+      throw new BadRequestError("Unknown production.");
     }
-    const member = e.app.findRecordById("members", e.record.get("member"));
-    const targets = [];
-    if (member.get("user")) targets.push(String(member.get("user")));
-    for (const g of lib.toIdArray(member.get("guardians"))) targets.push(g);
-    const authorId = String(e.record.get("author"));
-    const finalTargets = targets.filter((t) => t && t !== authorId);
-    if (finalTargets.length === 0) {
-      e.next();
-      return;
+    if (!lib.toIdArray(production.get("managers")).includes(e.auth.id)) {
+      throw new BadRequestError("Only the production team can send line notes.");
     }
-    const KINDS = {
-      dropped: "Dropped line",
-      paraphrased: "Paraphrased",
-      skipped: "Skipped ahead",
-      jumped: "Jumped a cue",
-      called: "Called for line",
-    };
-    const kind = KINDS[e.record.get("kind")] || "Line note";
-    const productionId = String(e.record.get("production"));
-    lib.sendPush(e.app, finalTargets, {
-      title: `🎯 Line note — p. ${e.record.get("page")}`,
-      body: kind + (e.record.get("text") ? `: ${String(e.record.get("text")).slice(0, 90)}` : ""),
-      url: `/production/${productionId}/script/${e.record.get("resource")}?page=${e.record.get("page")}`,
-      tag: `linenote-${e.record.id}`,
-    });
-  } catch (err) {
-    e.app.logger().error("glowtape: line note push failed", "error", String(err));
-  }
-  e.next();
-}, "line_notes");
+
+    const notes = e.app.findRecordsByFilter(
+      "line_notes",
+      "production = {:p} && notified = false",
+      "created",
+      500,
+      0,
+      { p: production.id },
+    );
+    const byMember = {};
+    for (const n of notes) {
+      const m = String(n.get("member"));
+      (byMember[m] = byMember[m] || []).push(n);
+    }
+
+    let people = 0;
+    for (const memberId of Object.keys(byMember)) {
+      const group = byMember[memberId];
+      let member;
+      try {
+        member = e.app.findRecordById("members", memberId);
+      } catch {
+        continue; // member deleted since the note was written
+      }
+      const targets = [];
+      if (member.get("user")) targets.push(String(member.get("user")));
+      for (const g of lib.toIdArray(member.get("guardians"))) targets.push(g);
+      const finalTargets = targets.filter((t) => t && t !== e.auth.id);
+      if (finalTargets.length > 0 && lib.pushConfigured()) {
+        try {
+          const pages = [...new Set(group.map((n) => n.get("page")))].sort((a, b) => a - b);
+          lib.sendPush(e.app, finalTargets, {
+            title:
+              group.length === 1
+                ? "🎯 A line note from tonight"
+                : `🎯 ${group.length} line notes from tonight`,
+            body: `Page${pages.length === 1 ? "" : "s"} ${pages.join(", ")} — waiting on your To-Do tab.`,
+            url: `/production/${production.id}/todo`,
+            tag: `linenotes-${production.id}-${memberId}`,
+          });
+          people += 1;
+        } catch (err) {
+          e.app.logger().error("glowtape: line note push failed", "error", String(err));
+        }
+      }
+      for (const n of group) {
+        n.set("notified", true);
+        e.app.save(n);
+      }
+    }
+    return e.json(200, { notes: notes.length, people: people });
+  },
+  $apis.requireAuth(),
+);
