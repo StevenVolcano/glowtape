@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# One-shot health snapshot: run `glowtape-doctor`, screenshot the output.
+# No flags, no follow-ups — everything worth knowing in one screen.
+
+echo "=== Glow Tape doctor · $(date '+%F %H:%M %Z') ==="
+echo
+echo "--- services ---"
+for s in glowtape glowtape-push caddy; do
+  printf '%-16s %s\n' "$s" "$(systemctl is-active "$s" 2>/dev/null)"
+done
+echo
+echo "--- disk ---"
+df -h / | tail -1 | awk '{print "used " $3 " of " $2 " (" $5 ") — " $4 " free"}'
+du -sh /opt/glowtape/backend/pb_data 2>/dev/null | awk '{print "pb_data: " $1}'
+du -sh /var/backups/glowtape 2>/dev/null | awk '{print "backups: " $1}'
+echo
+echo "--- memory ---"
+free -h | awk 'NR==2{print "used " $3 " of " $2 ", available " $7}'
+echo
+echo "--- latest backups ---"
+ls -1t /var/backups/glowtape 2>/dev/null | head -3
+echo
+echo "--- last 12 app log lines ---"
+journalctl -u glowtape -n 12 --no-pager -o short | cut -c1-120
+echo
+if [ -f /var/run/reboot-required ]; then
+  echo "⚠ kernel updates pending — reboot when convenient (takes ~30s):  reboot"
+fi
+echo "=== end ==="

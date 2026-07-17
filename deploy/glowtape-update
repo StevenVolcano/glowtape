@@ -21,6 +21,7 @@ chown -R glowtape:glowtape backend deploy/push-sender
 cp deploy/Caddyfile /etc/caddy/Caddyfile
 cp deploy/glowtape.service deploy/glowtape-push.service deploy/glowtape-backup.service deploy/glowtape-backup.timer /etc/systemd/system/
 install -m 0755 deploy/glowtape-backup /usr/local/bin/glowtape-backup
+install -m 0755 deploy/glowtape-doctor /usr/local/bin/glowtape-doctor
 systemctl daemon-reload
 systemctl enable --now glowtape-push >/dev/null 2>&1 || true
 systemctl restart glowtape glowtape-push
