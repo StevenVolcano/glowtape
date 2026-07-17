@@ -37,6 +37,16 @@ export default function ScriptRoom() {
   const [draftText, setDraftText] = useState('')
   const [draftScope, setDraftScope] = useState<'personal' | 'production'>('personal')
   const [color, setColor] = useState<keyof typeof HIGHLIGHT_COLORS>('yellow')
+  // Highlight style: freehand, snapped-straight, or a filled box — phones
+  // wobble, and a block of text wants one wash, not four passes.
+  const [hlStyle, setHlStyle] = useState<'free' | 'straight' | 'box'>(
+    () => (localStorage.getItem('gt-highlight-style') as 'free' | 'straight' | 'box') || 'free',
+  )
+
+  function pickHlStyle(v: 'free' | 'straight' | 'box') {
+    setHlStyle(v)
+    localStorage.setItem('gt-highlight-style', v)
+  }
   const [openNote, setOpenNote] = useState('')
   const [showDone, setShowDone] = useState(false)
   // Compact mode: once the tools are familiar, give the page the screen.
@@ -149,17 +159,23 @@ export default function ScriptRoom() {
   function paintStroke(ctx: CanvasRenderingContext2D, pts: { x: number; y: number }[], kind: string, w: number, h: number, faded: boolean, colorKey?: string) {
     if (pts.length < 2) return
     ctx.save()
-    strokeStyle(kind, ctx, w, colorKey)
     if (faded) ctx.globalAlpha = 0.35
-    ctx.beginPath()
-    ctx.moveTo(pts[0].x * w, pts[0].y * h)
-    for (const pt of pts.slice(1)) ctx.lineTo(pt.x * w, pt.y * h)
-    ctx.stroke()
+    if (kind === 'box') {
+      ctx.fillStyle = (HIGHLIGHT_COLORS[colorKey ?? 'yellow'] ?? HIGHLIGHT_COLORS.yellow).stroke
+      const x = Math.min(pts[0].x, pts[1].x) * w
+      const y = Math.min(pts[0].y, pts[1].y) * h
+      ctx.fillRect(x, y, Math.abs(pts[1].x - pts[0].x) * w, Math.abs(pts[1].y - pts[0].y) * h)
+    } else {
+      strokeStyle(kind, ctx, w, colorKey)
+      ctx.beginPath()
+      ctx.moveTo(pts[0].x * w, pts[0].y * h)
+      for (const pt of pts.slice(1)) ctx.lineTo(pt.x * w, pt.y * h)
+      ctx.stroke()
+    }
     ctx.restore()
   }
 
-  // Repaint saved strokes whenever the page (re)renders or notes change.
-  useEffect(() => {
+  function repaintOverlay() {
     const overlay = overlayRef.current
     const ctx = overlay?.getContext('2d')
     if (!overlay || !ctx) return
@@ -169,6 +185,11 @@ export default function ScriptRoom() {
       if (n.done && !showDone) continue
       paintStroke(ctx, n.path, n.kind ?? 'draw', overlay.width, overlay.height, !!n.done, n.color)
     }
+  }
+
+  // Repaint saved strokes whenever the page (re)renders or notes change.
+  useEffect(() => {
+    repaintOverlay()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [notes, pageNum, renderTick, showDone])
 
@@ -195,18 +216,43 @@ export default function ScriptRoom() {
     const last = strokeRef.current[strokeRef.current.length - 1]
     if (last && Math.hypot(pt.x - last.x, pt.y - last.y) < 0.004) return
     strokeRef.current.push(pt)
-    // live feedback: repaint saved strokes' overlay plus the one in progress
     const overlay = overlayRef.current
     const ctx = overlay?.getContext('2d')
-    if (overlay && ctx) paintStroke(ctx, strokeRef.current.slice(-2), mode, overlay.width, overlay.height, false, color)
+    if (!overlay || !ctx) return
+    const guided = mode === 'highlight' && hlStyle !== 'free'
+    if (guided) {
+      // straight/box preview: redraw everything plus the shape so far
+      repaintOverlay()
+      const first = strokeRef.current[0]
+      if (hlStyle === 'box') {
+        paintStroke(ctx, [first, pt], 'box', overlay.width, overlay.height, false, color)
+      } else {
+        paintStroke(ctx, [first, snapStraight(first, pt)], 'highlight', overlay.width, overlay.height, false, color)
+      }
+    } else {
+      paintStroke(ctx, strokeRef.current.slice(-2), mode, overlay.width, overlay.height, false, color)
+    }
+  }
+
+  // Nearly-level lines snap level — highlighting text wants horizontal.
+  function snapStraight(a: { x: number; y: number }, b: { x: number; y: number }) {
+    if (Math.abs(b.y - a.y) < 0.015) return { x: b.x, y: a.y }
+    return b
   }
 
   async function pointerUp() {
     if (!drawingRef.current) return
     drawingRef.current = false
-    const pts = strokeRef.current
+    let pts = strokeRef.current
     strokeRef.current = []
     if (pts.length < 2 || !resourceId) return
+    let kind: string = mode === 'highlight' ? 'highlight' : 'draw'
+    if (mode === 'highlight' && hlStyle === 'straight') {
+      pts = [pts[0], snapStraight(pts[0], pts[pts.length - 1])]
+    } else if (mode === 'highlight' && hlStyle === 'box') {
+      kind = 'box'
+      pts = [pts[0], pts[pts.length - 1]]
+    }
     await pb.collection('annotations').create({
       production: production.id,
       resource: resourceId,
@@ -215,7 +261,7 @@ export default function ScriptRoom() {
       x: pts[0].x,
       y: pts[0].y,
       text: '',
-      kind: mode === 'highlight' ? 'highlight' : 'draw',
+      kind,
       color: mode === 'highlight' ? color : '',
       path: pts,
       scope: isManager ? draftScope : 'personal',
@@ -228,13 +274,31 @@ export default function ScriptRoom() {
     const rect = holderRef.current?.getBoundingClientRect()
     if (!rect) return
     const threshold = 18 / rect.width // ~18px in normalized units
+    const aspect = rect.height / rect.width
+    const segDist = (p: { x: number; y: number }, a: { x: number; y: number }, b: { x: number; y: number }) => {
+      const ax = a.x, ay = a.y * aspect, bx = b.x, by = b.y * aspect, px = p.x, py = p.y * aspect
+      const dx = bx - ax, dy = by - ay
+      const len2 = dx * dx + dy * dy
+      const t = len2 === 0 ? 0 : Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / len2))
+      return Math.hypot(px - (ax + t * dx), py - (ay + t * dy))
+    }
     for (const n of notes) {
       if (n.page !== pageNum || !n.path?.length) continue
       const mine = n.user === user?.id || (n.scope === 'production' && isManager)
       if (!mine) continue
-      const hit = n.path.some((pt) => Math.hypot(pt.x - x, (pt.y - y) * (rect.height / rect.width)) < threshold)
+      const hit =
+        n.kind === 'box' && n.path.length >= 2
+          ? x >= Math.min(n.path[0].x, n.path[1].x) - threshold &&
+            x <= Math.max(n.path[0].x, n.path[1].x) + threshold &&
+            y >= Math.min(n.path[0].y, n.path[1].y) - threshold &&
+            y <= Math.max(n.path[0].y, n.path[1].y) + threshold
+          : n.path.some(
+              (pt, i) =>
+                (i > 0 && segDist({ x, y }, n.path![i - 1], pt) < threshold) ||
+                Math.hypot(pt.x - x, (pt.y - y) * aspect) < threshold,
+            )
       if (hit) {
-        if (window.confirm(`Erase this ${n.kind === 'highlight' ? 'highlight' : 'drawing'}?`)) {
+        if (window.confirm(`Erase this ${n.kind === 'highlight' || n.kind === 'box' ? 'highlight' : 'drawing'}?`)) {
           await pb.collection('annotations').delete(n.id)
           await loadNotes()
         }
@@ -367,6 +431,28 @@ export default function ScriptRoom() {
       </div>
       {mode === 'pin' && !compact && (
         <p className="hint no-print">Tap the spot on the page where the note goes.</p>
+      )}
+      {mode === 'highlight' && (
+        <div className="chips no-print" role="group" aria-label="Highlighter style">
+          {(
+            [
+              ['free', '✍', 'Freehand'],
+              ['straight', '📏', 'Straight line'],
+              ['box', '▭', 'Box'],
+            ] as const
+          ).map(([v, icon, label]) => (
+            <button
+              type="button"
+              key={v}
+              className={`chip ${hlStyle === v ? 'chip-active' : ''}`}
+              aria-pressed={hlStyle === v}
+              aria-label={label}
+              onClick={() => pickHlStyle(v)}
+            >
+              {compact ? icon : `${icon} ${label}`}
+            </button>
+          ))}
+        </div>
       )}
       {mode === 'highlight' && (
         <div className="chips no-print" role="group" aria-label="Highlighter color">
