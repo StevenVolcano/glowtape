@@ -3,7 +3,7 @@
 
 :root {
   --ink: #241f2e;
-  --paper: #faf8f4;
+  --paper: #ffffff;
   --card: #ffffff;
   --lamp: #cdef55; /* glow-tape green */
   --lamp-dark: #a3c437;
@@ -18,6 +18,10 @@
 
 * {
   box-sizing: border-box;
+}
+
+::selection {
+  background: rgba(205, 239, 85, 0.6);
 }
 
 html {
@@ -155,6 +159,16 @@ textarea {
   resize: vertical;
 }
 
+input[type='checkbox'],
+input[type='radio'] {
+  width: 1.4rem;
+  height: 1.4rem;
+  min-height: 1.4rem;
+  flex: none;
+  padding: 0;
+  accent-color: var(--accent);
+}
+
 input:disabled,
 select:disabled,
 textarea:disabled {
@@ -204,6 +218,12 @@ form.stack,
 
 .row > label {
   flex: 1;
+}
+
+.row a.link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
 }
 
 .space-between {
@@ -457,16 +477,25 @@ form.stack,
 }
 
 /* --- Join code --- */
+/* the join code IS a scrap of glow tape: torn edges, slightly askew */
 .join-code {
   font-size: 2.2rem;
   font-weight: 800;
   letter-spacing: 0.35em;
   text-align: center;
-  background: var(--card);
-  border: 3px dashed var(--lamp);
-  border-radius: 12px;
+  background: var(--lamp);
+  color: #1c2405;
   padding: 1rem;
+  margin: 0.5rem 0;
+  transform: rotate(-1.2deg);
+  clip-path: polygon(0% 8%, 2.5% 0%, 98% 3%, 100% 12%, 99% 90%, 96.5% 100%, 3% 97%, 0% 88%);
   user-select: all;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .join-code {
+    transform: none;
+  }
 }
 
 /* --- Sign-in --- */
