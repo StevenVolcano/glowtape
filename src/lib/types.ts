@@ -434,6 +434,17 @@ export interface AckRecord {
   user: string
 }
 
+export interface SlotRecord {
+  id: string
+  production: string
+  title: string
+  start: string
+  minutes: number
+  location: string
+  member: string // '' = open, otherwise booked by this member
+  created: string
+}
+
 export interface ShowReportRecord {
   id: string
   production: string

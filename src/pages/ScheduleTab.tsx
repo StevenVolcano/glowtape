@@ -10,6 +10,7 @@ import QrCode from '../components/QrCode.tsx'
 import FindTime from '../components/FindTime.tsx'
 import ShowReport from '../components/ShowReport.tsx'
 import TimelinePlanner, { TimelineView } from '../components/Timeline.tsx'
+import SlotsSection from '../components/Slots.tsx'
 import { DAY_SHORT, isWeekly, weeklyLabel } from '../lib/conflicts.ts'
 import type { AckRecord, AttendanceRecord, ConflictRecord, EventRecord, GroupRecord, MemberRecord, UnitRecord } from '../lib/types.ts'
 
@@ -521,6 +522,7 @@ export default function ScheduleTab() {
         </button>
       </section>
 
+      <SlotsSection />
       <ConflictsSection conflicts={conflicts} reload={load} />
       {isManager && <FindTime conflicts={conflicts} events={events} groups={groups} />}
       <CalendarSubscribeSection />
@@ -720,50 +722,74 @@ function ConflictsSection({ conflicts, reload }: { conflicts: ConflictRecord[]; 
       <p className="hint">
         Tell your stage manager when you're <em>not</em> available, before the schedule is built.
       </p>
-      <ul className="plain-list">
-        {weekly.map((c) => (
-          <li key={c.id}>
-            <strong>{isManager ? `${c.expand?.user?.name ?? '?'}: ` : ''}</strong>
-            ⏰ {c.note || 'Busy'} — {weeklyLabel(c)}
-            {c.end ? ` (until ${formatDay(c.end)})` : ''}
-            {c.user === user?.id && (
-              <button className="link" onClick={() => remove(c.id)}>
-                remove
-              </button>
-            )}
-          </li>
-        ))}
-        {[...seriesGroups.values()].map((rows) => {
+      {(() => {
+        // One line per person: all their conflicts strung together, so the
+        // manager view reads like a roster instead of a long mixed list.
+        type Item = { key: string; label: string; onRemove?: () => void; removeLabel?: string }
+        const byPerson = new Map<string, { name: string; items: Item[] }>()
+        const bucket = (c: ConflictRecord) => {
+          let b = byPerson.get(c.user)
+          if (!b) {
+            b = { name: c.expand?.user?.name ?? '?', items: [] }
+            byPerson.set(c.user, b)
+          }
+          return b
+        }
+        for (const c of weekly) {
+          bucket(c).items.push({
+            key: c.id,
+            label: `⏰ ${c.note || 'busy'} ${weeklyLabel(c)}${c.end ? ` until ${formatDay(c.end)}` : ''}`,
+            onRemove: c.user === user?.id ? () => remove(c.id) : undefined,
+            removeLabel: 'Remove these weekly hours',
+          })
+        }
+        for (const rows of seriesGroups.values()) {
           const c = rows[0]
           const sorted = [...rows].sort((a, b) => a.start.localeCompare(b.start))
-          const preview = sorted.slice(0, 3).map((r) => formatDay(r.start))
-          return (
-            <li key={c.series}>
-              <strong>{isManager ? `${c.expand?.user?.name ?? '?'}: ` : ''}</strong>
-              🔁 {c.note || 'Repeating conflict'} — {sorted.length} dates: {preview.join(', ')}
-              {sorted.length > 3 ? `, +${sorted.length - 3} more` : ''}
-              {c.user === user?.id && (
-                <button className="link" onClick={() => removeSeries(rows)}>
-                  remove the whole series
-                </button>
-              )}
-            </li>
-          )
-        })}
-        {loose.map((c) => (
-          <li key={c.id}>
-            <strong>{isManager ? `${c.expand?.user?.name ?? '?'}: ` : ''}</strong>
-            {formatDay(c.start)}
-            {c.end && c.end !== c.start ? ` – ${formatDay(c.end)}` : ''}
-            {c.note && ` — ${c.note}`}
-            {c.user === user?.id && (
-              <button className="link" onClick={() => remove(c.id)}>
-                remove
-              </button>
-            )}
-          </li>
-        ))}
-      </ul>
+          const preview = sorted.slice(0, 2).map((r) => formatDay(r.start)).join(', ')
+          bucket(c).items.push({
+            key: c.series,
+            label: `🔁 ${c.note || 'repeating'} — ${sorted.length} dates (${preview}${sorted.length > 2 ? ', …' : ''})`,
+            onRemove: c.user === user?.id ? () => removeSeries(rows) : undefined,
+            removeLabel: 'Remove the whole series',
+          })
+        }
+        for (const c of loose) {
+          bucket(c).items.push({
+            key: c.id,
+            label: `${formatDay(c.start)}${c.end && c.end !== c.start ? `–${formatDay(c.end)}` : ''}${c.note ? ` (${c.note})` : ''}`,
+            onRemove: c.user === user?.id ? () => remove(c.id) : undefined,
+            removeLabel: 'Remove this conflict',
+          })
+        }
+        const people = [...byPerson.entries()].sort((a, b) => a[1].name.localeCompare(b[1].name))
+        return (
+          <ul className="plain-list">
+            {people.map(([uid, p]) => (
+              <li key={uid} style={{ marginBottom: '0.3rem' }}>
+                {isManager && <strong>{p.name}: </strong>}
+                {p.items.map((it, i) => (
+                  <span key={it.key}>
+                    {i > 0 && <span className="hint"> · </span>}
+                    {it.label}
+                    {it.onRemove && (
+                      <button
+                        className="link"
+                        aria-label={`${it.removeLabel}: ${it.label}`}
+                        title={it.removeLabel}
+                        style={{ marginLeft: '0.25rem' }}
+                        onClick={it.onRemove}
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </span>
+                ))}
+              </li>
+            ))}
+          </ul>
+        )
+      })()}
       <form onSubmit={add} className="stack">
         <div className="row">
           <label>
