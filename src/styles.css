@@ -402,7 +402,7 @@ form.stack,
 .tabs a.active {
   color: var(--ink);
   border-bottom-color: var(--lamp);
-  background: linear-gradient(180deg, rgba(205, 239, 85, 0.22), transparent 75%);
+  background: linear-gradient(180deg, rgba(205, 239, 85, 0.6), rgba(205, 239, 85, 0.15));
 }
 
 /* --- Chips --- */

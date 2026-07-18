@@ -36,7 +36,7 @@ const BUILTIN_QUOTES: { text: string; by: string }[] = [
   { text: 'And though she be but little, she is fierce.', by: "A Midsummer Night's Dream" },
   { text: 'Break a leg.', by: 'the oldest blessing backstage' },
   { text: 'The show must go on.', by: 'every stage manager ever' },
-  { text: 'Bad dress rehearsal, great opening night.', by: 'theater proverb' },
+  { text: 'Our doubts are traitors, and make us lose the good we oft might win by fearing to attempt.', by: 'Measure for Measure' },
   { text: 'There are no small parts, only small actors.', by: 'attributed to Stanislavski' },
   { text: 'The audience never knows what was supposed to happen.', by: 'backstage wisdom' },
 ]
