@@ -76,6 +76,7 @@ export interface ProductionRecord {
   auditionQuestions: string[] | null
   breakdownStyle: '' | 'songs' | 'scenes' | 'pages'
   ticketUrl?: string
+  quotes: string[] | null // director-entered lines for the Tonight page
   expand?: { org?: OrgRecord }
 }
 

@@ -26,12 +26,62 @@ export default function AdminTab() {
       <NewEventSection />
       <ScheduleTableSection />
       <PresetsSection />
+      <TonightQuotesSection />
       <NewAnnouncementSection />
       <ResourcesSection />
       <ChannelsSection />
       <GroupsSection />
       <MembersSection />
     </div>
+  )
+}
+
+// Director-curated quotes for the Tonight page — lines from the show, things
+// said in the room. One per line; they join the built-in rotation.
+function TonightQuotesSection() {
+  const { production, reload } = useProduction()
+  const [text, setText] = useState((production.quotes ?? []).join('\n'))
+  const [saved, setSaved] = useState('')
+  const [err, setErr] = useState('')
+
+  async function save() {
+    setSaved('')
+    setErr('')
+    try {
+      const quotes = text
+        .split('\n')
+        .map((q) => q.trim())
+        .filter(Boolean)
+        .slice(0, 100)
+      await pb.collection('productions').update(production.id, { quotes })
+      setSaved(quotes.length === 0 ? 'Cleared — built-in quotes only.' : `Saved — ${quotes.length} quote${quotes.length === 1 ? '' : 's'} in the rotation.`)
+      await reload()
+    } catch (e) {
+      setErr(pbErrorMessage(e, "Couldn't save the quotes — try again."))
+    }
+  }
+
+  return (
+    <section id="tonight">
+      <h2>Tonight page</h2>
+      <p className="hint">
+        The Tonight tab shows everyone the same quote each day — the classics, plus anything
+        you add here. Favorite lines from the show, things you keep saying in the room, one
+        per line. Yours mix into the rotation.
+      </p>
+      <textarea
+        aria-label="Your quotes, one per line"
+        rows={4}
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        placeholder={'Example: Louder, faster, funnier. — every note session\nExample: We are an island. — that one rehearsal'}
+      />
+      <div className="row">
+        <button onClick={save}>Save quotes</button>
+        {saved && <span className="acked" role="status">{saved}</span>}
+        {err && <span className="error" role="alert">{err}</span>}
+      </div>
+    </section>
   )
 }
 

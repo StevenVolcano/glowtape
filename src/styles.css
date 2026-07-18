@@ -336,6 +336,46 @@ form.stack,
   font-weight: 600;
 }
 
+/* --- Tonight: the tape progress bar and the quote card --- */
+.tape-track {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  height: 1.1rem;
+  overflow: hidden;
+}
+
+.tape-fill {
+  height: 100%;
+  background: var(--lamp);
+  /* the leading edge is the torn end of the tape being laid down */
+  clip-path: polygon(
+    0% 0%,
+    calc(100% - 6px) 0%,
+    100% 30%,
+    calc(100% - 7px) 55%,
+    100% 80%,
+    calc(100% - 5px) 100%,
+    0% 100%
+  );
+  transition: width 0.4s ease;
+}
+
+.quote-card {
+  margin: 1.25rem 0 0;
+  padding: 0.9rem 1.1rem;
+  border-left: 6px solid var(--lamp);
+  background: var(--card);
+  border-radius: 0 14px 14px 0;
+  box-shadow: 0 1px 3px rgba(36, 31, 46, 0.06);
+  font-style: italic;
+}
+
+.quote-card p {
+  margin: 0 0 0.3rem;
+  font-size: 1.05rem;
+}
+
 /* --- Tabs --- */
 .tabs {
   display: flex;

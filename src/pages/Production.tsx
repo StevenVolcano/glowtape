@@ -5,6 +5,7 @@ import { useAuth } from '../lib/auth.tsx'
 import { TAGLINE } from '../lib/types.ts'
 import type { MemberRecord, ProductionRecord } from '../lib/types.ts'
 import ScheduleTab from './ScheduleTab.tsx'
+import TonightTab from './TonightTab.tsx'
 import MessagesTab from './MessagesTab.tsx'
 import PeopleTab from './PeopleTab.tsx'
 import TasksTab from './TasksTab.tsx'
@@ -99,6 +100,7 @@ export default function Production() {
         <h1>{production.title}</h1>
 
         <nav className="tabs" aria-label="Production sections">
+          <NavLink to={`${base}/tonight`}>Tonight</NavLink>
           <NavLink to={`${base}/schedule`}>Schedule</NavLink>
           <NavLink to={`${base}/messages`}>Messages</NavLink>
           <NavLink to={`${base}/todo`}>To-Do</NavLink>
@@ -111,6 +113,7 @@ export default function Production() {
         </nav>
 
         <Routes>
+          <Route path="tonight" element={<TonightTab />} />
           <Route path="schedule" element={<ScheduleTab />} />
           <Route path="schedule/print" element={<SchedulePrint />} />
           <Route path="schedule/print/:memberId" element={<SchedulePrint />} />
@@ -135,7 +138,7 @@ export default function Production() {
           {isManager && <Route path="admin" element={<AdminTab />} />}
           {isManager && <Route path="bios" element={<BiosView />} />}
           {isManager && <Route path="packet" element={<ProgramPacket />} />}
-          <Route path="*" element={<Navigate to={`${base}/schedule`} replace />} />
+          <Route path="*" element={<Navigate to={`${base}/tonight`} replace />} />
         </Routes>
         <p className="hint legal-links">
           <em>{TAGLINE}</em>
