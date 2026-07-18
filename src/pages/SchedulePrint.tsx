@@ -3,6 +3,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { pb } from '../lib/pb.ts'
 import { useProduction } from './Production.tsx'
 import { copyrightLine, memberName, pbDate } from '../lib/types.ts'
+import { timelineLine } from '../components/Timeline.tsx'
 import type { EventRecord, MemberRecord } from '../lib/types.ts'
 
 // A print-friendly schedule: chronological list plus monthly calendar grids.
@@ -122,6 +123,9 @@ export default function SchedulePrint() {
                 <td>
                   {e.kind && e.kind !== e.title ? `${e.kind}: ` : ''}
                   {e.title}
+                  {timelineLine(e) && (
+                    <div className="hint" style={{ fontSize: '0.85em' }}>⏱ {timelineLine(e)}</div>
+                  )}
                 </td>
                 <td>{e.location}</td>
               </tr>

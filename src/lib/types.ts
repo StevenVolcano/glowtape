@@ -378,6 +378,22 @@ export interface EventRecord {
   calledGroups: string[] | null
   units: string[] // breakdown units being rehearsed (called is still authoritative)
   signinCode: string // non-empty = door check-in is on for this event
+  timeline: TimelineItem[] | null // run-of-show segments; clock times computed from start
+}
+
+// A run-of-show segment: durations only — clock times always roll forward
+// from the event start, so edits shift everything after them.
+export interface TimelineItem {
+  title: string
+  minutes: number
+}
+
+export interface TimelineTemplateRecord {
+  id: string
+  production: string
+  name: string
+  items: TimelineItem[] | null
+  created: string
 }
 
 export interface TaskRecord {
