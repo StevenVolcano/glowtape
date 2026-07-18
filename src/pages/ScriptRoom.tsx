@@ -68,6 +68,14 @@ export default function ScriptRoom() {
   const [openLineNote, setOpenLineNote] = useState('')
   const [sendBusy, setSendBusy] = useState(false)
   const [sendStatus, setSendStatus] = useState('')
+  // "My lines": glow paints them, hide covers them for off-book practice.
+  // Regions come from the PDF's embedded text (same as line-note snippets) —
+  // best-effort speaker-tag parsing, nothing stored on the server.
+  const [myLinesMode, setMyLinesMode] = useState<'off' | 'glow' | 'hide'>('off')
+  const [myChars, setMyChars] = useState('')
+  const [myRegions, setMyRegions] = useState<{ x0: number; y0: number; x1: number; y1: number }[]>([])
+  const [revealed, setRevealed] = useState<Set<number>>(new Set())
+  const regionCache = useRef(new Map<string, { x0: number; y0: number; x1: number; y1: number }[]>())
   // Undo: ids of annotations created in THIS sitting, newest last.
   const [undoStack, setUndoStack] = useState<string[]>([])
   // Erase mode collects a selection; one tap of the erase button clears them all.
@@ -135,6 +143,115 @@ export default function ScriptRoom() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resourceId])
+
+  // Default the character name from their cast assignment; remember edits
+  // per document on this device.
+  useEffect(() => {
+    if (!resourceId) return
+    const saved = localStorage.getItem(`gt-chars-${resourceId}`)
+    if (saved !== null) {
+      setMyChars(saved)
+      return
+    }
+    const mine = members.find((m) => m.user === user?.id && m.role === 'performer')
+    if (mine?.position) setMyChars(mine.position)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resourceId, members.length])
+
+  // Find this page's regions of "my" dialogue from the embedded text.
+  // Heuristics for stage formats: a speaker tag is a short all-caps line (or
+  // one ending with a colon); a speech runs until the next tag. Inline tags
+  // ("GANDER. Welcome to the Rock.") count too. Tags themselves are never
+  // covered — they're the "you're up" cue.
+  async function computeMyLines(
+    pageN: number,
+    chars: string[],
+  ): Promise<{ x0: number; y0: number; x1: number; y1: number }[]> {
+    if (!pdf || chars.length === 0) return []
+    const key = `${pageN}|${chars.join(',')}`
+    const cached = regionCache.current.get(key)
+    if (cached) return cached
+    const page = await pdf.getPage(pageN)
+    const vp = page.getViewport({ scale: 1 })
+    const content = await page.getTextContent()
+    type TLine = { y: number; x0: number; x1: number; h: number; parts: { x: number; str: string }[] }
+    const lines: TLine[] = []
+    for (const item of content.items) {
+      if (!('str' in item) || !item.str.trim()) continue
+      const [vx, vy] = vp.convertToViewportPoint(item.transform[4], item.transform[5])
+      const x = vx / vp.width
+      const y = vy / vp.height
+      const w = (item.width || 0) / vp.width
+      const h = (item.height || 0) / vp.height || 0.012
+      const near = lines.find((l) => Math.abs(l.y - y) < 0.008)
+      if (near) {
+        near.parts.push({ x, str: item.str })
+        near.x0 = Math.min(near.x0, x)
+        near.x1 = Math.max(near.x1, x + w)
+        near.h = Math.max(near.h, h)
+      } else {
+        lines.push({ y, x0: x, x1: x + w, h, parts: [{ x, str: item.str }] })
+      }
+    }
+    lines.sort((a, b) => a.y - b.y)
+    const textOf = (l: TLine) =>
+      l.parts.sort((a, b) => a.x - b.x).map((p) => p.str).join(' ').replace(/\s+/g, ' ').trim()
+    const caps = (t: string) => /^[A-Z0-9 .,:;&'()#/-]+$/.test(t) && /[A-Z]{2}/.test(t)
+    // A tag ends with ':', or is 1–2 caps words — longer caps lines without a
+    // colon are usually sung lyrics, not speaker names.
+    const isTag = (t: string) =>
+      caps(t) &&
+      (t.endsWith(':') ||
+        (t.split(' ').length <= 2 && t.length <= 24) ||
+        (t.endsWith('.') && t.split(' ').length <= 3))
+    const matchesMe = (t: string) => {
+      const up = t.replace(/[.:]+$/, '').trim().toUpperCase()
+      return chars.some((c) => up === c || up.startsWith(c + ' ') || up.startsWith(c + ','))
+    }
+    const out: { x0: number; y0: number; x1: number; y1: number }[] = []
+    let inMine = false
+    for (const l of lines) {
+      const t = textOf(l)
+      if (!t) continue
+      // "(shouting)" and other parentheticals are often lowercase — strip
+      // them before deciding whether this line is a speaker tag.
+      const base = t.replace(/\([^)]*\)/g, ' ').replace(/\s+/g, ' ').trim()
+      if (base && isTag(base)) {
+        inMine = matchesMe(base)
+        continue
+      }
+      const inline = /^([A-Z][A-Z .,&'/-]{1,28}?)[.:]\s+\S/.exec(t)
+      if (inline) {
+        inMine = matchesMe(inline[1])
+        if (!inMine) continue
+      }
+      if (inMine) out.push({ x0: l.x0, y0: l.y - l.h, x1: l.x1, y1: l.y + l.h * 0.35 })
+    }
+    regionCache.current.set(key, out)
+    return out
+  }
+
+  useEffect(() => {
+    setRevealed(new Set())
+    const chars = myChars
+      .split(',')
+      .map((c) => c.trim().toUpperCase())
+      .filter(Boolean)
+    if (myLinesMode === 'off' || chars.length === 0 || !pdf) {
+      setMyRegions([])
+      return
+    }
+    let cancelled = false
+    computeMyLines(pageNum, chars)
+      .then((r) => {
+        if (!cancelled) setMyRegions(r)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [myLinesMode, myChars, pageNum, pdf])
 
   // Render the current page, scaled to the container, crisp on retina.
   useEffect(() => {
@@ -214,6 +331,27 @@ export default function ScriptRoom() {
     const ctx = overlay?.getContext('2d')
     if (!overlay || !ctx) return
     ctx.clearRect(0, 0, overlay.width, overlay.height)
+    // "My lines" layer sits under everyone's marks.
+    if (myLinesMode !== 'off') {
+      for (let i = 0; i < myRegions.length; i++) {
+        const r = myRegions[i]
+        const pad = overlay.width * 0.004
+        const x = r.x0 * overlay.width - pad
+        const y = r.y0 * overlay.height - pad
+        const w = (r.x1 - r.x0) * overlay.width + pad * 2
+        const h = (r.y1 - r.y0) * overlay.height + pad * 2
+        if (myLinesMode === 'glow') {
+          ctx.fillStyle = 'rgba(255, 214, 0, 0.3)'
+          ctx.fillRect(x, y, w, h)
+        } else if (!revealed.has(i)) {
+          ctx.fillStyle = '#dcd9cf'
+          ctx.fillRect(x, y, w, h)
+          ctx.strokeStyle = '#b9b4a4'
+          ctx.lineWidth = Math.max(1, overlay.width * 0.001)
+          ctx.strokeRect(x, y, w, h)
+        }
+      }
+    }
     for (const n of notes) {
       if (n.page !== pageNum || !n.path?.length) continue
       if (n.done && !showDone) continue
@@ -248,7 +386,7 @@ export default function ScriptRoom() {
   useEffect(() => {
     repaintOverlay()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [notes, pageNum, renderTick, showDone, selected])
+  }, [notes, pageNum, renderTick, showDone, selected, myLinesMode, myRegions, revealed])
 
   const pointFromEvent = (e: React.PointerEvent) => {
     const rect = holderRef.current!.getBoundingClientRect()
@@ -406,6 +544,24 @@ export default function ScriptRoom() {
   }
 
   function pageClick(e: React.MouseEvent<HTMLDivElement>) {
+    // Off-book peek: in read mode a tap on a covered line reveals it.
+    if (mode === 'read' && myLinesMode === 'hide' && holderRef.current) {
+      const rect = holderRef.current.getBoundingClientRect()
+      const x = (e.clientX - rect.left) / rect.width
+      const y = (e.clientY - rect.top) / rect.height
+      const i = myRegions.findIndex(
+        (r) => x >= r.x0 - 0.01 && x <= r.x1 + 0.01 && y >= r.y0 - 0.005 && y <= r.y1 + 0.005,
+      )
+      if (i >= 0) {
+        setRevealed((prev) => {
+          const next = new Set(prev)
+          if (next.has(i)) next.delete(i)
+          else next.add(i)
+          return next
+        })
+        return
+      }
+    }
     if (mode === 'line' && isManager && holderRef.current) {
       const rect = holderRef.current.getBoundingClientRect()
       setLineDraft({
@@ -658,6 +814,50 @@ export default function ScriptRoom() {
           <span className="pill" title="New notes and marks are production-wide">📌 all</span>
         )}
       </div>
+      <div className="chips no-print" role="group" aria-label="My lines">
+        <button
+          type="button"
+          className={`chip ${myLinesMode === 'glow' ? 'chip-active' : ''}`}
+          aria-pressed={myLinesMode === 'glow'}
+          onClick={() => setMyLinesMode(myLinesMode === 'glow' ? 'off' : 'glow')}
+        >
+          ✨{compact ? '' : ' My lines'}
+        </button>
+        <button
+          type="button"
+          className={`chip ${myLinesMode === 'hide' ? 'chip-active' : ''}`}
+          aria-pressed={myLinesMode === 'hide'}
+          onClick={() => setMyLinesMode(myLinesMode === 'hide' ? 'off' : 'hide')}
+        >
+          🙈{compact ? '' : ' Off book'}
+        </button>
+        {myLinesMode !== 'off' && (
+          <input
+            aria-label="Your character name or names, comma-separated"
+            value={myChars}
+            onChange={(e) => {
+              setMyChars(e.target.value)
+              if (resourceId) localStorage.setItem(`gt-chars-${resourceId}`, e.target.value)
+            }}
+            placeholder="Character name(s) — for example: GANDER, ANNETTE"
+            style={{ flex: 1, minWidth: '11rem' }}
+          />
+        )}
+      </div>
+      {myLinesMode === 'hide' && !compact && (
+        <p className="hint no-print">
+          Your lines are covered. Read the other lines as your cues, say yours out loud, then
+          tap a gray bar to peek and check yourself — tap again to cover it. Turning the page
+          covers everything again.
+        </p>
+      )}
+      {myLinesMode !== 'off' && myRegions.length === 0 && myChars.trim() !== '' && (
+        <p className="hint no-print">
+          Nothing found for “{myChars}” on this page — make sure it's spelled the way the
+          script prints the speaker names (this works best on scripts with standard
+          NAME-then-dialogue formatting).
+        </p>
+      )}
       {mode === 'pin' && !compact && (
         <p className="hint no-print">Tap the spot on the page where the note goes.</p>
       )}
