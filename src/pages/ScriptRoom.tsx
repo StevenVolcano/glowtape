@@ -6,6 +6,7 @@ import type { PDFDocumentProxy } from 'pdfjs-dist'
 import { pb } from '../lib/pb.ts'
 import { useAuth } from '../lib/auth.tsx'
 import { useProduction } from './Production.tsx'
+import SidesCutter from '../components/SidesCutter.tsx'
 import { LINE_NOTE_LABELS, chatName, firstLastInitial, memberName } from '../lib/types.ts'
 import type { AnnotationRecord, LineNoteKind, LineNoteRecord, ResourceRecord } from '../lib/types.ts'
 
@@ -1422,6 +1423,9 @@ export default function ScriptRoom() {
           </li>
         ))}
       </ul>
+      {isManager && resource && pageCount > 0 && (
+        <SidesCutter resource={resource} pageCount={pageCount} />
+      )}
     </section>
   )
 }
