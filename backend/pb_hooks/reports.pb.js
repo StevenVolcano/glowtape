@@ -180,3 +180,61 @@ cronAdd("glowtape_rehearsal_reports", "0 * * * *", () => {
     }
   }
 });
+
+// Show report saved → email the whole production team, the way a stage
+// manager traditionally distributes the performance report the same night.
+// First save only; later edits update the record quietly.
+onRecordAfterCreateSuccess((e) => {
+  const lib = require(`${__hooks}/glowtape_lib.js`);
+  try {
+    const production = e.app.findRecordById("productions", e.record.get("production"));
+    let evTitle = "";
+    let evWhen = "";
+    try {
+      const ev = e.app.findRecordById("events", e.record.get("event"));
+      evTitle = ev.get("title");
+      evWhen = lib.formatPacific(ev.get("start"));
+    } catch {
+      /* event gone */
+    }
+    let authorName = "the stage manager";
+    try {
+      authorName = e.app.findRecordById("users", e.record.get("author")).get("name") || authorName;
+    } catch {
+      /* keep */
+    }
+    const t12 = (t) => {
+      if (!t) return "";
+      const parts = String(t).split(":");
+      const h = Number(parts[0]);
+      return `${h % 12 || 12}:${parts[1] || "00"}${h >= 12 ? "pm" : "am"}`;
+    };
+    const row = (label, v) => (v ? `<p><strong>${label}:</strong> ${v}</p>` : "");
+    const times = [
+      e.record.get("houseOpen") ? `house open ${t12(e.record.get("houseOpen"))}` : "",
+      e.record.get("curtainUp") ? `curtain up ${t12(e.record.get("curtainUp"))}` : "",
+      e.record.get("curtainDown") ? `curtain down ${t12(e.record.get("curtainDown"))}` : "",
+    ]
+      .filter(Boolean)
+      .join(" · ");
+    const contacts = lib.managerContacts(e.app, production);
+    lib.sendMail(
+      e.app,
+      contacts.emails,
+      `[${production.get("title")}] Show report — ${evTitle || "performance"}${evWhen ? ` (${evWhen})` : ""}`,
+      [
+        `<h2>Show report — ${evTitle || "performance"}</h2>`,
+        evWhen ? `<p>${evWhen} (Pacific)</p>` : "",
+        row("Audience", e.record.get("audience") || ""),
+        times ? `<p><strong>Times:</strong> ${times}</p>` : "",
+        row("Technical", e.record.get("technical")),
+        row("Injuries / incidents", e.record.get("incidents")),
+        row("How it went", e.record.get("notes")),
+        `<p>Filed by ${authorName} from Glow Tape.</p>`,
+      ].join("\n"),
+    );
+  } catch (err) {
+    e.app.logger().error("glowtape: show report email failed", "error", String(err));
+  }
+  e.next();
+}, "show_reports");

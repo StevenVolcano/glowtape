@@ -8,6 +8,7 @@ import { downloadEventIcs, googleCalendarUrl } from '../lib/calendar.ts'
 import EventForm from '../components/EventForm.tsx'
 import QrCode from '../components/QrCode.tsx'
 import FindTime from '../components/FindTime.tsx'
+import ShowReport from '../components/ShowReport.tsx'
 import { DAY_SHORT, isWeekly, weeklyLabel } from '../lib/conflicts.ts'
 import type { AckRecord, AttendanceRecord, ConflictRecord, EventRecord, GroupRecord, MemberRecord, UnitRecord } from '../lib/types.ts'
 
@@ -472,6 +473,9 @@ export default function ScheduleTab() {
                     })}
                     <li className="hint">Tap a name to cycle: — → ✓ present → 🕒 late → ✗ absent</li>
                   </ul>
+                )}
+                {isManager && e.status !== 'cancelled' && /performance/i.test(e.kind) && (
+                  <ShowReport event={e} />
                 )}
                 {isManager && (
                   <div className="row">

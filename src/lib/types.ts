@@ -418,6 +418,21 @@ export interface AckRecord {
   user: string
 }
 
+export interface ShowReportRecord {
+  id: string
+  production: string
+  event: string
+  author: string
+  audience: number
+  houseOpen: string
+  curtainUp: string
+  curtainDown: string
+  technical: string
+  incidents: string
+  notes: string
+  created: string
+}
+
 export interface ConflictRecord {
   id: string
   production: string
