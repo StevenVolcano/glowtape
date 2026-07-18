@@ -96,11 +96,13 @@ function NewAnnouncementSection() {
   const [pinned, setPinned] = useState(false)
   const [busy, setBusy] = useState(false)
   const [done, setDone] = useState('')
+  const [err, setErr] = useState('')
 
   async function post(e: FormEvent) {
     e.preventDefault()
     setBusy(true)
     setDone('')
+    setErr('')
     try {
       await pb.collection('announcements').create({
         production: production.id,
@@ -113,6 +115,8 @@ function NewAnnouncementSection() {
       setBody('')
       setPinned(false)
       setDone('Posted, and emailed to everyone in the production.')
+    } catch (err) {
+      setErr(pbErrorMessage(err, "Couldn't post the announcement — try again."))
     } finally {
       setBusy(false)
     }
@@ -144,6 +148,7 @@ function NewAnnouncementSection() {
           {busy ? 'Posting…' : 'Post announcement'}
         </button>
         {done && <p className="acked" role="status">{done}</p>}
+        {err && <p className="error" role="alert">{err}</p>}
       </form>
     </section>
   )
@@ -348,6 +353,7 @@ function PresetsSection() {
   const [kinds, setKinds] = useState((production.eventKinds ?? []).join(', '))
   const [places, setPlaces] = useState<Place[]>(normalizePlaces(production.locations))
   const [saved, setSaved] = useState('')
+  const [saveErr, setSaveErr] = useState('')
 
   const orgPlaces = normalizePlaces(production.expand?.org?.locations)
 
@@ -361,13 +367,17 @@ function PresetsSection() {
         .split(',')
         .map((x) => x.trim())
         .filter(Boolean)
-    await pb.collection('productions').update(production.id, {
-      eventKinds: toList(kinds),
-      locations: places.filter((pl) => pl.name.trim()),
-    })
-    setSaved('Saved.')
-    setTimeout(() => setSaved(''), 2000)
-    await reload()
+    try {
+      await pb.collection('productions').update(production.id, {
+        eventKinds: toList(kinds),
+        locations: places.filter((pl) => pl.name.trim()),
+      })
+      setSaved('Saved.')
+      setTimeout(() => setSaved(''), 2000)
+      await reload()
+    } catch (err) {
+      setSaveErr(pbErrorMessage(err, "Couldn't save the presets — try again."))
+    }
   }
 
   return (
@@ -425,6 +435,7 @@ function PresetsSection() {
         <div className="row">
           <button onClick={save}>Save presets</button>
           {saved && <span className="acked" role="status">{saved}</span>}
+          {saveErr && <span className="error" role="alert">{saveErr}</span>}
         </div>
       </div>
     </section>
@@ -438,14 +449,21 @@ function TicketsSection() {
   const { production, reload } = useProduction()
   const [url, setUrl] = useState(production.ticketUrl ?? '')
   const [saved, setSaved] = useState('')
+  const [ticketErr, setTicketErr] = useState('')
 
   async function save() {
+    setTicketErr('')
     const trimmed = url.trim()
     if (trimmed === (production.ticketUrl ?? '')) return
-    await pb.collection('productions').update(production.id, { ticketUrl: trimmed })
-    setSaved('Saved.')
-    setTimeout(() => setSaved(''), 2000)
-    await reload()
+    try {
+      await pb.collection('productions').update(production.id, { ticketUrl: trimmed })
+      setSaved('Saved.')
+      setTimeout(() => setSaved(''), 2000)
+      await reload()
+    } catch (err) {
+      setSaved('')
+      setTicketErr(pbErrorMessage(err, "Couldn't save the ticket link — try again."))
+    }
   }
 
   return (
@@ -467,6 +485,7 @@ function TicketsSection() {
           style={{ flex: 1 }}
         />
         {saved && <span className="acked" role="status">{saved}</span>}
+        {ticketErr && <span className="error" role="alert">{ticketErr}</span>}
       </div>
     </section>
   )
@@ -797,7 +816,7 @@ function GroupsSection() {
           Add group
         </button>
       </form>
-      {message && <p className="error" role="status">{message}</p>}
+      {message && <p className="error" role="alert">{message}</p>}
     </section>
   )
 }
@@ -1615,7 +1634,8 @@ function ResourcesSection() {
             📄
             <input
               type="file"
-              hidden
+              className="sr-only"
+              aria-label="Choose a file to upload"
               onChange={async (e) => {
                 // Android cloud pickers (Drive) hand over a stale reference
                 // that dies mid-upload with no server contact — read the

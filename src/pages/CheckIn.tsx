@@ -131,7 +131,7 @@ export default function CheckIn() {
           </button>
         )
       })}
-      {error && <p className="error">{error}</p>}
+      {error && <p className="error" role="alert">{error}</p>}
       <p>
         <Link className="link" to={`${base}/schedule`}>
           → Tonight's schedule

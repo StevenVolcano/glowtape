@@ -81,6 +81,7 @@ button:hover {
 button:disabled {
   opacity: 0.5;
   cursor: default;
+  text-decoration-style: dotted; /* a second cue besides opacity */
 }
 
 button.link {
@@ -90,7 +91,9 @@ button.link {
   text-decoration: underline;
   font-weight: 500;
   padding: 0.4rem;
-  min-height: 0;
+  /* same 44px finger floor as every other control — the ✕ removes live here */
+  min-height: 44px;
+  min-width: 2rem;
 }
 
 input,
@@ -116,6 +119,14 @@ textarea {
 
 textarea {
   resize: vertical;
+}
+
+input:disabled,
+select:disabled,
+textarea:disabled {
+  background: #eeece6;
+  color: var(--muted);
+  cursor: not-allowed;
 }
 
 input:focus,
@@ -524,8 +535,8 @@ body.kiosk .legal-links {
   border-radius: 999px;
   padding: 0 0.6rem;
   background: var(--card);
-  min-height: 40px;
-  min-width: 40px;
+  min-height: 44px;
+  min-width: 44px;
   font-size: 0.9rem;
   font-weight: 500;
 }

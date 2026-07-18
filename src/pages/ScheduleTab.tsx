@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { pb } from '../lib/pb.ts'
+import { pbErrorMessage } from '../lib/files.ts'
 import { useAuth } from '../lib/auth.tsx'
 import { useProduction } from './Production.tsx'
 import { formatDay, formatWhen, mapsUrl, memberName, pbDate, placeLine, productionPlaces } from '../lib/types.ts'
@@ -636,6 +637,7 @@ function ConflictsSection({ conflicts, reload }: { conflicts: ConflictRecord[]; 
   const [nths, setNths] = useState<Set<string>>(new Set())
   const [until, setUntil] = useState('')
   const [busy, setBusy] = useState(false)
+  const [addErr, setAddErr] = useState('')
 
   const mine = conflicts.filter((c) => c.user === user?.id)
   const shown = isManager ? conflicts : mine
@@ -699,7 +701,10 @@ function ConflictsSection({ conflicts, reload }: { conflicts: ConflictRecord[]; 
       setRepeat('')
       setNths(new Set())
       setUntil('')
+      setAddErr('')
       await reload()
+    } catch (err) {
+      setAddErr(pbErrorMessage(err, "Couldn't save that conflict — try again."))
     } finally {
       setBusy(false)
     }
@@ -862,6 +867,7 @@ function ConflictsSection({ conflicts, reload }: { conflicts: ConflictRecord[]; 
         >
           {busy ? 'Adding…' : repeat ? 'Add all the dates' : 'Add conflict'}
         </button>
+        {addErr && <p className="error" role="alert">{addErr}</p>}
         {repeat === 'monthly' && start && nths.size > 0 && (
           <p className="hint" style={{ margin: 0 }}>
             Adds a conflict on the {[...nths].join(' and ')} {weekdayName} of each month.
@@ -885,6 +891,7 @@ function WeeklyHoursForm({ reload }: { reload: () => Promise<void> }) {
   const [note, setNote] = useState('')
   const [until, setUntil] = useState('')
   const [busy, setBusy] = useState(false)
+  const [wkErr, setWkErr] = useState('')
 
   async function add(e: FormEvent) {
     e.preventDefault()
@@ -907,7 +914,10 @@ function WeeklyHoursForm({ reload }: { reload: () => Promise<void> }) {
       setToTime('')
       setNote('')
       setUntil('')
+      setWkErr('')
       await reload()
+    } catch (err) {
+      setWkErr(pbErrorMessage(err, "Couldn't save those hours — try again."))
     } finally {
       setBusy(false)
     }
@@ -968,6 +978,7 @@ function WeeklyHoursForm({ reload }: { reload: () => Promise<void> }) {
       <button type="submit" disabled={busy || days.size === 0 || !fromTime || !toTime}>
         Add my busy hours
       </button>
+      {wkErr && <p className="error" role="alert">{wkErr}</p>}
     </form>
   )
 }

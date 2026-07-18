@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { pb } from '../lib/pb.ts'
 import { useAuth } from '../lib/auth.tsx'
 import { scrubImage } from '../lib/images.ts'
+import { pbErrorMessage } from '../lib/files.ts'
 import { useTitle } from '../lib/useTitle.ts'
 import type { CompanyRecord, CreditRow, ProfileRecord } from '../lib/types.ts'
 
@@ -20,6 +21,7 @@ export default function Profile() {
   const [loaded, setLoaded] = useState(false)
   const [busy, setBusy] = useState(false)
   const [saved, setSaved] = useState('')
+  const [error, setError] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
 
   const isTeen = user?.ageBand === 'teen'
@@ -50,6 +52,7 @@ export default function Profile() {
   async function save() {
     setBusy(true)
     setSaved('')
+    setError('')
     try {
       const form = new FormData()
       form.set('user', user?.id ?? '')
@@ -68,6 +71,8 @@ export default function Profile() {
       setProfile(rec)
       if (fileRef.current) fileRef.current.value = ''
       setSaved('Saved. ✓')
+    } catch (err) {
+      setError(pbErrorMessage(err, "Couldn't save — check your connection and try again."))
     } finally {
       setBusy(false)
     }
@@ -75,10 +80,14 @@ export default function Profile() {
 
   async function removeHeadshot() {
     if (!profile) return
-    const rec = await pb
-      .collection('profiles')
-      .update<ProfileRecord>(profile.id, { headshot: null })
-    setProfile(rec)
+    try {
+      const rec = await pb
+        .collection('profiles')
+        .update<ProfileRecord>(profile.id, { headshot: null })
+      setProfile(rec)
+    } catch (err) {
+      setError(pbErrorMessage(err, "Couldn't remove the photo — try again."))
+    }
   }
 
   return (
@@ -258,6 +267,7 @@ export default function Profile() {
               {busy ? 'Saving…' : 'Save profile'}
             </button>
             {saved && <span className="acked" role="status">{saved}</span>}
+            {error && <span className="error" role="alert">{error}</span>}
           </div>
         </section>
       )}

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { pb } from '../lib/pb.ts'
+import { pbErrorMessage } from '../lib/files.ts'
 import { useAuth } from '../lib/auth.tsx'
 import { useProduction } from '../pages/Production.tsx'
 import type { EventRecord, ShowReportRecord } from '../lib/types.ts'
@@ -22,6 +23,7 @@ export default function ShowReport({ event }: { event: EventRecord }) {
   const [notes, setNotes] = useState('')
   const [busy, setBusy] = useState(false)
   const [saved, setSaved] = useState('')
+  const [saveErr, setSaveErr] = useState('')
 
   async function openForm() {
     setBusy(true)
@@ -48,6 +50,7 @@ export default function ShowReport({ event }: { event: EventRecord }) {
   async function save() {
     setBusy(true)
     setSaved('')
+    setSaveErr('')
     try {
       const data = {
         production: production.id,
@@ -69,6 +72,8 @@ export default function ShowReport({ event }: { event: EventRecord }) {
         setExisting(r)
         setSaved('Saved — the production team was emailed a copy.')
       }
+    } catch (err) {
+      setSaveErr(pbErrorMessage(err, "Couldn't save the report — try again."))
     } finally {
       setBusy(false)
     }
@@ -156,6 +161,7 @@ export default function ShowReport({ event }: { event: EventRecord }) {
           Close
         </button>
         {saved && <span className="acked" role="status">{saved}</span>}
+        {saveErr && <span className="error" role="alert">{saveErr}</span>}
       </div>
     </div>
   )

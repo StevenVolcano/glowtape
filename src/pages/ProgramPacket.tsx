@@ -19,6 +19,7 @@ export default function ProgramPacket() {
   const [events, setEvents] = useState<EventRecord[]>([])
   const [units, setUnits] = useState<UnitRecord[]>([])
   const [copied, setCopied] = useState(false)
+  const [fallbackText, setFallbackText] = useState('')
 
   useEffect(() => {
     Promise.all([
@@ -128,7 +129,8 @@ export default function ProgramPacket() {
       setCopied(true)
       setTimeout(() => setCopied(false), 3000)
     } catch {
-      window.prompt('Copy the packet text:', packetText())
+      // No clipboard access (older browsers): show the text to copy by hand.
+      setFallbackText(packetText())
     }
   }
 
@@ -223,6 +225,15 @@ export default function ProgramPacket() {
         ))}
       </ul>
 
+      {fallbackText && (
+        <div className="stack no-print">
+          <p className="hint">
+            Copying didn't work automatically on this browser — press and hold (or Ctrl+A,
+            Ctrl+C) in the box below to copy it yourself.
+          </p>
+          <textarea aria-label="Packet text to copy" rows={12} readOnly value={fallbackText} onFocus={(e) => e.target.select()} />
+        </div>
+      )}
       <p className="hint no-print">
         Headshots live on people's community profiles; photo sessions and company-side
         credits (posters, tickets, website…) are the company's department.

@@ -14,6 +14,7 @@ export default function CastingTab() {
   const [draft, setDraft] = useState<CastDraftRecord | null>(null)
   const [assignments, setAssignments] = useState<Record<string, string>>({})
   const [status, setStatus] = useState('')
+  const [errStatus, setErrStatus] = useState('')
   const [busy, setBusy] = useState(false)
   const [loaded, setLoaded] = useState(false)
 
@@ -64,7 +65,7 @@ export default function CastingTab() {
 
   function assign(memberId: string, userId: string) {
     saveDraft({ ...assignments, [memberId]: userId }).catch(() =>
-      setStatus('Could not save the draft — try again.'),
+      setErrStatus('Could not save the draft — check your connection and try again.'),
     )
   }
 
@@ -119,19 +120,20 @@ export default function CastingTab() {
       return
     setBusy(true)
     setStatus('')
+    setErrStatus('')
     try {
       const res = await pb.send('/api/glowtape/casting/finalize', {
         method: 'POST',
         body: { production: production.id, members: [memberId] },
       })
-      setStatus(
-        res.assigned > 0
-          ? `${who} is cast as ${role?.position || 'the role'}. 🎉 The rest of the draft is untouched.`
-          : `Couldn't cast that role${res.skipped?.length ? `: ${res.skipped.join('; ')}` : ''}.`,
-      )
+      if (res.assigned > 0) {
+        setStatus(`${who} is cast as ${role?.position || 'the role'}. 🎉 The rest of the draft is untouched.`)
+      } else {
+        setErrStatus(`Couldn't cast that role${res.skipped?.length ? `: ${res.skipped.join('; ')}` : ''}.`)
+      }
       await reload()
     } catch (err) {
-      setStatus(err instanceof Error ? err.message : 'Casting failed.')
+      setErrStatus(err instanceof Error ? err.message : 'Casting failed.')
     } finally {
       setBusy(false)
     }
@@ -140,7 +142,7 @@ export default function CastingTab() {
   async function finalize() {
     const count = Object.values(assignments).filter(Boolean).length
     if (count === 0) {
-      setStatus('Nothing to finalize yet — pick people from the dropdowns first.')
+      setErrStatus('Nothing to finalize yet — pick people from the dropdowns first.')
       return
     }
     if (
@@ -151,6 +153,7 @@ export default function CastingTab() {
       return
     setBusy(true)
     setStatus('')
+    setErrStatus('')
     try {
       const res = await pb.send('/api/glowtape/casting/finalize', {
         method: 'POST',
@@ -162,7 +165,7 @@ export default function CastingTab() {
       setDraft((d) => (d ? { ...d, status: 'final' } : d))
       await reload()
     } catch (err) {
-      setStatus(err instanceof Error ? err.message : 'Finalize failed.')
+      setErrStatus(err instanceof Error ? err.message : 'Finalize failed.')
     } finally {
       setBusy(false)
     }
@@ -273,6 +276,7 @@ export default function CastingTab() {
           </div>
         )}
         {status && <p className="acked" role="status">{status}</p>}
+        {errStatus && <p className="error" role="alert">{errStatus}</p>}
         <p className="hint">
           Double-cast warnings (⚠) are fine to leave while you think — they're flags, not
           errors. Casting your leads early? <em>✓ Cast now</em> next to a pick locks in just

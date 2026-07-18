@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { pb } from '../lib/pb.ts'
+import { pbErrorMessage } from '../lib/files.ts'
 import { useAuth } from '../lib/auth.tsx'
 import ResourceList from '../components/ResourceList.tsx'
 import { useTitle } from '../lib/useTitle.ts'
@@ -173,6 +174,13 @@ export default function AuditionForm() {
           : "You're signed up! The production team has your form. Break a leg! 🎭",
       )
       setJustSignedUp(true)
+    } catch (err) {
+      setError(
+        pbErrorMessage(
+          err,
+          "We couldn't save your signup — check your connection and try again. Your answers are still here.",
+        ),
+      )
     } finally {
       setBusy(false)
     }

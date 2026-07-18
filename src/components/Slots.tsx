@@ -109,7 +109,7 @@ export default function SlotsSection() {
           </select>
         </label>
       )}
-      {err && <p className="error">{err}</p>}
+      {err && <p className="error" role="alert">{err}</p>}
       {[...sheets.entries()].map(([title, group]) => {
         const days = [...new Set(group.map((s) => dayOf(s.start)))]
         const location = group.find((s) => s.location)?.location
@@ -142,6 +142,8 @@ export default function SlotsSection() {
                             key={s.id}
                             type="button"
                             className="chip chip-active"
+                            aria-pressed={true}
+                            aria-label={`${timeOf(s.start)}, booked by ${nameOf(s.member)} — tap to cancel`}
                             onClick={() => {
                               if (window.confirm('Cancel this booking?')) book(s, '')
                             }}
@@ -175,6 +177,8 @@ export default function SlotsSection() {
                           key={s.id}
                           type="button"
                           className="chip"
+                          aria-pressed={false}
+                          aria-label={`Book the ${timeOf(s.start)} slot`}
                           disabled={!bookingFor}
                           onClick={() => book(s, bookingFor)}
                         >

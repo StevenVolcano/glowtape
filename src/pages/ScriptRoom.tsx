@@ -69,6 +69,7 @@ export default function ScriptRoom() {
   const [openLineNote, setOpenLineNote] = useState('')
   const [sendBusy, setSendBusy] = useState(false)
   const [sendStatus, setSendStatus] = useState('')
+  const [sendErr, setSendErr] = useState('')
   // "My lines": glow paints them, hide covers them for off-book practice.
   // Regions come from the PDF's embedded text (same as line-note snippets) —
   // best-effort speaker-tag parsing, nothing stored on the server.
@@ -686,6 +687,7 @@ export default function ScriptRoom() {
   async function sendLineNotes() {
     setSendBusy(true)
     setSendStatus('')
+    setSendErr('')
     try {
       const res = await pb.send<{ notes: number; people: number }>(
         '/api/glowtape/line-notes/send',
@@ -700,7 +702,7 @@ export default function ScriptRoom() {
       )
       await loadNotes()
     } catch {
-      setSendStatus('Sending failed — try again.')
+      setSendErr('Sending failed — check your connection and try again.')
     } finally {
       setSendBusy(false)
     }
@@ -820,6 +822,7 @@ export default function ScriptRoom() {
           type="button"
           className={`chip ${myLinesMode === 'glow' ? 'chip-active' : ''}`}
           aria-pressed={myLinesMode === 'glow'}
+          aria-label="Highlight my lines"
           onClick={() => setMyLinesMode(myLinesMode === 'glow' ? 'off' : 'glow')}
         >
           ✨{compact ? '' : ' My lines'}
@@ -828,6 +831,7 @@ export default function ScriptRoom() {
           type="button"
           className={`chip ${myLinesMode === 'hide' ? 'chip-active' : ''}`}
           aria-pressed={myLinesMode === 'hide'}
+          aria-label="Off book — cover my lines"
           onClick={() => setMyLinesMode(myLinesMode === 'hide' ? 'off' : 'hide')}
         >
           🙈{compact ? '' : ' Off book'}
@@ -968,7 +972,12 @@ export default function ScriptRoom() {
       )}
 
       <div className="row no-print" style={{ alignItems: 'center' }}>
-        <button type="button" disabled={pageNum <= 1} onClick={() => setPageNum(pageNum - 1)}>
+        <button
+          type="button"
+          aria-label="Previous page"
+          disabled={pageNum <= 1}
+          onClick={() => setPageNum(pageNum - 1)}
+        >
           {compact ? '←' : '← Page'}
         </button>
         <span>
@@ -989,6 +998,7 @@ export default function ScriptRoom() {
         </span>
         <button
           type="button"
+          aria-label="Next page"
           disabled={pageNum >= pageCount}
           onClick={() => setPageNum(pageNum + 1)}
         >
@@ -1064,8 +1074,9 @@ export default function ScriptRoom() {
                 transform: 'translate(-50%, -90%)',
                 background: 'none',
                 border: 'none',
-                padding: 0,
-                minHeight: 0,
+                padding: '0.3rem',
+                minHeight: '1.9rem',
+                minWidth: '1.9rem',
                 fontSize: openLineNote === n.id ? '2rem' : '1.4rem',
                 opacity: n.done ? 0.45 : 1,
                 filter: n.done
@@ -1223,7 +1234,7 @@ export default function ScriptRoom() {
             setOpenLineNote(next.id)
           }
           return (
-            <div className="card stack" role="dialog" aria-label="Line note details">
+            <div className="card stack" role="region" aria-label="Line note details">
               <p style={{ margin: 0 }}>
                 🎯 <strong>{LINE_NOTE_LABELS[n.kind]}</strong> — {lineWho(n)}
               </p>
@@ -1298,7 +1309,7 @@ export default function ScriptRoom() {
           if (!n) return null
           const canEdit = n.user === user?.id || (n.scope === 'production' && isManager)
           return (
-            <div className="card stack" role="dialog" aria-label="Note details">
+            <div className="card stack" role="region" aria-label="Note details">
               <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
                 {n.scope === 'production' ? '📌' : '📝'} {n.text}
               </p>
@@ -1343,6 +1354,11 @@ export default function ScriptRoom() {
           {sendStatus && (
             <p className="acked" role="status">
               {sendStatus}
+            </p>
+          )}
+          {sendErr && (
+            <p className="error" role="alert">
+              {sendErr}
             </p>
           )}
           <ul className="plain-list">
@@ -1391,7 +1407,7 @@ export default function ScriptRoom() {
         Notes in this document ({openCount} open)
       </h3>
       {visibleNotes.length === 0 && (
-        <p className="hint">No notes yet — tap ➕ Add a note and then a spot on the page.</p>
+        <p className="hint">No notes yet — tap 📝 Note, then the spot on the page where it goes.</p>
       )}
       <ul className="plain-list">
         {visibleNotes.map((n) => (

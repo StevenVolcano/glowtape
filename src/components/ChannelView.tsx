@@ -138,6 +138,8 @@ export default function ChannelView({
     bottomRef.current?.scrollIntoView({ block: 'end' })
   }, [messages.length])
 
+  const [sendErr, setSendErr] = useState('')
+
   async function send(e: FormEvent) {
     e.preventDefault()
     const body = text.trim()
@@ -152,6 +154,9 @@ export default function ChannelView({
       })
       setText('')
       setFile(null)
+      setSendErr('')
+    } catch {
+      setSendErr("That didn't send — check your connection and try again. Your message is still typed below.")
     } finally {
       setBusy(false)
     }
@@ -277,7 +282,8 @@ export default function ChannelView({
           <input
             type="file"
             accept="image/*"
-            hidden
+            className="sr-only"
+            aria-label="Attach a photo"
             onChange={(e) => setFile(e.target.files?.[0] ?? null)}
           />
         </label>
@@ -291,6 +297,11 @@ export default function ChannelView({
           Send
         </button>
       </form>
+      {sendErr && (
+        <p className="error" role="alert">
+          {sendErr}
+        </p>
+      )}
     </div>
   )
 }

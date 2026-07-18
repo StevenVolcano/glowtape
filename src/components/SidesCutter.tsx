@@ -115,7 +115,7 @@ export default function SidesCutter({
         />
       </div>
       {range.trim() !== '' && !pages && (
-        <p className="error" style={{ margin: 0 }}>
+        <p className="error" role="alert" style={{ margin: 0 }}>
           Pages should look like "34-36" or "12, 34-36", within 1–{pageCount}.
         </p>
       )}
@@ -132,7 +132,7 @@ export default function SidesCutter({
         </button>
       </div>
       {msg && <p className="acked" role="status">{msg}</p>}
-      {err && <p className="error">{err}</p>}
+      {err && <p className="error" role="alert">{err}</p>}
     </div>
   )
 }

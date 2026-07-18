@@ -61,6 +61,13 @@ export default function PeopleTab() {
           </tr>
         </thead>
         <tbody>
+          {sorted.length === 0 && (
+            <tr>
+              <td colSpan={isManager ? 5 : 3} className="hint">
+                Nobody here yet — people appear as they join with the code or get cast.
+              </td>
+            </tr>
+          )}
           {sorted.map((m) => (
             <tr key={m.id}>
               <td>

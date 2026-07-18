@@ -144,6 +144,10 @@ export default function SignIn() {
                   onChange={(e) => setAge(e.target.value)}
                   placeholder="Age"
                 />
+                <p className="hint" style={{ margin: 0 }}>
+                  We ask because theater includes kids — your age only sets the right safety
+                  protections. It's never shown to anyone, and only an age range is kept.
+                </p>
                 <label htmlFor="joincode">Code</label>
                 <input
                   id="joincode"

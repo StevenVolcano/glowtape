@@ -114,6 +114,7 @@ export default function TimelinePlanner({
   const [templateName, setTemplateName] = useState('')
   const [busy, setBusy] = useState(false)
   const [saved, setSaved] = useState('')
+  const [saveErr, setSaveErr] = useState('')
 
   useEffect(() => {
     if (!open) return
@@ -146,6 +147,7 @@ export default function TimelinePlanner({
   async function save() {
     setBusy(true)
     setSaved('')
+    setSaveErr('')
     try {
       const clean = items
         .filter((i) => i.title.trim())
@@ -154,6 +156,8 @@ export default function TimelinePlanner({
       setItems(clean)
       setSaved('Saved — everyone sees it on the event.')
       await onSaved()
+    } catch {
+      setSaveErr("Couldn't save the timeline — try again.")
     } finally {
       setBusy(false)
     }
@@ -162,6 +166,7 @@ export default function TimelinePlanner({
   async function saveAsTemplate() {
     if (!templateName.trim()) return
     setBusy(true)
+    setSaveErr('')
     try {
       await pb.collection('timeline_templates').create({
         production: production.id,
@@ -175,6 +180,8 @@ export default function TimelinePlanner({
       })
       setTemplates(list)
       setSaved('Template saved for this production.')
+    } catch {
+      setSaveErr("Couldn't save the template — try again.")
     } finally {
       setBusy(false)
     }
@@ -284,6 +291,7 @@ export default function TimelinePlanner({
           Close
         </button>
         {saved && <span className="acked" role="status">{saved}</span>}
+        {saveErr && <span className="error" role="alert">{saveErr}</span>}
       </div>
       <div className="row" style={{ alignItems: 'center' }}>
         <input

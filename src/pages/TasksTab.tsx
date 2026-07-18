@@ -235,11 +235,13 @@ function NewTaskForm({
   const [due, setDue] = useState('')
   const [busy, setBusy] = useState(false)
   const [done, setDone] = useState('')
+  const [addErr, setAddErr] = useState('')
 
   async function add(e: FormEvent) {
     e.preventDefault()
     setBusy(true)
     setDone('')
+    setAddErr('')
     try {
       await pb.collection('tasks').create({
         production: production.id,
@@ -252,6 +254,8 @@ function NewTaskForm({
       setTitle('')
       setDue('')
       await onAdded()
+    } catch {
+      setAddErr("Couldn't add the task — try again.")
     } finally {
       setBusy(false)
     }
@@ -303,6 +307,7 @@ function NewTaskForm({
           Add task
         </button>
         {done && <p className="acked" role="status">{done}</p>}
+        {addErr && <p className="error" role="alert">{addErr}</p>}
       </form>
     </section>
   )
@@ -314,12 +319,14 @@ function BioEditor({ member, onSaved }: { member: MemberRecord; onSaved: () => P
   const [bio, setBio] = useState(member.bio ?? '')
   const [busy, setBusy] = useState(false)
   const [saved, setSaved] = useState('')
+  const [bioErr, setBioErr] = useState('')
 
   const whose = member.minor ? `${member.displayName}'s` : 'Your'
 
   async function save() {
     setBusy(true)
     setSaved('')
+    setBioErr('')
     try {
       await pb.collection('members').update(member.id, { bio: bio.trim() })
       if (bio.trim()) {
@@ -335,6 +342,8 @@ function BioEditor({ member, onSaved }: { member: MemberRecord; onSaved: () => P
       setSaved('Saved — thank you! 🎭')
       await reload()
       await onSaved()
+    } catch {
+      setBioErr("Couldn't save the bio — check your connection and try again. Your words are still here.")
     } finally {
       setBusy(false)
     }
@@ -363,6 +372,7 @@ function BioEditor({ member, onSaved }: { member: MemberRecord; onSaved: () => P
           {busy ? 'Saving…' : 'Save bio'}
         </button>
         {saved && <span className="acked" role="status">{saved}</span>}
+        {bioErr && <span className="error" role="alert">{bioErr}</span>}
       </div>
     </div>
   )
