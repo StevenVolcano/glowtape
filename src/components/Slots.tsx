@@ -30,6 +30,9 @@ export default function SlotsSection() {
   const [slots, setSlots] = useState<SlotRecord[]>([])
   const [bookAs, setBookAs] = useState('')
   const [err, setErr] = useState('')
+  // Cancel is instant with an undo, not a confirm — forgiveness beats
+  // permission for a low-stakes action.
+  const [undoSlot, setUndoSlot] = useState<{ slot: SlotRecord; memberId: string } | null>(null)
 
   async function load() {
     const list = await pb.collection('slots').getFullList<SlotRecord>({
@@ -60,14 +63,13 @@ export default function SlotsSection() {
         method: 'POST',
         body: { slot: slot.id, member: memberId },
       })
+      if (memberId) setUndoSlot(null) // booked something — the old undo is stale
       await load()
     } catch (e) {
       setErr(pbErrorMessage(e, "That didn't work — refresh and try again."))
       await load()
     }
   }
-
-  if (slots.length === 0 && !isManager) return null
 
   // Group by sheet (title), then by day inside each sheet.
   const sheets = new Map<string, SlotRecord[]>()
@@ -83,12 +85,13 @@ export default function SlotsSection() {
   }
 
   return (
-    <section>
+    <section id="signups">
       <h2>📐 Sign-up slots</h2>
       {slots.length === 0 ? (
         <p className="hint">
-          No sign-up sheets right now. Post one for costume fittings, headshots, or any
-          one-at-a-time appointments.
+          {isManager
+            ? 'No sign-up sheets right now. Post one for costume fittings, headshots, or any one-at-a-time appointments.'
+            : 'Nothing to sign up for right now — fitting and photo sheets will appear here.'}
         </p>
       ) : (
         <p className="hint">
@@ -110,6 +113,22 @@ export default function SlotsSection() {
         </label>
       )}
       {err && <p className="error" role="alert">{err}</p>}
+      {undoSlot && (
+        <p className="acked" role="status">
+          Booking cancelled.{' '}
+          <button
+            type="button"
+            className="link"
+            onClick={() => {
+              const u = undoSlot
+              setUndoSlot(null)
+              book(u.slot, u.memberId)
+            }}
+          >
+            ↩ Put it back ({timeOf(undoSlot.slot.start)})
+          </button>
+        </p>
+      )}
       {[...sheets.entries()].map(([title, group]) => {
         const days = [...new Set(group.map((s) => dayOf(s.start)))]
         const location = group.find((s) => s.location)?.location
@@ -145,7 +164,8 @@ export default function SlotsSection() {
                             aria-pressed={true}
                             aria-label={`${timeOf(s.start)}, booked by ${nameOf(s.member)} — tap to cancel`}
                             onClick={() => {
-                              if (window.confirm('Cancel this booking?')) book(s, '')
+                              setUndoSlot({ slot: s, memberId: s.member })
+                              book(s, '')
                             }}
                           >
                             {timeOf(s.start)} — {nameOf(s.member)} ✕

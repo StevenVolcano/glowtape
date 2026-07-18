@@ -13,6 +13,7 @@
   --ctrl: #8a8478; /* control borders: ≥3:1 on white and paper */
   --ok: #256843;
   --error: #b3372f;
+  --warn: #7a4c00; /* 7:1 on paper */
 }
 
 * {
@@ -40,6 +41,20 @@ h1 {
 h2 {
   font-size: 1.2rem;
   margin: 1.5rem 0 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* the namesake: a diagonal scrap of glow tape marking each section */
+h2::before {
+  content: '';
+  flex: none;
+  width: 0.5rem;
+  height: 1.05em;
+  background: var(--lamp);
+  border-radius: 2px;
+  transform: skewX(-10deg);
 }
 
 .page {
@@ -58,6 +73,13 @@ h2 {
 .brand-small {
   font-weight: 700;
   color: var(--accent);
+  background: linear-gradient(
+    transparent 58%,
+    rgba(205, 239, 85, 0.55) 58%,
+    rgba(205, 239, 85, 0.55) 92%,
+    transparent 92%
+  );
+  padding: 0 0.15rem;
 }
 
 /* --- Buttons and inputs: minimum 44px targets --- */
@@ -71,6 +93,18 @@ button {
   padding: 0.65rem 1.1rem;
   min-height: 44px;
   cursor: pointer;
+  box-shadow: 0 1px 2px rgba(28, 36, 5, 0.18);
+  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.08s ease;
+}
+
+button:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: none;
+}
+
+button.link,
+.chip {
+  box-shadow: none;
 }
 
 button:hover {
@@ -190,9 +224,10 @@ form.stack,
 .card {
   background: var(--card);
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 14px;
   padding: 0.9rem 1rem;
   display: block;
+  box-shadow: 0 1px 3px rgba(36, 31, 46, 0.06), 0 4px 14px rgba(36, 31, 46, 0.045);
 }
 
 .card-link {
@@ -236,6 +271,25 @@ form.stack,
   color: var(--ok);
   font-weight: 700;
   margin-top: 0.4rem;
+  animation: gt-settle 0.2s ease-out;
+}
+
+@keyframes gt-settle {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
 }
 
 .cal-links {
@@ -257,6 +311,11 @@ form.stack,
   font-weight: 600;
 }
 
+.warn {
+  color: var(--warn);
+  font-weight: 600;
+}
+
 /* --- Tabs --- */
 .tabs {
   display: flex;
@@ -275,12 +334,15 @@ form.stack,
   text-decoration: none;
   font-weight: 600;
   border-bottom: 3px solid transparent;
+  border-radius: 8px 8px 0 0;
   white-space: nowrap;
+  transition: color 0.15s ease, background 0.15s ease;
 }
 
 .tabs a.active {
   color: var(--ink);
   border-bottom-color: var(--lamp);
+  background: linear-gradient(180deg, rgba(205, 239, 85, 0.22), transparent 75%);
 }
 
 /* --- Chips --- */
@@ -295,6 +357,7 @@ form.stack,
   border: 2px solid var(--ctrl);
   color: var(--ink);
   font-weight: 500;
+  transition: border-color 0.15s ease, background 0.15s ease;
 }
 
 .chip-active {
@@ -467,6 +530,10 @@ body.kiosk .legal-links {
   .no-print,
   button {
     display: none !important;
+  }
+
+  h2::before {
+    display: none;
   }
 
   body {

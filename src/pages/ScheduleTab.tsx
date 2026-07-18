@@ -12,6 +12,7 @@ import FindTime from '../components/FindTime.tsx'
 import ShowReport from '../components/ShowReport.tsx'
 import TimelinePlanner, { TimelineView } from '../components/Timeline.tsx'
 import SlotsSection from '../components/Slots.tsx'
+import { JumpNav } from '../components/ManageJumpNav.tsx'
 import { DAY_SHORT, isWeekly, weeklyLabel } from '../lib/conflicts.ts'
 import type { AckRecord, AttendanceRecord, ConflictRecord, EventRecord, GroupRecord, MemberRecord, UnitRecord } from '../lib/types.ts'
 
@@ -212,9 +213,18 @@ export default function ScheduleTab() {
     return names.join(', ')
   }
 
+  const scheduleJumps = [
+    ['#events', 'Events'],
+    ['#signups', 'Sign-ups'],
+    ['#conflicts', 'Conflicts'],
+    ...(isManager ? ([['#findtime', 'Find a time']] as const) : []),
+    ['#calendar', 'Calendar feed'],
+  ] as readonly (readonly [string, string])[]
+
   return (
     <div>
-      <section>
+      <JumpNav jumps={scheduleJumps} ariaLabel="Schedule sections" />
+      <section id="events">
         <h2>Coming up</h2>
         <div className="row no-print" style={{ alignItems: 'center' }}>
           {isManager && members.filter((m) => m.user || m.minor).length > 0 && (
@@ -553,7 +563,7 @@ function CalendarSubscribeSection() {
   }
 
   return (
-    <section>
+    <section id="calendar">
       <h2>Put your calls on your own calendar</h2>
       <p className="hint">
         Subscribe once and every event you're called for shows up in Google Calendar, Apple
@@ -722,7 +732,7 @@ function ConflictsSection({ conflicts, reload }: { conflicts: ConflictRecord[]; 
   }
 
   return (
-    <section>
+    <section id="conflicts">
       <h2>{isManager ? 'Conflicts (everyone)' : 'My conflicts'}</h2>
       <p className="hint">
         Tell your stage manager when you're <em>not</em> available, before the schedule is built.

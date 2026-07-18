@@ -96,7 +96,7 @@ export default function FindTime({
   const clearDays = rows.filter((r) => r.busy.length === 0 && r.scheduled.length === 0).length
 
   return (
-    <section>
+    <section id="findtime">
       <h2>🗓 When can we rehearse?</h2>
       {!open && (
         <>

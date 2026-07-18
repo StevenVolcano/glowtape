@@ -2,8 +2,9 @@ import { useEffect, useId, useState, type FormEvent } from 'react'
 import { pb } from '../lib/pb.ts'
 import { useProduction } from '../pages/Production.tsx'
 import { groupMemberIds, resolveUnitMemberIds } from '../lib/breakdown.ts'
+import { conflictHitsEvent, isWeekly, weeklyLabel } from '../lib/conflicts.ts'
 import { DEFAULT_EVENT_KINDS, isCommunityKind, memberName, pbDate, productionPlaces } from '../lib/types.ts'
-import type { EventRecord, GroupRecord, UnitRecord } from '../lib/types.ts'
+import type { ConflictRecord, EventRecord, GroupRecord, UnitRecord } from '../lib/types.ts'
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
@@ -53,6 +54,7 @@ export default function EventForm({
   const [busy, setBusy] = useState(false)
   const [done, setDone] = useState('')
   const [error, setError] = useState('')
+  const [allConflicts, setAllConflicts] = useState<ConflictRecord[]>([])
 
   useEffect(() => {
     pb.collection('units')
@@ -69,7 +71,52 @@ export default function EventForm({
       })
       .then(setAllGroups)
       .catch(() => {})
+    pb.collection('conflicts')
+      .getFullList<ConflictRecord>({
+        filter: pb.filter('production = {:p}', { p: production.id }),
+      })
+      .then(setAllConflicts)
+      .catch(() => {})
   }, [production.id])
+
+  // Prevention beats correction: while the date and time are being picked,
+  // say who can't make it — before the schedule email goes out, not after.
+  const busyPeople = (() => {
+    if (!date || !startTime) return []
+    const pseudo = {
+      start: `${date}T${startTime}:00`,
+      end: endTime ? `${date}T${endTime}:00` : '',
+    } as EventRecord
+    const ids = everyone
+      ? members.filter((m) => (m.user || m.minor) && m.role !== 'guardian').map((m) => m.id)
+      : [
+          ...new Set([
+            ...called,
+            ...groupMemberIds(calledGroups, members),
+            ...units.flatMap((uid) => {
+              const u = allUnits.find((x) => x.id === uid)
+              return u ? resolveUnitMemberIds(u, members) : []
+            }),
+          ]),
+        ]
+    const out: string[] = []
+    for (const mid of ids) {
+      const m = members.find((x) => x.id === mid)
+      if (!m?.user) continue
+      for (const c of allConflicts) {
+        if (c.user !== m.user) continue
+        if (conflictHitsEvent(c, pseudo)) {
+          out.push(
+            `${m.displayName || memberName(m)} (${
+              isWeekly(c) ? `${c.note || 'busy'} ${weeklyLabel(c)}` : c.note || 'conflict'
+            })`,
+          )
+          break
+        }
+      }
+    }
+    return out
+  })()
 
   function toggleKind(k: string) {
     setKindParts((prev) => {
@@ -261,6 +308,12 @@ export default function EventForm({
           <input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
         </label>
       </div>
+      {busyPeople.length > 0 && (
+        <p className="warn" role="status">
+          ⚠ Can't make this time: {busyPeople.join(', ')}. You can still schedule it — or
+          nudge the time and watch this update.
+        </p>
+      )}
 
       {!editing && (
         <>
