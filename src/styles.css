@@ -3,7 +3,7 @@
 
 :root {
   --ink: #241f2e;
-  --paper: #ffffff;
+  --paper: #f2f3f6; /* cool neutral stage — cards read as truly white against it */
   --card: #ffffff;
   --lamp: #cdef55; /* glow-tape green */
   --lamp-dark: #a3c437;
@@ -477,7 +477,8 @@ form.stack,
 }
 
 /* --- Join code --- */
-/* the join code IS a scrap of glow tape: torn edges, slightly askew */
+/* the join code IS a strip of glow tape: straight sides, ripped only at
+   the ends — the way tape actually comes off the roll */
 .join-code {
   font-size: 2.2rem;
   font-weight: 800;
@@ -485,17 +486,30 @@ form.stack,
   text-align: center;
   background: var(--lamp);
   color: #1c2405;
-  padding: 1rem;
+  padding: 1rem 1.8rem;
   margin: 0.5rem 0;
-  transform: rotate(-1.2deg);
-  clip-path: polygon(0% 8%, 2.5% 0%, 98% 3%, 100% 12%, 99% 90%, 96.5% 100%, 3% 97%, 0% 88%);
+  clip-path: polygon(
+    2% 0%,
+    98.2% 0%,
+    100% 9%,
+    98.4% 21%,
+    99.8% 33%,
+    98.2% 46%,
+    100% 58%,
+    98.5% 71%,
+    99.8% 83%,
+    98.2% 100%,
+    1.8% 100%,
+    0% 91%,
+    1.7% 79%,
+    0.2% 67%,
+    1.8% 54%,
+    0% 42%,
+    1.6% 29%,
+    0.2% 17%,
+    1.9% 9%
+  );
   user-select: all;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .join-code {
-    transform: none;
-  }
 }
 
 /* --- Sign-in --- */
