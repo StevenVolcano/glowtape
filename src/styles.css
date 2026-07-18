@@ -486,28 +486,28 @@ form.stack,
   text-align: center;
   background: var(--lamp);
   color: #1c2405;
-  padding: 1rem 1.8rem;
+  padding: 1rem 2.2rem;
   margin: 0.5rem 0;
+  /* rip depth in PIXELS — percent teeth shrink into rounded-looking
+     corners on a phone-width strip */
   clip-path: polygon(
-    2% 0%,
-    98.2% 0%,
-    100% 9%,
-    98.4% 21%,
-    99.8% 33%,
-    98.2% 46%,
-    100% 58%,
-    98.5% 71%,
-    99.8% 83%,
-    98.2% 100%,
-    1.8% 100%,
-    0% 91%,
-    1.7% 79%,
-    0.2% 67%,
-    1.8% 54%,
-    0% 42%,
-    1.6% 29%,
-    0.2% 17%,
-    1.9% 9%
+    16px 0%,
+    calc(100% - 8px) 0%,
+    100% 14%,
+    calc(100% - 16px) 30%,
+    calc(100% - 3px) 46%,
+    calc(100% - 13px) 62%,
+    100% 76%,
+    calc(100% - 15px) 90%,
+    calc(100% - 5px) 100%,
+    12px 100%,
+    0px 88%,
+    15px 74%,
+    3px 60%,
+    13px 46%,
+    0px 32%,
+    14px 18%,
+    4px 8%
   );
   user-select: all;
 }
