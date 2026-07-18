@@ -13,6 +13,7 @@ import NotesTab from './NotesTab.tsx'
 import DocsTab from './DocsTab.tsx'
 import SchedulePrint from './SchedulePrint.tsx'
 import CheckIn, { CheckInPoster } from './CheckIn.tsx'
+import ProgramPacket from './ProgramPacket.tsx'
 import CastingTab from './CastingTab.tsx'
 import BiosView from './BiosView.tsx'
 import { useTitle } from '../lib/useTitle.ts'
@@ -133,6 +134,7 @@ export default function Production() {
           {isManager && <Route path="casting" element={<CastingTab />} />}
           {isManager && <Route path="admin" element={<AdminTab />} />}
           {isManager && <Route path="bios" element={<BiosView />} />}
+          {isManager && <Route path="packet" element={<ProgramPacket />} />}
           <Route path="*" element={<Navigate to={`${base}/schedule`} replace />} />
         </Routes>
         <p className="hint legal-links">

@@ -552,6 +552,11 @@ function BiosSection() {
         <Link className="link" to={`/production/${production.id}/bios`}>
           📄 View compiled bios (print / copy for the program)
         </Link>
+        <br />
+        <Link className="link" to={`/production/${production.id}/packet`}>
+          📦 Program &amp; publicity packet (everything the program folks ask for, ready to
+          email)
+        </Link>
       </p>
     </section>
   )
