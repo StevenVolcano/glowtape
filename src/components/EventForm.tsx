@@ -55,6 +55,12 @@ export default function EventForm({
   const [done, setDone] = useState('')
   const [error, setError] = useState('')
   const [allConflicts, setAllConflicts] = useState<ConflictRecord[]>([])
+  // Potluck sign-up: parties (and anything the team likes) can carry a
+  // bring-something list; the event stores just the category names.
+  const [bringOn, setBringOn] = useState((event?.bringCategories ?? []).length > 0)
+  const [bringCats, setBringCats] = useState(
+    (event?.bringCategories ?? []).join(', ') || 'Mains, Sides, Desserts, Drinks',
+  )
 
   useEffect(() => {
     pb.collection('units')
@@ -214,6 +220,9 @@ export default function EventForm({
                 called: calledIds,
                 units,
                 calledGroups,
+                bringCategories: bringOn
+                  ? bringCats.split(',').map((c) => c.trim()).filter(Boolean)
+                  : [],
                 start: new Date(`${date}T${startTime}`).toISOString(),
                 end: endTime ? new Date(`${date}T${endTime}`).toISOString() : '',
               },
@@ -233,6 +242,9 @@ export default function EventForm({
             called: calledIds,
             units,
             calledGroups,
+            bringCategories: bringOn
+              ? bringCats.split(',').map((c) => c.trim()).filter(Boolean)
+              : [],
             occurrences: buildOccurrences(),
           },
         })
@@ -313,6 +325,29 @@ export default function EventForm({
           ⚠ Can't make this time: {busyPeople.join(', ')}. You can still schedule it — or
           nudge the time and watch this update.
         </p>
+      )}
+      {(bringOn || /party|potluck/i.test(kind)) && (
+        <div className="stack">
+          <label className="row">
+            <input
+              type="checkbox"
+              checked={bringOn}
+              onChange={(e) => setBringOn(e.target.checked)}
+            />
+            🍪 Include a bring-something list (everyone signs up for what they'll bring)
+          </label>
+          {bringOn && (
+            <label>
+              Categories (comma-separated)
+              <input
+                aria-label="Bring-list categories"
+                value={bringCats}
+                onChange={(e) => setBringCats(e.target.value)}
+                placeholder="Example: Mains, Sides, Desserts, Drinks"
+              />
+            </label>
+          )}
+        </div>
       )}
 
       {!editing && (

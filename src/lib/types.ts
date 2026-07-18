@@ -380,6 +380,18 @@ export interface EventRecord {
   units: string[] // breakdown units being rehearsed (called is still authoritative)
   signinCode: string // non-empty = door check-in is on for this event
   timeline: TimelineItem[] | null // run-of-show segments; clock times computed from start
+  bringCategories: string[] | null // non-empty = potluck sign-up list is on
+}
+
+export interface BringItemRecord {
+  id: string
+  production: string
+  event: string
+  user: string
+  item: string
+  category: string
+  created: string
+  expand?: { user?: UserRecord }
 }
 
 // A run-of-show segment: durations only — clock times always roll forward

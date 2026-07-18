@@ -10,6 +10,7 @@ import EventForm from '../components/EventForm.tsx'
 import QrCode from '../components/QrCode.tsx'
 import FindTime from '../components/FindTime.tsx'
 import ShowReport from '../components/ShowReport.tsx'
+import BringList from '../components/BringList.tsx'
 import TimelinePlanner, { TimelineView } from '../components/Timeline.tsx'
 import SlotsSection from '../components/Slots.tsx'
 import { JumpNav } from '../components/ManageJumpNav.tsx'
@@ -345,6 +346,9 @@ export default function ScheduleTab() {
                 </div>
                 {e.notes && <div className="event-line">{e.notes}</div>}
                 {e.status !== 'cancelled' && <TimelineView event={e} />}
+                {e.status !== 'cancelled' && (e.bringCategories?.length ?? 0) > 0 && (
+                  <BringList event={e} />
+                )}
                 {iAmCalled &&
                   e.status !== 'cancelled' &&
                   (myAck ? (
