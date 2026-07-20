@@ -1,11 +1,19 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { pb } from '../lib/pb.ts'
 import { SMS_READY } from '../lib/types.ts'
 import type { UserRecord } from '../lib/types.ts'
 
-// Attach a cell number and opt into text reminders. Verification codes only
-// go out once the server has an SMS provider configured.
-export default function PhoneSettings({ user }: { user: UserRecord }) {
+interface PhoneStatus {
+  phone: string
+  phoneVerified: boolean
+  smsOptIn: boolean
+}
+
+// Attach a cell number and opt into text reminders. The phone fields are
+// hidden at the API layer (contact privacy), so everything here goes through
+// the /api/glowtape/phone/* routes — never the record API.
+export default function PhoneSettings(_props: { user: UserRecord }) {
+  const [status, setStatus] = useState<PhoneStatus | null>(null)
   const [editing, setEditing] = useState(false)
   const [step, setStep] = useState<'phone' | 'code'>('phone')
   const [phone, setPhone] = useState('')
@@ -13,9 +21,18 @@ export default function PhoneSettings({ user }: { user: UserRecord }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
-  async function refreshAuth() {
-    await pb.collection('users').authRefresh()
+  async function loadStatus() {
+    try {
+      const s = await pb.send<PhoneStatus>('/api/glowtape/phone/status', { method: 'GET' })
+      setStatus(s)
+    } catch {
+      setStatus({ phone: '', phoneVerified: false, smsOptIn: false })
+    }
   }
+
+  useEffect(() => {
+    if (SMS_READY) loadStatus()
+  }, [])
 
   if (!SMS_READY) {
     return (
@@ -52,7 +69,7 @@ export default function PhoneSettings({ user }: { user: UserRecord }) {
     setError('')
     try {
       await pb.send('/api/glowtape/phone/confirm', { method: 'POST', body: { phone, code } })
-      await refreshAuth()
+      await loadStatus()
       setEditing(false)
       setStep('phone')
       setCode('')
@@ -64,22 +81,27 @@ export default function PhoneSettings({ user }: { user: UserRecord }) {
   }
 
   async function toggleOptIn(on: boolean) {
-    await pb.collection('users').update(user.id, { smsOptIn: on })
-    await refreshAuth()
+    setError('')
+    try {
+      await pb.send('/api/glowtape/phone/optin', { method: 'POST', body: { on } })
+      await loadStatus()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't update that — try again.")
+    }
   }
 
-  if (user.phoneVerified && !editing) {
+  if (status?.phoneVerified && !editing) {
     return (
       <section>
         <h2>Text reminders</h2>
         <div className="card stack">
           <div>
-            📱 <strong>{user.phone}</strong> is verified.
+            📱 <strong>{status.phone}</strong> is verified.
           </div>
           <label className="row">
             <input
               type="checkbox"
-              checked={user.smsOptIn}
+              checked={status.smsOptIn}
               onChange={(e) => toggleOptIn(e.target.checked)}
             />
             Text me reminders about my calls (message &amp; data rates may apply; reply STOP anytime)
@@ -87,6 +109,7 @@ export default function PhoneSettings({ user }: { user: UserRecord }) {
           <button className="link" onClick={() => setEditing(true)}>
             Change number
           </button>
+          {error && <p className="error" role="alert">{error}</p>}
         </div>
       </section>
     )

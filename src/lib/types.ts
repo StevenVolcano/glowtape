@@ -42,7 +42,7 @@ export interface FeedbackRecord {
 
 // Flip to true when Twilio's toll-free verification clears and texting goes
 // live — it reveals the phone/SMS UI (sign-in by text, text reminders).
-export const SMS_READY = false
+export const SMS_READY = true
 
 export interface CompanyRecord {
   id: string

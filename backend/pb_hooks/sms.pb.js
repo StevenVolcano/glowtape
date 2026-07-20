@@ -217,3 +217,39 @@ cronAdd("glowtape_sms_reminders", "*/10 * * * *", () => {
   });
   for (const s of stale) $app.delete(s);
 });
+
+// Own phone status. The phone fields are hidden at the API layer (contact
+// privacy, migration 1755500000), so the settings card reads them through
+// this route instead of the auth record.
+routerAdd(
+  "GET",
+  "/api/glowtape/phone/status",
+  (e) => {
+    const user = e.app.findRecordById("users", e.auth.id);
+    return e.json(200, {
+      phone: user.get("phone") || "",
+      phoneVerified: !!user.get("phoneVerified"),
+      smsOptIn: !!user.get("smsOptIn"),
+    });
+  },
+  $apis.requireAuth(),
+);
+
+// Opt in or out of reminder texts. Same reason: smsOptIn is hidden, so the
+// record API can't set it from the client.
+routerAdd(
+  "POST",
+  "/api/glowtape/phone/optin",
+  (e) => {
+    const data = new DynamicModel({ on: false });
+    e.bindBody(data);
+    const user = e.app.findRecordById("users", e.auth.id);
+    if (!user.get("phoneVerified")) {
+      throw new BadRequestError("Verify a phone number first.");
+    }
+    user.set("smsOptIn", !!data.on);
+    e.app.save(user);
+    return e.json(200, { ok: true, smsOptIn: !!data.on });
+  },
+  $apis.requireAuth(),
+);
