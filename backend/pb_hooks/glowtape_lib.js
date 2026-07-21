@@ -76,22 +76,28 @@ function sendMail(app, to, subject, html) {
 
 // --- sms ----------------------------------------------------------------------
 
+// Trim + lowercase so an invisible trailing space or stray capital in the
+// env file can't silently put texting into dormant mode (2026-07-21: it did).
+function smsProvider() {
+  return ($os.getenv("GLOWTAPE_SMS_PROVIDER") || "").trim().toLowerCase();
+}
+
 function smsConfigured() {
-  const p = $os.getenv("GLOWTAPE_SMS_PROVIDER");
+  const p = smsProvider();
   return p === "twilio" || p === "telnyx";
 }
 
 function sendSms(app, to, body) {
-  const provider = $os.getenv("GLOWTAPE_SMS_PROVIDER");
+  const provider = smsProvider();
   if (!smsConfigured()) {
     app.logger().info("glowtape sms (dormant, not sent)", "to", to, "body", body);
     return false;
   }
   try {
     if (provider === "twilio") {
-      const sid = $os.getenv("TWILIO_ACCOUNT_SID");
-      const token = $os.getenv("TWILIO_AUTH_TOKEN");
-      const from = $os.getenv("TWILIO_FROM");
+      const sid = ($os.getenv("TWILIO_ACCOUNT_SID") || "").trim();
+      const token = ($os.getenv("TWILIO_AUTH_TOKEN") || "").trim();
+      const from = ($os.getenv("TWILIO_FROM") || "").trim();
       const auth = $security.base64Encode(sid + ":" + token);
       const form =
         "To=" + encodeURIComponent(to) +
