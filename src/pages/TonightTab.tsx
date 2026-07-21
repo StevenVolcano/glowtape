@@ -375,7 +375,7 @@ export default function TonightTab() {
         {isManager && (
           <p className="hint">
             Add your own quotes — favorite lines from the show, things you say in the room —
-            in <Link to={`${base}/admin#tonight`}>Manage → Tonight page</Link>. The whole cast
+            in <Link to={`${base}/admin#quotes`}>Manage → Dashboard quotes</Link>. The whole cast
             sees the same quote each day.
           </p>
         )}

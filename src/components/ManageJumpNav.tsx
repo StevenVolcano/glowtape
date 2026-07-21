@@ -42,7 +42,7 @@ const MANAGE_JUMPS = [
   ['#bios', 'Bios'],
   ['#resources', 'Docs & links'],
   ['#presets', 'Places'],
-  ['#tonight', 'Tonight page'],
+  ['#quotes', 'Quotes'],
 ] as const
 
 export default function ManageJumpNav() {

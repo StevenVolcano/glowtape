@@ -62,10 +62,10 @@ function TonightQuotesSection() {
   }
 
   return (
-    <section id="tonight">
-      <h2>Tonight page</h2>
+    <section id="quotes">
+      <h2>Dashboard quotes</h2>
       <p className="hint">
-        The Tonight tab shows everyone the same quote each day — the classics, plus anything
+        The Dashboard shows everyone the same quote each day — the classics, plus anything
         you add here. Favorite lines from the show, things you keep saying in the room, one
         per line. Yours mix into the rotation.
       </p>
