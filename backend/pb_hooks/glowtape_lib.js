@@ -76,6 +76,25 @@ function sendMail(app, to, subject, html) {
 
 // --- sms ----------------------------------------------------------------------
 
+// Plain-JS base64: PocketBase's JSVM has no $security.base64Encode (found
+// the hard way on the first real Twilio send, 2026-07-21). ASCII-only input
+// (SID:token), so no unicode handling needed. Verified byte-identical to
+// Node's Buffer base64.
+function base64Encode(str) {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+  let out = "";
+  for (let i = 0; i < str.length; i += 3) {
+    const c1 = str.charCodeAt(i);
+    const c2 = str.charCodeAt(i + 1);
+    const c3 = str.charCodeAt(i + 2);
+    out += chars[c1 >> 2];
+    out += chars[((c1 & 3) << 4) | (isNaN(c2) ? 0 : c2 >> 4)];
+    out += isNaN(c2) ? "=" : chars[((c2 & 15) << 2) | (isNaN(c3) ? 0 : c3 >> 6)];
+    out += isNaN(c3) ? "=" : chars[c3 & 63];
+  }
+  return out;
+}
+
 // Trim + lowercase so an invisible trailing space or stray capital in the
 // env file can't silently put texting into dormant mode (2026-07-21: it did).
 function smsProvider() {
@@ -98,7 +117,7 @@ function sendSms(app, to, body) {
       const sid = ($os.getenv("TWILIO_ACCOUNT_SID") || "").trim();
       const token = ($os.getenv("TWILIO_AUTH_TOKEN") || "").trim();
       const from = ($os.getenv("TWILIO_FROM") || "").trim();
-      const auth = $security.base64Encode(sid + ":" + token);
+      const auth = base64Encode(sid + ":" + token);
       const form =
         "To=" + encodeURIComponent(to) +
         "&From=" + encodeURIComponent(from) +
