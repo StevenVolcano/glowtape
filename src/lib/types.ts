@@ -21,6 +21,9 @@ export interface UserRecord {
   id: string
   email: string
   name: string
+  // phone/phoneVerified/smsOptIn and ageBand are HIDDEN fields (migrations
+  // 1755500000, 1757600000) — absent from API responses. Own phone status
+  // comes from /api/glowtape/phone/status, own age band from /api/glowtape/me.
   phone: string
   phoneVerified: boolean
   smsOptIn: boolean
@@ -336,6 +339,9 @@ export interface MemberRecord {
   displayName: string // child's shown name (first name + last initial)
   guardians: string[] // guardian user ids — each sees everything this member sees
   noPhotos: boolean // photo-consent flag (guardian/manager set)
+  // Hidden fields since migration 1757600000 — absent from API responses.
+  // Managers read them via GET /api/glowtape/contacts (offline map) and write
+  // via POST /api/glowtape/members/contact.
   contactEmail: string // manager-entered, for members not on Glow Tape
   contactPhone: string
   bio: string // program bio, editable by the member/guardian

@@ -15,13 +15,17 @@ interface ContactInfo {
 export default function PeopleTab() {
   const { production, members, isManager } = useProduction()
   const [contacts, setContacts] = useState<Record<string, ContactInfo>>({})
+  const [offline, setOffline] = useState<Record<string, ContactInfo>>({})
 
   useEffect(() => {
     if (!isManager) return
     pb.send(`/api/glowtape/contacts?production=${encodeURIComponent(production.id)}`, {
       method: 'GET',
     })
-      .then((res) => setContacts(res.users ?? {}))
+      .then((res) => {
+        setContacts(res.users ?? {})
+        setOffline(res.offline ?? {})
+      })
       .catch(() => {})
   }, [production.id, isManager])
 
@@ -93,10 +97,10 @@ export default function PeopleTab() {
                     ? (m.expand?.guardians ?? [])
                         .map((g) => `${g.name} (${emailOf(g.id)})`)
                         .join(', ') || '— via guardian —'
-                    : emailOf(m.user) || m.contactEmail}
+                    : emailOf(m.user) || offline[m.id]?.email || ''}
                 </td>
               )}
-              {isManager && <td>{m.minor ? '' : phoneOf(m.user) || m.contactPhone}</td>}
+              {isManager && <td>{m.minor ? '' : phoneOf(m.user) || offline[m.id]?.phone || ''}</td>}
             </tr>
           ))}
         </tbody>

@@ -63,7 +63,43 @@ routerAdd(
         /* user gone */
       }
     }
-    return e.json(200, { users });
+
+    // Offline members' manager-entered contacts (hidden fields since
+    // migration 1757600000 — this manager-gated route is the only reader).
+    const offline = {};
+    for (const m of members) {
+      const email = m.get("contactEmail") || "";
+      const phone = m.get("contactPhone") || "";
+      if (email || phone) offline[m.id] = { email, phone };
+    }
+    return e.json(200, { users, offline });
+  },
+  $apis.requireAuth(),
+);
+
+// Managers set offline members' contact info here — the fields are hidden
+// from the record API, so a plain members update can't write them.
+routerAdd(
+  "POST",
+  "/api/glowtape/members/contact",
+  (e) => {
+    const lib = require(`${__hooks}/glowtape_lib.js`);
+    const data = new DynamicModel({ member: "", contactEmail: null, contactPhone: null });
+    e.bindBody(data);
+    let member;
+    try {
+      member = e.app.findRecordById("members", data.member);
+    } catch {
+      throw new BadRequestError("Unknown member.");
+    }
+    const production = e.app.findRecordById("productions", member.get("production"));
+    if (!lib.canManage(production, e.auth)) {
+      throw new BadRequestError("Only the production team can edit contact info.");
+    }
+    if (data.contactEmail !== null) member.set("contactEmail", String(data.contactEmail).trim());
+    if (data.contactPhone !== null) member.set("contactPhone", String(data.contactPhone).trim());
+    e.app.save(member);
+    return e.json(200, { ok: true });
   },
   $apis.requireAuth(),
 );

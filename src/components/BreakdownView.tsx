@@ -271,7 +271,8 @@ export default function BreakdownView() {
             <>
               Add units below, or import a CSV — a spreadsheet with columns like Song, Act, On
               stage, Singing, Dancing. People are matched by role/character name from People
-              &amp; roles. Short on time? An AI chat can draft the CSV from your script:{' '}
+              &amp; roles. Short on time? An AI chat can draft this CSV — plus starter props,
+              costume, set, and cue sheets — from your script:{' '}
               <a href="/breakdown-ai.html" target="_blank" rel="noreferrer">
                 here's how, prompt included
               </a>

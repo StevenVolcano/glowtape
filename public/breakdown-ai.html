@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Glow Tape — Breakdown from your script, with an AI helper</title>
+<title>Glow Tape — Breakdown &amp; sheets from your script, with an AI helper</title>
 <style>
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
          max-width: 720px; margin: 0 auto; padding: 1.5rem 1rem; color: #241f2e; line-height: 1.45; }
@@ -24,14 +24,17 @@
 <body>
 <p><a href="/help.html">← Help</a> · <a href="/director-guide.html">Director's setup guide</a></p>
 
-<h1>📋 Breakdown from your script, with an AI helper</h1>
-<p class="tagline">Ten minutes with an AI chat instead of an evening with a highlighter.</p>
+<h1>📋 Breakdown &amp; sheets from your script, with an AI helper</h1>
+<p class="tagline">Ten minutes with an AI chat instead of a week with a highlighter — the
+breakdown plus starter props, costumes, set, and cue sheets.</p>
 
-<p>Glow Tape's <strong>Sheets → Breakdown</strong> can import a spreadsheet of your show's
-songs or scenes and who's in each one — that's what powers "pick a song, the right people
-get called" when you schedule. Making that spreadsheet by hand is the tedious part. If you
-use an AI assistant (Claude, or any chat that accepts file uploads), it can read your script
-and draft the spreadsheet for you.</p>
+<p>Glow Tape's <strong>Sheets</strong> tab can import spreadsheets: the show
+<strong>Breakdown</strong> (songs or scenes and who's in each — what powers "pick a song,
+the right people get called"), plus <strong>Props</strong>, <strong>Costumes</strong>,
+<strong>Set</strong>, and <strong>Light/Sound cue</strong> sheets. Making those by hand is
+the tedious part. If you use an AI assistant (Claude, or any chat that accepts file
+uploads), it can read your script once and draft all of them — you edit from a running
+start instead of a blank page.</p>
 
 <p>To be clear: <strong>Glow Tape itself doesn't use AI and never sees your script.</strong>
 This all happens in your own AI chat, on your own account. Glow Tape just imports the
@@ -42,11 +45,12 @@ finished CSV like any other spreadsheet.</p>
   <li><strong>Open your AI chat</strong> — claude.ai works well — and attach your script or
       score as a PDF.</li>
   <li><strong>Paste the prompt below</strong> and send it.</li>
-  <li><strong>Save what comes back as a .csv file</strong> (most assistants offer it as a
-      download; otherwise copy the code block into a file named
-      <em>breakdown.csv</em>).</li>
-  <li><strong>Import it</strong>: your show → Sheets tab → Breakdown →
-      <em>⬆ Import CSV</em>.</li>
+  <li><strong>Save what comes back as .csv files</strong> (most assistants offer them as
+      downloads; otherwise copy each code block into its own file —
+      <em>breakdown.csv</em>, <em>props.csv</em>, and so on).</li>
+  <li><strong>Import each file into its matching sheet</strong>: your show → Sheets tab →
+      pick Breakdown (or Props, Costumes, Set, Light cues, Sound cues) →
+      <em>⬆ Import CSV</em>. One file per sheet.</li>
   <li><strong>Check the character names.</strong> Glow Tape matches people by the
       role/character names in <em>Manage → People &amp; roles</em> — if the import says it
       didn't recognize someone, spell that role the way the script does (or fix the CSV) and
@@ -55,30 +59,44 @@ finished CSV like any other spreadsheet.</p>
 
 <h2>The prompt</h2>
 <p><button class="copy" id="copyBtn" onclick="copyPrompt()">📋 Copy the prompt</button></p>
-<pre id="prompt">You're helping a community-theater stage manager break down the attached script for rehearsal scheduling. Read the whole script carefully and produce ONE CSV.
+<pre id="prompt">You're helping a community-theater stage manager prep the attached script for rehearsals. Read the whole script carefully and produce SIX CSV files, each as its own downloadable file (or its own code block). Quote any cell containing a comma. No commentary inside the CSVs. Use character names EXACTLY as the script's character list spells them, everywhere.
 
-If it's a musical, use exactly these columns:
-Song,Act,Pages,On stage,Singing,Dancing,Notes
+FILE 1 — breakdown.csv (the show broken into rehearsal units)
+If it's a musical, columns: Song,Act,Pages,On stage,Singing,Dancing,Notes
+If it's a straight play, columns: Scene,Act,Pages,On stage,Notes
+- One row per musical number (including reprises) or per scene, in show order. For a musical you may add rows for substantial book scenes between numbers.
+- Act written consistently ("Act 1", "Act 2"); blank for a one-act. Pages like 12-18.
+- On stage: every character in the unit, comma-separated; include "Ensemble" or "Chorus" when called for. Singing/Dancing (musicals): which of those characters do. If unsure whether someone appears, INCLUDE them and add "(check)" to Notes — never silently drop anyone.
+- Notes: what an SM would flag — mid-scene entrances/exits, quick changes, offstage voices. Under 300 characters each.
 
-If it's a straight play, use exactly these columns:
-Scene,Act,Pages,On stage,Notes
+FILE 2 — props.csv
+Columns: Item,Scene,Character,Source,Status,Notes
+- One row per prop mentioned in dialogue or stage directions. Scene = where it first appears (add more scenes in Notes if it travels). Character = who handles it. Leave Source blank and set Status to "Need". Consumables and food get a note.
 
-Rules:
-- One row per musical number (including reprises) or per scene, in show order. For a musical you may also add rows for substantial book scenes between numbers.
-- Act: written consistently ("Act 1", "Act 2"). Leave blank for a one-act.
-- Pages: the page range in the attached file, like 12-18.
-- On stage: every character who appears in that unit, separated by commas, using character names EXACTLY as the script's character list spells them. Include "Ensemble" or "Chorus" when the script calls for them.
-- Singing / Dancing (musicals only): which of those characters sing or dance in that number. Leave blank if none.
-- Notes: what a stage manager would flag — mid-scene entrances/exits, quick changes, offstage voices, props that travel. Keep each under 300 characters.
-- If you're unsure whether a character appears in a unit, INCLUDE them and add "(check)" to Notes — don't silently drop anyone.
-- Output the CSV as a downloadable file if you can, otherwise in a single code block. Quote any cell that contains a comma. No commentary inside the CSV.
+FILE 3 — costumes.csv
+Columns: Piece,Character,Scene,Source,Status,Notes
+- One row per costume piece or look the script explicitly requires or strongly implies (uniforms, period notes, quick changes, weather gear). Note quick changes with the pages involved. Status "Need", Source blank. Don't invent full costume plots — only what the text supports.
 
-After the CSV, tell me separately: any characters from the script's character list who never appear in your rows, and any pages you couldn't read.</pre>
+FILE 4 — set.csv
+Columns: Piece,Scene,Source,Status,Notes
+- One row per set piece, furniture item, or scenic element in the stage directions. Status "Need".
 
-<div class="tip">The AI's draft is a <strong>draft</strong>. Skim every row against your
-script before you rely on it for calls — assistants occasionally miss a silent entrance or
-an offstage voice. The "(check)" notes are where it wants your eyes first. You can edit any
-unit in Glow Tape after importing.</div>
+FILE 5 — light-cues.csv
+Columns: Cue #,Page,Trigger / line,Action,Notes
+- One row per lighting change the script explicitly calls for (blackouts, specials, sunrise, act tops/ends). Number them LX 1, LX 2… in order. Trigger = the exact line or action that fires it, shortened. These are placeholders for the designer — mark anything inferred with "(draft)" in Notes.
+
+FILE 6 — sound-cues.csv
+Columns: Cue #,Page,Trigger / line,Action,Notes
+- Same idea for sound: effects, phones, doorbells, underscoring the script names, pre-show/intermission. Number them SQ 1, SQ 2…
+
+After the six files, tell me separately: any characters from the script's character list who never appear in your breakdown rows, and any pages you couldn't read.</pre>
+
+<div class="tip">Every file is a <strong>draft</strong>. The breakdown deserves a real
+skim against your script before you rely on it for calls — assistants occasionally miss a
+silent entrance or an offstage voice — and the cue sheets are placeholders for your
+designers, not a design. Everything is editable in Glow Tape after importing: tap any cell.
+Only want some of the sheets? Delete the paragraphs you don't need from the prompt before
+sending it.</div>
 
 <div class="caution">Your script is licensed material — only upload what you're licensed to
 work with, and know that AI chat services have their own data policies. If you'd rather not

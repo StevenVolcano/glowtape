@@ -181,7 +181,7 @@ cronAdd("glowtape_rehearsal_reports", "0 * * * *", () => {
   }
 });
 
-// Show report saved → email the whole production team, the way a stage
+// Show report saved → email the production managers, the way a stage
 // manager traditionally distributes the performance report the same night.
 // First save only; later edits update the record quietly.
 onRecordAfterCreateSuccess((e) => {

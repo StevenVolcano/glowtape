@@ -47,7 +47,11 @@ onRecordAfterCreateSuccess((e) => {
       url = `/production/${productionId}/messages`;
       const memberId = String(channel.get("member") || "");
       const groupId = String(channel.get("group") || "");
-      if (memberId) {
+      if (String(channel.get("audience")) === "team") {
+        // Team audience wins over member/group: the read rule ANDs the team
+        // gate with the others, so managers-only is the widest legal set.
+        targets = lib.toIdArray(production.get("managers"));
+      } else if (memberId) {
         // Semi-private team channel: the member + guardians + managers.
         const member = e.app.findRecordById("members", memberId);
         targets = [String(member.get("user") || "")]
@@ -64,10 +68,6 @@ onRecordAfterCreateSuccess((e) => {
           if (m.get("user")) targets.push(String(m.get("user")));
           for (const g of lib.toIdArray(m.get("guardians"))) targets.push(g);
         }
-      } else if (String(channel.get("audience")) === "team") {
-        // Team channel: managers only — matching the read rule, so a
-        // team-only message never previews on a cast member's phone.
-        targets = lib.toIdArray(production.get("managers"));
       } else {
         targets = lib.recipientUserIds(e.app, productionId, null);
       }
@@ -269,3 +269,28 @@ routerAdd(
   },
   $apis.requireAuth(),
 );
+
+// The update rule lets the actor/guardian touch their line notes so they can
+// mark them done — this guard keeps them to exactly that. The note's content
+// stays the SM's words.
+onRecordUpdateRequest((e) => {
+  if (!e.hasSuperuserAuth()) {
+    const lib = require(`${__hooks}/glowtape_lib.js`);
+    let isManager = false;
+    try {
+      const production = e.app.findRecordById("productions", e.record.get("production"));
+      isManager = lib.canManage(production, e.auth);
+    } catch {
+      /* fall through to strict check */
+    }
+    if (!isManager) {
+      const original = e.record.original();
+      for (const f of ["production", "resource", "member", "author", "page", "x", "y", "kind", "text", "snippet", "notified"]) {
+        if (String(e.record.get(f)) !== String(original.get(f))) {
+          throw new BadRequestError("You can mark a line note done — editing it is for the production team.");
+        }
+      }
+    }
+  }
+  e.next();
+}, "line_notes");

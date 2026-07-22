@@ -24,7 +24,16 @@ export default function Profile() {
   const [error, setError] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
 
-  const isTeen = user?.ageBand === 'teen'
+  // ageBand is a hidden field now (accounts can't be scanned for minors) —
+  // the app asks about its OWN band via the /me route. Default to the safe
+  // side (no headshot upload) until the answer arrives.
+  const [ageBand, setAgeBand] = useState('')
+  useEffect(() => {
+    pb.send('/api/glowtape/me', { method: 'GET' })
+      .then((res) => setAgeBand(res.ageBand ?? ''))
+      .catch(() => {})
+  }, [])
+  const isTeen = ageBand !== 'adult'
 
   useEffect(() => {
     async function load() {

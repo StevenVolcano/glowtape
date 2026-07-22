@@ -82,7 +82,11 @@ export default function Production() {
     )
   }
 
-  const myMember = members.find((m) => m.user === user?.id) ?? null
+  // Someone can be both a performer and a guardian (parent in the cast whose
+  // kid is too) — prefer their non-guardian row so their OWN calls, acks, and
+  // print-my-schedule work; child coverage rides on myChildIds patterns.
+  const myRows = members.filter((m) => m.user === user?.id)
+  const myMember = myRows.find((m) => m.role !== 'guardian') ?? myRows[0] ?? null
   // The operator (the "Glow Tape Stagehand") can manage any production for
   // setup and troubleshooting. In shows where they hold a real role, the
   // member row wins and nothing looks different — the Stagehand banner only

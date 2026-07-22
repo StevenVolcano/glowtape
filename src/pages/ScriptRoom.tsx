@@ -70,6 +70,7 @@ export default function ScriptRoom() {
   const [sendBusy, setSendBusy] = useState(false)
   const [sendStatus, setSendStatus] = useState('')
   const [sendErr, setSendErr] = useState('')
+  const [noteErr, setNoteErr] = useState('')
   // "My lines": glow paints them, hide covers them for off-book practice.
   // Regions come from the PDF's embedded text (same as line-note snippets) —
   // best-effort speaker-tag parsing, nothing stored on the server.
@@ -450,22 +451,27 @@ export default function ScriptRoom() {
       kind = 'box'
       pts = [pts[0], pts[pts.length - 1]]
     }
-    const rec = await pb.collection('annotations').create({
-      production: production.id,
-      resource: resourceId,
-      user: user!.id,
-      page: pageNum,
-      x: pts[0].x,
-      y: pts[0].y,
-      text: '',
-      kind,
-      color: mode === 'highlight' ? color : '',
-      path: pts,
-      scope: isManager ? draftScope : 'personal',
-      done: false,
-    })
-    setUndoStack((prev) => [...prev, rec.id].slice(-50))
-    await loadNotes()
+    try {
+      const rec = await pb.collection('annotations').create({
+        production: production.id,
+        resource: resourceId,
+        user: user!.id,
+        page: pageNum,
+        x: pts[0].x,
+        y: pts[0].y,
+        text: '',
+        kind,
+        color: mode === 'highlight' ? color : '',
+        path: pts,
+        scope: isManager ? draftScope : 'personal',
+        done: false,
+      })
+      setUndoStack((prev) => [...prev, rec.id].slice(-50))
+      setNoteErr('')
+      await loadNotes()
+    } catch {
+      setNoteErr("Couldn't save that mark — check your connection and try again.")
+    }
   }
 
   async function eraseAt(x: number, y: number) {
@@ -586,23 +592,28 @@ export default function ScriptRoom() {
 
   async function saveDraft() {
     if (!draft || !draftText.trim() || !resourceId) return
-    const rec = await pb.collection('annotations').create({
-      production: production.id,
-      resource: resourceId,
-      user: user!.id,
-      page: pageNum,
-      x: draft.x,
-      y: draft.y,
-      text: draftText.trim(),
-      kind: 'pin',
-      scope: isManager ? draftScope : 'personal',
-      done: false,
-    })
-    setUndoStack((prev) => [...prev, rec.id].slice(-50))
-    setDraft(null)
-    setDraftText('')
-    setMode('read')
-    await loadNotes()
+    try {
+      const rec = await pb.collection('annotations').create({
+        production: production.id,
+        resource: resourceId,
+        user: user!.id,
+        page: pageNum,
+        x: draft.x,
+        y: draft.y,
+        text: draftText.trim(),
+        kind: 'pin',
+        scope: isManager ? draftScope : 'personal',
+        done: false,
+      })
+      setUndoStack((prev) => [...prev, rec.id].slice(-50))
+      setNoteErr('')
+      setDraft(null)
+      setDraftText('')
+      setMode('read')
+      await loadNotes()
+    } catch {
+      setNoteErr("Couldn't save that note — check your connection and try again.")
+    }
   }
 
   async function toggleDone(n: AnnotationRecord) {
@@ -1006,6 +1017,11 @@ export default function ScriptRoom() {
         </button>
       </div>
 
+      {noteErr && (
+        <p className="error" role="alert">
+          {noteErr}
+        </p>
+      )}
       <div
         ref={holderRef}
         onClick={pageClick}

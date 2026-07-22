@@ -105,6 +105,13 @@ onRecordUpdateRequest((e) => {
     if (e.record.get("operator") !== original.get("operator")) {
       throw new BadRequestError("The operator flag is set in the PocketBase dashboard.");
     }
+    // The age band is derived from the birthdate at signup — if it were
+    // self-editable, so would be all the youth-safety gating it drives.
+    for (const f of ["ageBand", "teenUntil"]) {
+      if (String(e.record.get(f)) !== String(original.get(f))) {
+        throw new BadRequestError("Ask the operator to correct an age band.");
+      }
+    }
   }
   e.next();
 }, "users");

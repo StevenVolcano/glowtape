@@ -887,6 +887,21 @@ function MembersSection() {
   const { production, members, reload } = useProduction()
   const [busyId, setBusyId] = useState('')
   const [groups, setGroups] = useState<GroupRecord[]>([])
+  // Offline contact info lives in hidden fields — read once via the
+  // manager-gated contacts route, written via the members/contact route.
+  const [offline, setOffline] = useState<Record<string, { email: string; phone: string }>>({})
+
+  async function loadOffline() {
+    try {
+      const res = await pb.send(
+        `/api/glowtape/contacts?production=${encodeURIComponent(production.id)}`,
+        { method: 'GET' },
+      )
+      setOffline(res.offline ?? {})
+    } catch {
+      /* stays empty */
+    }
+  }
 
   useEffect(() => {
     pb.collection('groups')
@@ -896,6 +911,8 @@ function MembersSection() {
       })
       .then(setGroups)
       .catch(() => {})
+    loadOffline()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [production.id])
 
   async function toggleMemberGroup(m: MemberRecord, gid: string) {
@@ -1062,7 +1079,14 @@ function MembersSection() {
               remove
             </button>
             {!m.user && !m.minor && !m.multi && (
-              <OfflineContact member={m} onSaved={reload} />
+              <OfflineContact
+                member={m}
+                contact={offline[m.id] ?? { email: '', phone: '' }}
+                onSaved={async () => {
+                  await reload()
+                  await loadOffline()
+                }}
+              />
             )}
           </li>
         ))}
@@ -1814,16 +1838,31 @@ function AttendanceHistorySection() {
 // address; texts never do (they didn't opt in).
 function OfflineContact({
   member,
+  contact,
   onSaved,
 }: {
   member: MemberRecord
+  contact: { email: string; phone: string }
   onSaved: () => Promise<void>
 }) {
-  const [open, setOpen] = useState(!!member.contactEmail || !!member.contactPhone)
+  const [open, setOpen] = useState(!!contact.email || !!contact.phone)
+  useEffect(() => {
+    if (contact.email || contact.phone) setOpen(true)
+  }, [contact.email, contact.phone])
 
   async function save(field: 'displayName' | 'contactEmail' | 'contactPhone', value: string) {
-    if (value === (member[field] ?? '')) return
-    await pb.collection('members').update(member.id, { [field]: value })
+    if (field === 'displayName') {
+      if (value === (member.displayName ?? '')) return
+      await pb.collection('members').update(member.id, { displayName: value })
+    } else {
+      const current = field === 'contactEmail' ? contact.email : contact.phone
+      if (value === current) return
+      // Hidden fields — written through the manager-gated route.
+      await pb.send('/api/glowtape/members/contact', {
+        method: 'POST',
+        body: { member: member.id, [field]: value },
+      })
+    }
     await onSaved()
   }
 
@@ -1833,7 +1872,8 @@ function OfflineContact({
         📇 {open ? 'Hide' : 'Not on Glow Tape? Add their contact info'}
       </button>
       {open && (
-        <div className="row">
+        // Keyed so the uncontrolled inputs pick up the async-loaded values.
+        <div className="row" key={`${contact.email}|${contact.phone}`}>
           <input
             aria-label="Their name"
             defaultValue={member.displayName}
@@ -1844,14 +1884,14 @@ function OfflineContact({
           <input
             aria-label="Their email"
             type="email"
-            defaultValue={member.contactEmail}
+            defaultValue={contact.email}
             placeholder="Email (gets production emails)"
             maxLength={200}
             onBlur={(e) => save('contactEmail', e.target.value.trim())}
           />
           <input
             aria-label="Their phone"
-            defaultValue={member.contactPhone}
+            defaultValue={contact.phone}
             placeholder="Phone (contact sheet only)"
             maxLength={40}
             onBlur={(e) => save('contactPhone', e.target.value.trim())}

@@ -237,7 +237,11 @@ export default function TrackersTab() {
           <p className="hint no-print">
             Tap a cell to edit — changes save on their own. Coming from Google Sheets? In your
             sheet: File → Download → Comma Separated Values, one tab at a time, then import it
-            here.
+            here. Starting from nothing? An AI chat can draft every sheet from your script —{' '}
+            <a href="/breakdown-ai.html" target="_blank" rel="noreferrer">
+              here's how, prompt included
+            </a>
+            .
           </p>
         )}
         </>

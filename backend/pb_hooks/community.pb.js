@@ -212,3 +212,38 @@ routerAdd(
   },
   $apis.requireAuth(),
 );
+
+// --- Teen profiles skip the headshot — server-enforced. -----------------------
+// The UI already hides the upload for teens; these guards make it real at the
+// API (a teen account could otherwise POST a headshot that every signed-in
+// user can view). Expired teenUntil = adult now, so no block. Guard is
+// duplicated inline because handlers run in isolated VMs.
+onRecordCreateRequest((e) => {
+  if (!e.hasSuperuserAuth() && e.record.get("headshot") && e.auth) {
+    const until = e.auth.get("teenUntil");
+    const stillTeen =
+      e.auth.get("ageBand") === "teen" &&
+      (!until || new Date(String(until)).getTime() > Date.now());
+    if (stillTeen) {
+      throw new BadRequestError(
+        "Teen profiles skip the headshot — that's part of the youth-safety model.",
+      );
+    }
+  }
+  e.next();
+}, "profiles");
+
+onRecordUpdateRequest((e) => {
+  if (!e.hasSuperuserAuth() && e.record.get("headshot") && e.auth) {
+    const until = e.auth.get("teenUntil");
+    const stillTeen =
+      e.auth.get("ageBand") === "teen" &&
+      (!until || new Date(String(until)).getTime() > Date.now());
+    if (stillTeen) {
+      throw new BadRequestError(
+        "Teen profiles skip the headshot — that's part of the youth-safety model.",
+      );
+    }
+  }
+  e.next();
+}, "profiles");

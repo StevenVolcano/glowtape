@@ -84,6 +84,24 @@ routerAdd("POST", "/api/glowtape/signup", (e) => {
   return e.json(200, { ok: true, existing: false });
 });
 
+// --- Own account facts the hidden fields no longer expose. -------------------
+// ageBand/teenUntil became hidden in migration 1757600000 (so accounts can't
+// be scanned for minors); the app reads its OWN effective band here. A teen
+// whose teenUntil has passed reads as adult.
+routerAdd(
+  "GET",
+  "/api/glowtape/me",
+  (e) => {
+    let band = e.auth.get("ageBand") || "";
+    const until = e.auth.get("teenUntil");
+    if (band === "teen" && until && new Date(String(until)).getTime() <= Date.now()) {
+      band = "adult";
+    }
+    return e.json(200, { ageBand: band });
+  },
+  $apis.requireAuth(),
+);
+
 // --- Join a production with its join code. -----------------------------------
 routerAdd(
   "POST",
