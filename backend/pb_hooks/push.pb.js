@@ -64,6 +64,10 @@ onRecordAfterCreateSuccess((e) => {
           if (m.get("user")) targets.push(String(m.get("user")));
           for (const g of lib.toIdArray(m.get("guardians"))) targets.push(g);
         }
+      } else if (String(channel.get("audience")) === "team") {
+        // Team channel: managers only — matching the read rule, so a
+        // team-only message never previews on a cast member's phone.
+        targets = lib.toIdArray(production.get("managers"));
       } else {
         targets = lib.recipientUserIds(e.app, productionId, null);
       }

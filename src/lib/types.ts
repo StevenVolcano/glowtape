@@ -176,6 +176,7 @@ export interface GroupRecord {
   production: string
   name: string
   order: number
+  auto?: 'cast' | 'crew' | '' // system groups whose membership syncs from roles
 }
 
 export interface UnitRecord {
@@ -498,6 +499,8 @@ export interface ChannelRecord {
   production: string
   name: string
   group?: string
+  // 'cast'/'crew' are legacy — such channels became 🔒 group channels
+  // (migration 1757500000); only 'all' and 'team' can exist now.
   audience: 'all' | 'cast' | 'crew' | 'team'
   archived: boolean
   defaultMuted: boolean

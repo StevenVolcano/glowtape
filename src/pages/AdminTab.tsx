@@ -636,15 +636,17 @@ function ChannelsSection() {
   const [channels, setChannels] = useState<ChannelRecord[]>([])
   const [groups, setGroups] = useState<GroupRecord[]>([])
   const [name, setName] = useState('')
-  // 'all'|'cast'|'crew'|'team', or 'group:<id>' for a group + team channel.
+  // 'all'|'team', or 'group:<id>' for a 🔒 group + team channel.
   const [audience, setAudience] = useState('all')
   const [busy, setBusy] = useState(false)
 
+  // cast/crew are legacy values — those channels became 🔒 group channels
+  // (migration 1757500000) and can't be created anymore.
   const AUDIENCE_LABELS = {
-    all: 'Everyone',
+    all: 'Everyone in the show',
     cast: 'Cast',
     crew: 'Crew',
-    team: 'Production team',
+    team: '🔒 Production team only',
   } as const
 
   async function load() {
@@ -682,7 +684,11 @@ function ChannelsSection() {
           group: groupId,
         })
       } else {
-        await pb.collection('channels').create({ production: production.id, name, audience })
+        // Team-only channels get the 🔒 in the name too, matching group
+        // channels — the lock always means server-enforced.
+        const finalName =
+          audience === 'team' && !name.trim().startsWith('🔒') ? `🔒 ${name.trim()}` : name.trim()
+        await pb.collection('channels').create({ production: production.id, name: finalName, audience })
       }
       setName('')
       await load()
@@ -742,10 +748,8 @@ function ChannelsSection() {
           value={audience}
           onChange={(e) => setAudience(e.target.value as typeof audience)}
         >
-          <option value="all">Everyone</option>
-          <option value="cast">Cast</option>
-          <option value="crew">Crew</option>
-          <option value="team">Production team</option>
+          <option value="all">Everyone in the show</option>
+          <option value="team">🔒 Production team only</option>
           {groups.map((g) => (
             <option key={g.id} value={`group:${g.id}`}>
               🔒 {g.name} + production team only
@@ -757,10 +761,12 @@ function ChannelsSection() {
         </button>
       </form>
       <p className="hint">
-        Archiving hides a channel without deleting its messages; restore it any time. A 🔒
-        group channel is visible only to that group's members (parents of any children in it
-        included) and the production team — enforced on the server. Set up groups under{' '}
-        <em>Groups</em> above.
+        The 🔒 means what it says: locked channels are enforced on the server — people outside
+        the audience can't read them, and notifications only go to people who can. A 🔒 group
+        channel is visible to that group's members (parents of any children in it included)
+        plus the production team; <em>Cast</em> and <em>Crew</em> are groups that fill
+        themselves in from people's roles. Archiving hides a channel without deleting its
+        messages; restore it any time. Set up more groups under <em>Groups</em> above.
       </p>
     </section>
   )
@@ -848,9 +854,15 @@ function GroupsSection() {
               maxLength={80}
               onBlur={(e) => rename(g, e.target.value)}
             />
-            <button className="link" aria-label={`Delete group ${g.name}`} onClick={() => remove(g)}>
-              ✕
-            </button>
+            {g.auto ? (
+              <span className="hint">
+                fills itself with every {g.auto === 'cast' ? 'performer' : 'crew'} role
+              </span>
+            ) : (
+              <button className="link" aria-label={`Delete group ${g.name}`} onClick={() => remove(g)}>
+                ✕
+              </button>
+            )}
           </li>
         ))}
       </ul>

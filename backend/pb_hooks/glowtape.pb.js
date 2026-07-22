@@ -224,7 +224,7 @@ routerAdd(
   $apis.requireAuth(),
 );
 
-// --- Default channels + join code when a production is created. --------------
+// --- Default groups + channels + join code when a production is created. -----
 onRecordAfterCreateSuccess((e) => {
   if (!e.record.get("joinCode")) {
     // Unambiguous alphabet: no 0/O or 1/I confusion on a printed handout.
@@ -233,21 +233,37 @@ onRecordAfterCreateSuccess((e) => {
     e.app.save(e.record);
   }
 
+  // Cast/Crew are auto groups (membership syncs from roles) so their default
+  // channels are real 🔒 group channels, server-enforced like any other.
+  const groupsCol = e.app.findCollectionByNameOrId("groups");
+  const mkGroup = (name, auto, order) => {
+    const g = new Record(groupsCol);
+    g.set("production", e.record.id);
+    g.set("name", name);
+    g.set("auto", auto);
+    g.set("order", order);
+    e.app.save(g);
+    return g;
+  };
+  const castGroup = mkGroup("Cast", "cast", 1);
+  const crewGroup = mkGroup("Crew", "crew", 2);
+
   const channels = e.app.findCollectionByNameOrId("channels");
-  // name, audience, defaultMuted (Off Topic starts muted; opt in, not out)
+  // name, audience, defaultMuted (Off Topic starts muted; opt in, not out), group
   const defaults = [
-    ["All Call", "all", false],
-    ["Cast", "cast", false],
-    ["Crew", "crew", false],
-    ["Production Team", "team", false],
-    ["Off Topic", "all", true],
+    ["All Call", "all", false, ""],
+    ["🔒 Cast", "all", false, castGroup.id],
+    ["🔒 Crew", "all", false, crewGroup.id],
+    ["🔒 Production Team", "team", false, ""],
+    ["Off Topic", "all", true, ""],
   ];
-  for (const [name, audience, defaultMuted] of defaults) {
+  for (const [name, audience, defaultMuted, group] of defaults) {
     const c = new Record(channels);
     c.set("production", e.record.id);
     c.set("name", name);
     c.set("audience", audience);
     c.set("defaultMuted", defaultMuted);
+    if (group) c.set("group", group);
     e.app.save(c);
   }
   e.next();

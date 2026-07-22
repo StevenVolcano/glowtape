@@ -24,18 +24,10 @@ export default function MessagesTab() {
         sort: 'created',
       })
       .then((list) => {
-        // Audience filtering is a UI courtesy in the pilot; managers see all.
-        const role = myMember?.role
-        const visible = list.filter((c) => {
-          if (c.member) return true // semi-private: the server already gated who sees it
-          if (isManager || !role) return true
-          if (c.audience === 'all') return true
-          if (c.audience === 'cast') return role === 'performer'
-          if (c.audience === 'crew') return role === 'crew'
-          return false // team
-        })
-        setChannels(visible)
-        setActive((prev) => prev ?? visible[0]?.id ?? null)
+        // The server enforces who sees what (team = managers, 🔒 = group
+        // members + guardians + managers) — whatever comes back is visible.
+        setChannels(list)
+        setActive((prev) => prev ?? list[0]?.id ?? null)
       })
       .catch(() => {})
 
@@ -43,7 +35,7 @@ export default function MessagesTab() {
       .getFullList<ChannelPrefRecord>({ filter: pb.filter('user = {:u}', { u: user!.id }) })
       .then(setPrefs)
       .catch(() => {})
-  }, [production.id, myMember?.role, isManager, user])
+  }, [production.id, user])
 
   const prefFor = (channelId: string) => prefs.find((p) => p.channel === channelId)
   const isMuted = (c: ChannelRecord) => {

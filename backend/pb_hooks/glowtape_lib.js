@@ -451,11 +451,49 @@ function syncProductionManagers(app, productionId) {
   }
 }
 
+// Keep a member's auto-group assignments (🔒 Cast / 🔒 Crew channels) matched
+// to their role: performers belong in the 'cast' auto group, crew in 'crew',
+// everyone else in neither. Hand-picked custom groups are left alone. Called
+// from the members after-save hooks; the no-change guard stops the re-entrant
+// second pass.
+function syncMemberAutoGroups(app, member) {
+  try {
+    const autoGroups = app.findRecordsByFilter(
+      "groups",
+      "production = {:p} && auto != ''",
+      "",
+      10,
+      0,
+      { p: String(member.get("production")) },
+    );
+    if (autoGroups.length === 0) return;
+    const role = String(member.get("role"));
+    const current = toIdArray(member.get("groups"));
+    const next = current.slice();
+    for (const g of autoGroups) {
+      const wanted =
+        (g.get("auto") === "cast" && role === "performer") ||
+        (g.get("auto") === "crew" && role === "crew");
+      const at = next.indexOf(g.id);
+      if (wanted && at === -1) next.push(g.id);
+      if (!wanted && at !== -1) next.splice(at, 1);
+    }
+    const same = next.length === current.length && next.every((id) => current.includes(id));
+    if (!same) {
+      member.set("groups", next);
+      app.save(member);
+    }
+  } catch (err) {
+    app.logger().error("glowtape: auto-group sync failed", "error", String(err));
+  }
+}
+
 module.exports = {
   pbNow,
   canManage,
   managerContacts,
   syncProductionManagers,
+  syncMemberAutoGroups,
   toIdArray,
   recipients,
   sendMail,

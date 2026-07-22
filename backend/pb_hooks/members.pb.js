@@ -39,12 +39,14 @@ onRecordUpdateRequest((e) => {
 onRecordAfterCreateSuccess((e) => {
   const lib = require(`${__hooks}/glowtape_lib.js`);
   lib.syncProductionManagers(e.app, e.record.get("production"));
+  lib.syncMemberAutoGroups(e.app, e.record);
   e.next();
 }, "members");
 
 onRecordAfterUpdateSuccess((e) => {
   const lib = require(`${__hooks}/glowtape_lib.js`);
   lib.syncProductionManagers(e.app, e.record.get("production"));
+  lib.syncMemberAutoGroups(e.app, e.record);
   e.next();
 }, "members");
 
