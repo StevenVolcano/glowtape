@@ -16,7 +16,7 @@ onRecordUpdateRequest((e) => {
     let isManager = false;
     try {
       const production = e.app.findRecordById("productions", e.record.get("production"));
-      isManager = !!e.auth && lib.toIdArray(production.get("managers")).includes(e.auth.id);
+      isManager = lib.canManage(production, e.auth);
     } catch {
       /* fall through to strict check */
     }

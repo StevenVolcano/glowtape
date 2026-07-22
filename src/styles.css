@@ -336,6 +336,16 @@ form.stack,
   font-weight: 600;
 }
 
+/* Operator-only note atop a production they're not a member of. */
+.stagehand-banner {
+  background: var(--card);
+  border: 1px dashed var(--ctrl);
+  border-left: 6px solid var(--lamp);
+  border-radius: 6px;
+  padding: 0.6rem 0.8rem;
+  color: var(--muted);
+}
+
 /* --- Tonight: the tape progress bar and the quote card --- */
 .tape-track {
   background: var(--paper);

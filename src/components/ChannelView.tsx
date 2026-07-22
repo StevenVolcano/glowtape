@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { pb } from '../lib/pb.ts'
 import { useAuth } from '../lib/auth.tsx'
 import { scrubImage } from '../lib/images.ts'
-import { chatName } from '../lib/types.ts'
+import { STAGEHAND_TITLE, chatName } from '../lib/types.ts'
 import type { MemberRecord, MessageRecord, ReactionRecord } from '../lib/types.ts'
 
 // Note links render with the note's actual title; a tiny cache keeps a busy
@@ -77,6 +77,11 @@ export default function ChannelView({
     const name = m.expand?.author?.name || '…'
     const rows = members.filter((x) => x.user === m.author)
     const row = rows.find((x) => x.role !== 'guardian') ?? rows[0] ?? null
+    // The operator posting in a show they're not part of gets their admin
+    // title, so a message from a stranger's name explains itself.
+    if (!row && members.length > 0 && m.expand?.author?.operator) {
+      return `${chatName(name)} (${STAGEHAND_TITLE})`
+    }
     return chatName(name, row)
   }
   const [messages, setMessages] = useState<MessageRecord[]>([])

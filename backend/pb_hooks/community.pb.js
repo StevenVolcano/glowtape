@@ -102,7 +102,7 @@ routerAdd(
     } catch {
       throw new NotFoundError("Unknown production.");
     }
-    const isManager = lib.toIdArray(production.get("managers")).includes(e.auth.id);
+    const isManager = lib.canManage(production, e.auth);
     if (!production.get("auditionOpen") && !isManager) {
       throw new NotFoundError("Auditions aren't open for this production.");
     }

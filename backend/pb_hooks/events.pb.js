@@ -45,7 +45,7 @@ routerAdd(
     } catch {
       throw new BadRequestError("Unknown production.");
     }
-    if (!lib.toIdArray(production.get("managers")).includes(e.auth.id)) {
+    if (!lib.canManage(production, e.auth)) {
       throw new BadRequestError("Only the production team can add to the schedule.");
     }
 
@@ -177,7 +177,7 @@ routerAdd(
       const rec = e.app.findRecordById("events", String(item.id));
       if (!production) {
         production = e.app.findRecordById("productions", rec.get("production"));
-        if (!lib.toIdArray(production.get("managers")).includes(e.auth.id)) {
+        if (!lib.canManage(production, e.auth)) {
           throw new BadRequestError("Only the production team can edit the schedule.");
         }
       } else if (rec.get("production") !== production.id) {

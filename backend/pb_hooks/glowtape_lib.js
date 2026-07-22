@@ -23,6 +23,17 @@ function toIdArray(value) {
   return out;
 }
 
+// A user can manage a production if they're on its managers list — or if
+// they're the app operator (the "Glow Tape Stagehand"), who can step into any
+// production for setup and troubleshooting. Route-level twin of the
+// `|| @request.auth.operator = true` clause in the API rules
+// (migration 1757400000).
+function canManage(production, auth) {
+  if (!auth) return false;
+  if (auth.get("operator")) return true;
+  return toIdArray(production.get("managers")).includes(auth.id);
+}
+
 // --- email --------------------------------------------------------------------
 
 function recipients(app, productionId, calledMemberIds) {
@@ -442,6 +453,7 @@ function syncProductionManagers(app, productionId) {
 
 module.exports = {
   pbNow,
+  canManage,
   managerContacts,
   syncProductionManagers,
   toIdArray,

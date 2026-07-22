@@ -25,7 +25,7 @@ routerAdd(
     } catch {
       throw new BadRequestError("Unknown production.");
     }
-    if (!lib.toIdArray(production.get("managers")).includes(e.auth.id)) {
+    if (!lib.canManage(production, e.auth)) {
       throw new BadRequestError("Only the production team can finalize a cast.");
     }
 

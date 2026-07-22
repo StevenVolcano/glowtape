@@ -83,7 +83,12 @@ export default function Production() {
   }
 
   const myMember = members.find((m) => m.user === user?.id) ?? null
-  const isManager = !!user && production.managers.includes(user.id)
+  // The operator (the "Glow Tape Stagehand") can manage any production for
+  // setup and troubleshooting. In shows where they hold a real role, the
+  // member row wins and nothing looks different — the Stagehand banner only
+  // shows where they have no row of their own.
+  const isManager = !!user && (production.managers.includes(user.id) || user.operator)
+  const asStagehand = !!user?.operator && !myMember && !production.managers.includes(user.id)
   // Absolute tab paths: relative links inside a splat route resolve against
   // the full current URL in react-router v7 and stack segments endlessly.
   const base = `/production/${production.id}`
@@ -98,6 +103,12 @@ export default function Production() {
           <span className="brand-small">Glow Tape</span>
         </header>
         <h1>{production.title}</h1>
+        {asStagehand && (
+          <p className="stagehand-banner" role="note">
+            🔧 You're here as the <strong>Glow Tape Stagehand</strong> — full
+            access for setup and troubleshooting.
+          </p>
+        )}
 
         <nav className="tabs" aria-label="Production sections">
           <NavLink to={`${base}/dashboard`}>Dashboard</NavLink>

@@ -353,6 +353,10 @@ export function firstLastInitial(name: string): string {
   return `${parts[0]} ${parts[parts.length - 1][0].toUpperCase()}.`
 }
 
+// What the operator is called inside productions they're not a member of.
+// One string to change if the title ever stops being fun.
+export const STAGEHAND_TITLE = 'Glow Tape Stagehand'
+
 // Chat byline within a show: "Steven P. (Director)" / "Anna K. (Golde)".
 // Guardians read as Parent/Guardian; the character name (position) wins over
 // the generic role label. Without a member match (community channels), just

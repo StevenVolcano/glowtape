@@ -70,6 +70,9 @@ export default function Home() {
     (p) => p.managers.includes(user?.id ?? '') || memberProdIds.has(p.id),
   )
   const openAuditions = productions.filter((p) => p.auditionOpen && !mine.includes(p))
+  // The operator's production list includes every show on the server (API
+  // rules let the Stagehand in anywhere); the rest go in their own section.
+  const stagehand = user?.operator ? productions.filter((p) => !mine.includes(p)) : []
 
   return (
     <main className="page">
@@ -188,6 +191,24 @@ export default function Home() {
             and direct show setup, feedback triage, access codes, organizations, and the
             theater-company list.
           </p>
+          {stagehand.length > 0 && (
+            <>
+              <h3>🔧 All productions (Stagehand access)</h3>
+              <ul className="cards">
+                {stagehand.map((p) => (
+                  <li key={p.id}>
+                    <Link className="card card-link" to={`/production/${p.id}/dashboard`}>
+                      <strong>{p.title}</strong>
+                      <span className="pill">{p.status}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+              <p className="hint">
+                Shows you're not part of — open them to help with setup or troubleshooting.
+              </p>
+            </>
+          )}
         </section>
       )}
 
