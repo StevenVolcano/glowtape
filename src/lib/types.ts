@@ -488,6 +488,9 @@ export interface ConflictRecord {
   id: string
   production: string
   user: string
+  // Set = this conflict is ABOUT that member row (a parent entered it for
+  // their child); empty = the author's own, applying to all their rows.
+  member: string
   start: string
   end: string
   note: string

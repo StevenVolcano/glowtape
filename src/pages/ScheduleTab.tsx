@@ -642,8 +642,19 @@ function repeatDates(
 }
 
 function ConflictsSection({ conflicts, reload }: { conflicts: ConflictRecord[]; reload: () => Promise<void> }) {
-  const { production, isManager } = useProduction()
+  const { production, members, isManager } = useProduction()
   const { user } = useAuth()
+  // Children this user guards — they get a "who is this for?" picker so a
+  // parent can enter soccer-on-Tuesdays for a kid who has no login.
+  const myChildren = members.filter((m) => m.guardians?.includes(user?.id ?? ''))
+  const [forMember, setForMember] = useState('')
+  const memberLabel = (id: string) => {
+    const m = members.find((x) => x.id === id)
+    return m ? m.displayName || memberName(m) : '?'
+  }
+  const canTouch = (c: ConflictRecord) =>
+    c.user === user?.id ||
+    (!!c.member && members.some((m) => m.id === c.member && m.guardians?.includes(user?.id ?? '')))
   const [start, setStart] = useState('')
   const [end, setEnd] = useState('')
   const [note, setNote] = useState('')
@@ -653,7 +664,7 @@ function ConflictsSection({ conflicts, reload }: { conflicts: ConflictRecord[]; 
   const [busy, setBusy] = useState(false)
   const [addErr, setAddErr] = useState('')
 
-  const mine = conflicts.filter((c) => c.user === user?.id)
+  const mine = conflicts.filter(canTouch)
   const shown = isManager ? conflicts : mine
 
   // Weekly busy-hours rows and series rows each collapse to one line;
@@ -694,6 +705,7 @@ function ConflictsSection({ conflicts, reload }: { conflicts: ConflictRecord[]; 
           await pb.collection('conflicts').create({
             production: production.id,
             user: user!.id,
+            member: forMember,
             start: d,
             end: occEnd,
             note,
@@ -704,6 +716,7 @@ function ConflictsSection({ conflicts, reload }: { conflicts: ConflictRecord[]; 
         await pb.collection('conflicts').create({
           production: production.id,
           user: user!.id,
+          member: forMember,
           start,
           end: end || start,
           note,
@@ -747,10 +760,12 @@ function ConflictsSection({ conflicts, reload }: { conflicts: ConflictRecord[]; 
         type Item = { key: string; label: string; onRemove?: () => void; removeLabel?: string }
         const byPerson = new Map<string, { name: string; items: Item[] }>()
         const bucket = (c: ConflictRecord) => {
-          let b = byPerson.get(c.user)
+          // Child conflicts group under the child, not the parent who typed them.
+          const key = c.member ? `m:${c.member}` : c.user
+          let b = byPerson.get(key)
           if (!b) {
-            b = { name: c.expand?.user?.name ?? '?', items: [] }
-            byPerson.set(c.user, b)
+            b = { name: c.member ? memberLabel(c.member) : c.expand?.user?.name ?? '?', items: [] }
+            byPerson.set(key, b)
           }
           return b
         }
@@ -758,7 +773,7 @@ function ConflictsSection({ conflicts, reload }: { conflicts: ConflictRecord[]; 
           bucket(c).items.push({
             key: c.id,
             label: `⏰ ${c.note || 'busy'} ${weeklyLabel(c)}${c.end ? ` until ${formatDay(c.end)}` : ''}`,
-            onRemove: c.user === user?.id ? () => remove(c.id) : undefined,
+            onRemove: canTouch(c) ? () => remove(c.id) : undefined,
             removeLabel: 'Remove these weekly hours',
           })
         }
@@ -769,7 +784,7 @@ function ConflictsSection({ conflicts, reload }: { conflicts: ConflictRecord[]; 
           bucket(c).items.push({
             key: c.series,
             label: `🔁 ${c.note || 'repeating'} — ${sorted.length} dates (${preview}${sorted.length > 2 ? ', …' : ''})`,
-            onRemove: c.user === user?.id ? () => removeSeries(rows) : undefined,
+            onRemove: canTouch(c) ? () => removeSeries(rows) : undefined,
             removeLabel: 'Remove the whole series',
           })
         }
@@ -777,7 +792,7 @@ function ConflictsSection({ conflicts, reload }: { conflicts: ConflictRecord[]; 
           bucket(c).items.push({
             key: c.id,
             label: `${formatDay(c.start)}${c.end && c.end !== c.start ? `–${formatDay(c.end)}` : ''}${c.note ? ` (${c.note})` : ''}`,
-            onRemove: c.user === user?.id ? () => remove(c.id) : undefined,
+            onRemove: canTouch(c) ? () => remove(c.id) : undefined,
             removeLabel: 'Remove this conflict',
           })
         }
@@ -786,7 +801,7 @@ function ConflictsSection({ conflicts, reload }: { conflicts: ConflictRecord[]; 
           <ul className="plain-list">
             {people.map(([uid, p]) => (
               <li key={uid} style={{ marginBottom: '0.3rem' }}>
-                {isManager && <strong>{p.name}: </strong>}
+                {(isManager || byPerson.size > 1) && <strong>{p.name}: </strong>}
                 {p.items.map((it, i) => (
                   <span key={it.key}>
                     {i > 0 && <span className="hint"> · </span>}
@@ -810,6 +825,23 @@ function ConflictsSection({ conflicts, reload }: { conflicts: ConflictRecord[]; 
         )
       })()}
       <form onSubmit={add} className="stack">
+        {myChildren.length > 0 && (
+          <label>
+            Who is this for?
+            <select
+              aria-label="Who this conflict is for"
+              value={forMember}
+              onChange={(e) => setForMember(e.target.value)}
+            >
+              <option value="">Me</option>
+              {myChildren.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.displayName || memberName(m)}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <div className="row">
           <label>
             From
@@ -888,7 +920,7 @@ function ConflictsSection({ conflicts, reload }: { conflicts: ConflictRecord[]; 
           </p>
         )}
       </form>
-      <WeeklyHoursForm reload={reload} />
+      <WeeklyHoursForm reload={reload} forMember={forMember} forLabel={forMember ? memberLabel(forMember) : ''} />
     </section>
   )
 }
@@ -896,7 +928,15 @@ function ConflictsSection({ conflicts, reload }: { conflicts: ConflictRecord[]; 
 // "I work Mon–Fri 9–5" / "class Tue & Thu 6–9pm": one row that means busy
 // during those hours every week — free before and after, so evening
 // rehearsals on those days can still work.
-function WeeklyHoursForm({ reload }: { reload: () => Promise<void> }) {
+function WeeklyHoursForm({
+  reload,
+  forMember,
+  forLabel,
+}: {
+  reload: () => Promise<void>
+  forMember: string
+  forLabel: string
+}) {
   const { production } = useProduction()
   const { user } = useAuth()
   const [days, setDays] = useState<Set<number>>(new Set())
@@ -916,6 +956,7 @@ function WeeklyHoursForm({ reload }: { reload: () => Promise<void> }) {
       await pb.collection('conflicts').create({
         production: production.id,
         user: user!.id,
+        member: forMember,
         start: iso,
         end: until || '',
         note,
@@ -939,7 +980,7 @@ function WeeklyHoursForm({ reload }: { reload: () => Promise<void> }) {
 
   return (
     <form onSubmit={add} className="stack" style={{ marginTop: '1rem' }}>
-      <h3>⏰ My weekly busy hours</h3>
+      <h3>⏰ {forLabel ? `${forLabel}'s weekly busy hours` : 'My weekly busy hours'}</h3>
       <p className="hint" style={{ margin: 0 }}>
         Work or class schedule? Enter the hours you're busy each week — you stay available
         the rest of those days, so an evening rehearsal can still work.
@@ -990,7 +1031,7 @@ function WeeklyHoursForm({ reload }: { reload: () => Promise<void> }) {
         placeholder="What is it — for example: work, night class"
       />
       <button type="submit" disabled={busy || days.size === 0 || !fromTime || !toTime}>
-        Add my busy hours
+        {forLabel ? `Add ${forLabel}'s busy hours` : 'Add my busy hours'}
       </button>
       {wkErr && <p className="error" role="alert">{wkErr}</p>}
     </form>

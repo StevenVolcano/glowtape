@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useProduction } from '../pages/Production.tsx'
-import { conflictHitsEvent, formatTime12, isWeekly, weeklyLabel } from '../lib/conflicts.ts'
+import { conflictAppliesTo, conflictHitsEvent, formatTime12, isWeekly, weeklyLabel } from '../lib/conflicts.ts'
 import { groupMemberIds } from '../lib/breakdown.ts'
 import { memberName, pbDate } from '../lib/types.ts'
 import type { ConflictRecord, EventRecord, GroupRecord } from '../lib/types.ts'
@@ -54,7 +54,7 @@ export default function FindTime({
             return candidates.filter((m) => ids.includes(m.id))
           })()
 
-  const noAccount = chosen.filter((m) => !m.user)
+  const noAccount = chosen.filter((m) => !m.user && !(m.guardians?.length))
 
   // Day-by-day verdicts, capped so a stray year-long window stays cheap.
   const rows: { day: string; label: string; busy: string[]; scheduled: string[] }[] = []
@@ -71,9 +71,8 @@ export default function FindTime({
       } as EventRecord
       const busy: string[] = []
       for (const m of chosen) {
-        if (!m.user) continue
         for (const c of conflicts) {
-          if (c.user !== m.user) continue
+          if (!conflictAppliesTo(c, m)) continue
           if (conflictHitsEvent(c, slot)) {
             const why = isWeekly(c) ? `${c.note || 'busy'} ${weeklyLabel(c)}` : c.note || 'conflict'
             busy.push(`${m.displayName || memberName(m)} (${why})`)

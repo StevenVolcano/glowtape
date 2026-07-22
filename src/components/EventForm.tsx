@@ -2,7 +2,7 @@ import { useEffect, useId, useState, type FormEvent } from 'react'
 import { pb } from '../lib/pb.ts'
 import { useProduction } from '../pages/Production.tsx'
 import { groupMemberIds, groupUnitsByAct, resolveUnitMemberIds } from '../lib/breakdown.ts'
-import { conflictHitsEvent, isWeekly, weeklyLabel } from '../lib/conflicts.ts'
+import { conflictAppliesTo, conflictHitsEvent, isWeekly, weeklyLabel } from '../lib/conflicts.ts'
 import { DEFAULT_EVENT_KINDS, isCommunityKind, memberName, pbDate, productionPlaces } from '../lib/types.ts'
 import type { ConflictRecord, EventRecord, GroupRecord, UnitRecord } from '../lib/types.ts'
 
@@ -108,9 +108,9 @@ export default function EventForm({
     const out: string[] = []
     for (const mid of ids) {
       const m = members.find((x) => x.id === mid)
-      if (!m?.user) continue
+      if (!m) continue
       for (const c of allConflicts) {
-        if (c.user !== m.user) continue
+        if (!conflictAppliesTo(c, m)) continue
         if (conflictHitsEvent(c, pseudo)) {
           out.push(
             `${m.displayName || memberName(m)} (${

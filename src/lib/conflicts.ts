@@ -1,5 +1,5 @@
 import { pbDate } from './types.ts'
-import type { ConflictRecord, EventRecord } from './types.ts'
+import type { ConflictRecord, EventRecord, MemberRecord } from './types.ts'
 
 // One place that decides "does this conflict collide with this event?" —
 // used by Manage's ⚠ alerts (and future availability tools). Two kinds:
@@ -49,4 +49,13 @@ export function conflictHitsEvent(c: ConflictRecord, ev: EventRecord): boolean {
   }
   const to = String(c.end || c.start).slice(0, 10)
   return evDay >= from && evDay <= to
+}
+
+// Does this conflict belong to this member? Member-attached conflicts (a
+// parent entered them for their child's row) match that row (and claimed
+// copies of it); personal conflicts match by account, across all of that
+// person's rows.
+export function conflictAppliesTo(c: ConflictRecord, m: MemberRecord): boolean {
+  if (c.member) return c.member === m.id || (!!m.claimedFrom && c.member === m.claimedFrom)
+  return !!m.user && c.user === m.user
 }

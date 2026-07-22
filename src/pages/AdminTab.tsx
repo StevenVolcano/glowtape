@@ -8,7 +8,7 @@ import { openResourceFile, pbErrorMessage } from '../lib/files.ts'
 import ManageJumpNav from '../components/ManageJumpNav.tsx'
 import QrCode from '../components/QrCode.tsx'
 import { MANAGER_ROLES, ROLE_LABELS } from '../lib/types.ts'
-import { conflictHitsEvent, isWeekly, weeklyLabel } from '../lib/conflicts.ts'
+import { conflictAppliesTo, conflictHitsEvent, isWeekly, weeklyLabel } from '../lib/conflicts.ts'
 import type { AttendanceRecord, AuditionRecord, ChannelRecord, ConflictRecord, EventRecord, GroupRecord, MemberRecord, MemberRole, ProfileRecord, ResourceRecord } from '../lib/types.ts'
 import { DEFAULT_EVENT_KINDS, memberName, normalizePlaces, pbDate, productionPlaces, shareInvite } from '../lib/types.ts'
 import type { Place } from '../lib/types.ts'
@@ -1226,21 +1226,21 @@ function ConflictAlertsSection() {
         const evDate = pbDate(ev.start)
         if (evDate.getTime() < now) continue
         const evDay = `${evDate.getFullYear()}-${pad2(evDate.getMonth() + 1)}-${pad2(evDate.getDate())}`
-        const calledUsers =
+        const calledMembers =
           ev.called.length === 0
-            ? members.filter((m) => m.user).map((m) => m.user)
-            : members
-                .filter(
-                  (m) =>
-                    m.user &&
-                    (ev.called.includes(m.id) ||
-                      (!!m.claimedFrom && ev.called.includes(m.claimedFrom))),
-                )
-                .map((m) => m.user)
+            ? members.filter((m) => m.role !== 'guardian')
+            : members.filter(
+                (m) =>
+                  ev.called.includes(m.id) ||
+                  (!!m.claimedFrom && ev.called.includes(m.claimedFrom)),
+              )
         for (const c of conflicts) {
-          if (!calledUsers.includes(c.user)) continue
+          const hit = calledMembers.find((m) => conflictAppliesTo(c, m))
+          if (!hit) continue
           if (conflictHitsEvent(c, ev)) {
-            const who = c.expand?.user?.name || 'Someone'
+            const who = c.member
+              ? hit.displayName || memberName(hit)
+              : c.expand?.user?.name || 'Someone'
             const what = isWeekly(c)
               ? `${c.note || 'busy hours'} (${weeklyLabel(c)})`
               : `a conflict${c.note ? ` (${c.note})` : ''}`
