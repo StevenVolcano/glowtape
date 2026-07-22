@@ -1,7 +1,7 @@
 import { useEffect, useId, useState, type FormEvent } from 'react'
 import { pb } from '../lib/pb.ts'
 import { useProduction } from '../pages/Production.tsx'
-import { groupMemberIds, resolveUnitMemberIds } from '../lib/breakdown.ts'
+import { groupMemberIds, groupUnitsByAct, resolveUnitMemberIds } from '../lib/breakdown.ts'
 import { conflictHitsEvent, isWeekly, weeklyLabel } from '../lib/conflicts.ts'
 import { DEFAULT_EVENT_KINDS, isCommunityKind, memberName, pbDate, productionPlaces } from '../lib/types.ts'
 import type { ConflictRecord, EventRecord, GroupRecord, UnitRecord } from '../lib/types.ts'
@@ -152,6 +152,17 @@ export default function EventForm({
 
   function toggleUnit(id: string) {
     const next = units.includes(id) ? units.filter((x) => x !== id) : [...units, id]
+    setUnits(next)
+    recomputeCalled(next, calledGroups)
+  }
+
+  // "All of Act 1" in one tap: select every unit in the act, or clear them
+  // all if they're already all in.
+  function toggleAct(actUnitIds: string[]) {
+    const allIn = actUnitIds.every((id) => units.includes(id))
+    const next = allIn
+      ? units.filter((id) => !actUnitIds.includes(id))
+      : [...new Set([...units, ...actUnitIds])]
     setUnits(next)
     recomputeCalled(next, calledGroups)
   }
@@ -435,19 +446,36 @@ export default function EventForm({
       {allUnits.length > 0 && (
         <div>
           <strong>Rehearsing (from the breakdown)</strong>
-          <div className="chips">
-            {allUnits.map((u) => (
-              <button
-                type="button"
-                key={u.id}
-                className={`chip ${units.includes(u.id) ? 'chip-active' : ''}`}
-                aria-pressed={units.includes(u.id)}
-                onClick={() => toggleUnit(u.id)}
-              >
-                {u.name}
-              </button>
-            ))}
-          </div>
+          {groupUnitsByAct(allUnits).map((section, i) => (
+            <div key={section.act || `no-act-${i}`}>
+              {section.act && <div className="hint act-label">{section.act}</div>}
+              <div className="chips">
+                {section.act && section.units.length > 1 && (
+                  <button
+                    type="button"
+                    className={`chip ${
+                      section.units.every((u) => units.includes(u.id)) ? 'chip-active' : ''
+                    }`}
+                    aria-pressed={section.units.every((u) => units.includes(u.id))}
+                    onClick={() => toggleAct(section.units.map((u) => u.id))}
+                  >
+                    All of {section.act}
+                  </button>
+                )}
+                {section.units.map((u) => (
+                  <button
+                    type="button"
+                    key={u.id}
+                    className={`chip ${units.includes(u.id) ? 'chip-active' : ''}`}
+                    aria-pressed={units.includes(u.id)}
+                    onClick={() => toggleUnit(u.id)}
+                  >
+                    {u.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
           <p className="hint">
             Picking units calls everyone involved in them — fine-tune with the people chips
             below.

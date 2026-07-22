@@ -116,3 +116,23 @@ export function peopleLine(ids: string[], members: MemberRecord[]): string {
     .filter(Boolean)
     .join(', ')
 }
+
+// Units grouped for display: one section per act, acts in first-appearance
+// order, unit order preserved inside each. Units with no act land in a
+// section with an empty label — when nothing has an act, that's the only
+// section and the list looks exactly like the flat one.
+export function groupUnitsByAct(units: UnitRecord[]): { act: string; units: UnitRecord[] }[] {
+  const sections: { act: string; units: UnitRecord[] }[] = []
+  const byAct = new Map<string, { act: string; units: UnitRecord[] }>()
+  for (const u of units) {
+    const act = (u.act || '').trim()
+    let section = byAct.get(act)
+    if (!section) {
+      section = { act, units: [] }
+      byAct.set(act, section)
+      sections.push(section)
+    }
+    section.units.push(u)
+  }
+  return sections
+}

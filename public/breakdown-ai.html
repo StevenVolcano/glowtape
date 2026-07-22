@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Glow Tape — Breakdown from your script, with an AI helper</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+         max-width: 720px; margin: 0 auto; padding: 1.5rem 1rem; color: #241f2e; line-height: 1.45; }
+  h1 { font-size: 1.5rem; margin: 0 0 .2rem; }
+  h2 { font-size: 1.15rem; margin: 1.4rem 0 .4rem; }
+  .tagline { color: #555; margin: 0 0 1rem; }
+  ol.steps { padding-left: 1.4rem; }
+  ol.steps > li { margin-bottom: .75rem; }
+  .tip { background: #f4fadd; border-radius: 8px; padding: .5rem .75rem; margin: 1rem 0; }
+  .caution { background: #fdf3e2; border-radius: 8px; padding: .5rem .75rem; margin: 1rem 0; }
+  pre { background: #f2f3f6; border: 1px solid #ddd8ce; border-radius: 8px;
+        padding: .75rem; white-space: pre-wrap; font-size: .85rem; }
+  button.copy { font: inherit; padding: .55rem 1rem; border-radius: 8px; border: 1px solid #8a8478;
+                background: #cdef55; cursor: pointer; font-weight: 600; }
+  .copyright { margin-top: 1.5rem; font-size: .85rem; color: #6b6478; }
+</style>
+</head>
+<body>
+<p><a href="/help.html">← Help</a> · <a href="/director-guide.html">Director's setup guide</a></p>
+
+<h1>📋 Breakdown from your script, with an AI helper</h1>
+<p class="tagline">Ten minutes with an AI chat instead of an evening with a highlighter.</p>
+
+<p>Glow Tape's <strong>Sheets → Breakdown</strong> can import a spreadsheet of your show's
+songs or scenes and who's in each one — that's what powers "pick a song, the right people
+get called" when you schedule. Making that spreadsheet by hand is the tedious part. If you
+use an AI assistant (Claude, or any chat that accepts file uploads), it can read your script
+and draft the spreadsheet for you.</p>
+
+<p>To be clear: <strong>Glow Tape itself doesn't use AI and never sees your script.</strong>
+This all happens in your own AI chat, on your own account. Glow Tape just imports the
+finished CSV like any other spreadsheet.</p>
+
+<h2>How to do it</h2>
+<ol class="steps">
+  <li><strong>Open your AI chat</strong> — claude.ai works well — and attach your script or
+      score as a PDF.</li>
+  <li><strong>Paste the prompt below</strong> and send it.</li>
+  <li><strong>Save what comes back as a .csv file</strong> (most assistants offer it as a
+      download; otherwise copy the code block into a file named
+      <em>breakdown.csv</em>).</li>
+  <li><strong>Import it</strong>: your show → Sheets tab → Breakdown →
+      <em>⬆ Import CSV</em>.</li>
+  <li><strong>Check the character names.</strong> Glow Tape matches people by the
+      role/character names in <em>Manage → People &amp; roles</em> — if the import says it
+      didn't recognize someone, spell that role the way the script does (or fix the CSV) and
+      re-import.</li>
+</ol>
+
+<h2>The prompt</h2>
+<p><button class="copy" id="copyBtn" onclick="copyPrompt()">📋 Copy the prompt</button></p>
+<pre id="prompt">You're helping a community-theater stage manager break down the attached script for rehearsal scheduling. Read the whole script carefully and produce ONE CSV.
+
+If it's a musical, use exactly these columns:
+Song,Act,Pages,On stage,Singing,Dancing,Notes
+
+If it's a straight play, use exactly these columns:
+Scene,Act,Pages,On stage,Notes
+
+Rules:
+- One row per musical number (including reprises) or per scene, in show order. For a musical you may also add rows for substantial book scenes between numbers.
+- Act: written consistently ("Act 1", "Act 2"). Leave blank for a one-act.
+- Pages: the page range in the attached file, like 12-18.
+- On stage: every character who appears in that unit, separated by commas, using character names EXACTLY as the script's character list spells them. Include "Ensemble" or "Chorus" when the script calls for them.
+- Singing / Dancing (musicals only): which of those characters sing or dance in that number. Leave blank if none.
+- Notes: what a stage manager would flag — mid-scene entrances/exits, quick changes, offstage voices, props that travel. Keep each under 300 characters.
+- If you're unsure whether a character appears in a unit, INCLUDE them and add "(check)" to Notes — don't silently drop anyone.
+- Output the CSV as a downloadable file if you can, otherwise in a single code block. Quote any cell that contains a comma. No commentary inside the CSV.
+
+After the CSV, tell me separately: any characters from the script's character list who never appear in your rows, and any pages you couldn't read.</pre>
+
+<div class="tip">The AI's draft is a <strong>draft</strong>. Skim every row against your
+script before you rely on it for calls — assistants occasionally miss a silent entrance or
+an offstage voice. The "(check)" notes are where it wants your eyes first. You can edit any
+unit in Glow Tape after importing.</div>
+
+<div class="caution">Your script is licensed material — only upload what you're licensed to
+work with, and know that AI chat services have their own data policies. If you'd rather not
+upload the script anywhere, the same CSV can be typed up in any spreadsheet app: the columns
+above are all Glow Tape needs.</div>
+
+<p class="copyright">Glow Tape · <a href="https://glowtape.net">glowtape.net</a> ·
+free for Grays Harbor community theater</p>
+
+<script>
+function copyPrompt() {
+  const text = document.getElementById('prompt').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const b = document.getElementById('copyBtn');
+    b.textContent = '✓ Copied — paste it into your AI chat';
+    setTimeout(() => { b.textContent = '📋 Copy the prompt'; }, 4000);
+  });
+}
+</script>
+</body>
+</html>

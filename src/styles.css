@@ -336,6 +336,17 @@ form.stack,
   font-weight: 600;
 }
 
+/* Breakdown act sections. */
+.act-heading {
+  margin: 0.9rem 0 0.3rem;
+  padding-bottom: 0.15rem;
+  border-bottom: 1px solid var(--line);
+}
+.act-label {
+  margin-top: 0.4rem;
+  font-weight: 600;
+}
+
 /* Operator-only note atop a production they're not a member of. */
 .stagehand-banner {
   background: var(--card);

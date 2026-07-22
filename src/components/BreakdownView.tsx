@@ -6,6 +6,7 @@ import { csvField, parseCsv } from '../lib/trackers.ts'
 import {
   BREAKDOWN_STYLES,
   GROUP_LABELS,
+  groupUnitsByAct,
   mapUnitHeaders,
   matchMember,
   peopleLine,
@@ -266,46 +267,68 @@ export default function BreakdownView() {
 
       {units.length === 0 && (
         <p className="hint">
-          {isManager
-            ? 'Add units below, or import a CSV — a spreadsheet with columns like Song, Act, On stage, Singing, Dancing. People are matched by role/character name from People & roles.'
-            : 'Nothing here yet.'}
+          {isManager ? (
+            <>
+              Add units below, or import a CSV — a spreadsheet with columns like Song, Act, On
+              stage, Singing, Dancing. People are matched by role/character name from People
+              &amp; roles. Short on time? An AI chat can draft the CSV from your script:{' '}
+              <a href="/breakdown-ai.html" target="_blank" rel="noreferrer">
+                here's how, prompt included
+              </a>
+              .
+            </>
+          ) : (
+            'Nothing here yet.'
+          )}
         </p>
       )}
       {onlyMine && visible.length === 0 && units.length > 0 && (
         <p className="hint">You're not in any units yet — lucky you, or check with the SM.</p>
       )}
 
-      <ul className="plain-list">
-        {visible.map((u) => (
-          <li key={u.id} style={{ marginBottom: '0.5rem' }}>
-            <button
-              className="link"
-              aria-expanded={openId === u.id}
-              onClick={() => setOpenId(openId === u.id ? '' : u.id)}
-            >
-              {openId === u.id ? '▾' : '▸'} <strong>{u.name}</strong>
-            </button>{' '}
-            <span className="hint">
-              {[u.act, u.pages && `pp. ${u.pages}`].filter(Boolean).join(' · ')}
-            </span>
-            <div className="hint" style={{ marginLeft: '1.2rem' }}>
-              {peopleLine(u.onstage ?? [], members) || 'Nobody yet'}
-            </div>
-            {openId === u.id && (
-              <UnitEditor
-                unit={u}
-                pool={pool}
-                members={members}
-                groups={BREAKDOWN_STYLES[style].groups as readonly UnitGroup[]}
-                roleGroups={roleGroups}
-                canEdit={isManager}
-                onSave={(patch) => saveUnit(u, patch)}
-                onDelete={() => removeUnit(u)}
-              />
-            )}
-          </li>
-        ))}
-      </ul>
+      {groupUnitsByAct(visible).map((section, i) => (
+        <div key={section.act || `no-act-${i}`}>
+          {section.act && (
+            <h4 className="act-heading">
+              {section.act}{' '}
+              <span className="hint">
+                — {section.units.length} {BREAKDOWN_STYLES[style].unit.toLowerCase()}
+                {section.units.length === 1 ? '' : 's'}
+              </span>
+            </h4>
+          )}
+          <ul className="plain-list">
+            {section.units.map((u) => (
+              <li key={u.id} style={{ marginBottom: '0.5rem' }}>
+                <button
+                  className="link"
+                  aria-expanded={openId === u.id}
+                  onClick={() => setOpenId(openId === u.id ? '' : u.id)}
+                >
+                  {openId === u.id ? '▾' : '▸'} <strong>{u.name}</strong>
+                </button>{' '}
+                <span className="hint">{u.pages && `pp. ${u.pages}`}</span>
+                <div className="hint" style={{ marginLeft: '1.2rem' }}>
+                  {peopleLine(u.onstage ?? [], members) || 'Nobody yet'}
+                </div>
+                {openId === u.id && (
+                  <UnitEditor
+                    unit={u}
+                    pool={pool}
+                    members={members}
+                    groups={BREAKDOWN_STYLES[style].groups as readonly UnitGroup[]}
+                    roleGroups={roleGroups}
+                    knownActs={[...new Set(units.map((x) => (x.act || '').trim()).filter(Boolean))]}
+                    canEdit={isManager}
+                    onSave={(patch) => saveUnit(u, patch)}
+                    onDelete={() => removeUnit(u)}
+                  />
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
 
       {isManager && (
         <div className="row no-print" style={{ flexWrap: 'wrap' }}>
@@ -352,6 +375,7 @@ function UnitEditor({
   members,
   groups,
   roleGroups,
+  knownActs,
   canEdit,
   onSave,
   onDelete,
@@ -361,6 +385,7 @@ function UnitEditor({
   members: MemberRecord[]
   groups: readonly UnitGroup[]
   roleGroups: GroupRecord[]
+  knownActs: string[]
   canEdit: boolean
   onSave: (patch: Partial<UnitRecord>) => Promise<void>
   onDelete: () => Promise<void>
@@ -429,8 +454,14 @@ function UnitEditor({
           value={act}
           maxLength={60}
           onChange={(e) => setAct(e.target.value)}
-          placeholder="Act"
+          placeholder="Act — for example: Act 1"
+          list="known-acts"
         />
+        <datalist id="known-acts">
+          {knownActs.map((a) => (
+            <option key={a} value={a} />
+          ))}
+        </datalist>
         <input
           aria-label="Pages"
           value={pages}
