@@ -13,6 +13,14 @@
 // identity-preserving wrap instead, so the operator can never write a record
 // attributed to someone else.
 //
+// !! POST-MORTEM (2026-07-22): the dynamic `c[prop]` access in the wrap loop
+// below silently no-ops in PocketBase's JSVM — only the two direct
+// assignments at the end (productions.createRule) actually applied. The
+// wraps are re-applied correctly, with static property access, in
+// 1757800000_operator_access_take2.js. This file stays as the historical
+// record; NEVER use bracket-style dynamic property access on collection
+// objects in migrations.
+//
 // Deliberately NOT wrapped:
 // - annotations: personal script-room marks are private even from the
 //   operator (and from directors) — that's a constitution rule.

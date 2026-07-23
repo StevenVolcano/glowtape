@@ -60,6 +60,7 @@ can pick up mid-project — read it fully before changing anything.
 | **AI breakdown helper** (`public/breakdown-ai.html`): static page with a copy-button prompt — user attaches their script to their own AI chat (claude.ai etc.), gets back the exact CSV the breakdown importer understands (Song/Scene, Act, Pages, On stage, Singing, Dancing, Notes; names matched per `HEADER_ALIASES`/`matchMember`); page states Glow Tape has no AI + never sees the script, licensing caution included; linked from BreakdownView empty-state hint + help.html FAQ | `public/breakdown-ai.html` | — |
 | **Roles audit fixes** (migration `1757600000_privacy_hardening.js` + hooks, 2026-07-22): members.contactEmail/contactPhone hidden (read via contacts route `offline` map, write via POST `/api/glowtape/members/contact`; OfflineContact + PeopleTab updated); users.ageBand/teenUntil hidden (no minor-scanning; own band via GET `/api/glowtape/me` with teenUntil-expiry→adult; Profile.tsx uses it, defaults teen-safe) + locked in the users update guard (sms.pb.js); teen headshot block server-enforced (profiles create/update guards in community.pb.js); line_notes non-manager updates locked to `done` only (guard in push.pb.js); annotations production scope opened to operator so Stagehand script tools work — PERSONAL annotations still operator-excluded (constitution); annotation saves surface errors in ScriptRoom (noteErr); push.pb.js team-audience branch now wins over member/group combos; Production.tsx myMember prefers the non-guardian row for performer+parent users. Confirmed working-as-designed: conflicts + attendance rows member-visible, acks visible, SchedulePrint any-member, Notes creation open to members, FindTime skips no-account minors | see files listed | migration `1757600000` |
 | **Team-only conflicts + child conflicts** (migration `1757700000_child_conflicts.js`): conflicts list/view tightened to own + about-a-member-you-are/guard + managers + operator (castmates could previously read everyone's rows+notes via API; UI never showed them); conflicts.member relation = conflict ABOUT a member row (parent enters for a child with no login; both guardians + managers can create/edit/remove; create rule pins member.production = production); matching via `conflictAppliesTo(c, m)` in `lib/conflicts.ts` (member-attached → match row/claimedFrom; personal → match by account) used by FindTime (no-account flag now only for members with no user AND no guardians), EventForm busyPeople, ConflictAlertsSection (groups under the child's name); ConflictsSection "Who is this for?" select when user guards children, child rows grouped under child with ✕ for either parent, WeeklyHoursForm heading/button reflect the child | `pages/ScheduleTab.tsx`, `components/FindTime.tsx`, `EventForm.tsx`, `pages/AdminTab.tsx`, `lib/conflicts.ts` | migration `1757700000` |
+| **Stagehand access FIX** (`1757800000_operator_access_take2.js`): 1757400000's wrap loop never applied (dynamic `c[prop]` no-ops in JSVM — see landmine #5); take-2 re-applies all operator wraps with static dot access, String()-coerced reads, includes-guard idempotence; skips collections later migrations already made operator-aware (channels/messages/reactions/conflicts/annotations, groups.update/delete); verified against a goja-like mock with String-object rule values | — | migration `1757800000` |
 | Self-service email change (code to the NEW address proves inbox ownership, then `setEmail`; reuses `phone_codes` w/ purpose `email-change`, email string in the `phone` column) | `components/EmailSettings.tsx` (Home) | `pb_hooks/email.pb.js` |
 | Casting extras: dropdowns offer auditioners + 🎭 already-in-show people + ✍ paper-form freeform (`name:`-prefixed values → offline member displayName); "✓ Cast now" early-casts one role via finalize `members:[id]` subset (draft stays open/private); Strike + Cast Party in DEFAULT_EVENT_KINDS | `pages/CastingTab.tsx` | `casting.pb.js` subset logic |
 | UX conventions: ALL placeholders italic (global `::placeholder` CSS) and realistic samples say "Example:" / "— for example:" — keep new placeholders on this convention; `.golive` CSS class = bordered can't-miss go-live box | `src/styles.css`, everywhere | — |
@@ -109,18 +110,25 @@ data is yours" bullet — keep any future AI mentions consistent with this.
 4. **react-router v7 splat routes**: relative links inside `/production/:id/*`
    resolve against the full URL and stack segments. All tab links/redirects use
    absolute paths built from `/production/${production.id}`.
-5. **No Intl in the PB JSVM** — Pacific-time math is manual
+5. **No dynamic bracket access on collection objects in migrations** —
+   `c[prop] = rule` and `const r = c[prop]` silently no-op in the PB JSVM
+   (bit us in `1757400000_operator_access.js`: its whole wrap loop did
+   nothing; fixed by `1757800000_operator_access_take2.js`). Always use
+   static dot access (`c.listRule = ...`), coerce reads with `String()`
+   (rules can come back as wrapped objects — never trust `typeof`), and
+   test migrations against goja-ish mocks, not plain JS objects.
+6. **No Intl in the PB JSVM** — Pacific-time math is manual
    (`lib.pacificOffsetHours/pacificHour/formatPacific`).
-6. **JSVM can't do Web Push crypto** — pushes go through the Node sidecar
+7. **JSVM can't do Web Push crypto** — pushes go through the Node sidecar
    (`deploy/push-sender/server.mjs`, systemd unit `glowtape-push`, localhost
    only). Everything is no-op until `GLOWTAPE_VAPID_*` env vars exist.
-7. **Locked user fields**: `phone`, `phoneVerified`, `operator` cannot be
+8. **Locked user fields**: `phone`, `phoneVerified`, `operator` cannot be
    changed via the record API (guard hook in `sms.pb.js`).
-8. **Events are edited only through the routes** (`/api/glowtape/events`,
+9. **Events are edited only through the routes** (`/api/glowtape/events`,
    `/api/glowtape/events/update`) so emails digest correctly and acks/reminders
    reset on date/time/place changes. The only raw-record event update the app
    does is status (cancel/restore), which the cancel hook + push hook watch.
-9. **`chown -R glowtape:glowtape backend`** after touching server files;
+10. **`chown -R glowtape:glowtape backend`** after touching server files;
    services run as user `glowtape`.
 
 ## Data model (collections)
