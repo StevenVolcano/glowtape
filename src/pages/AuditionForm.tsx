@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { pb } from '../lib/pb.ts'
 import { pbErrorMessage } from '../lib/files.ts'
 import { useAuth } from '../lib/auth.tsx'
+import ProfileEditor from '../components/ProfileEditor.tsx'
 import ResourceList from '../components/ResourceList.tsx'
 import { useTitle } from '../lib/useTitle.ts'
 import { formatDay, formatWhen } from '../lib/types.ts'
@@ -82,6 +83,9 @@ export default function AuditionForm() {
   const [busy, setBusy] = useState(false)
   const [saved, setSaved] = useState('')
   const [justSignedUp, setJustSignedUp] = useState(false)
+  // The embedded profile editor hands us its save-if-dirty function so
+  // "Sign up" also flushes unsaved résumé edits — one button saves it all.
+  const profileSave = useRef<(() => Promise<void>) | null>(null)
   useTitle(info ? `Audition: ${info.title}` : 'Audition')
 
   useEffect(() => {
@@ -154,6 +158,16 @@ export default function AuditionForm() {
     setSaved('')
     setError('')
     try {
+      // Unsaved profile edits ride along with the signup. If the profile
+      // save fails, its own error shows in the profile box — stop here so
+      // nothing is half-saved without the auditioner noticing.
+      try {
+        await profileSave.current?.()
+      } catch {
+        setError("Your profile section couldn't save — see the note there, then try again.")
+        setBusy(false)
+        return
+      }
       const roles = [...checkedRoles, otherRoles.trim()].filter(Boolean).join(', ')
       const rows = conflictRows.filter((r) => r.start)
       const data = {
@@ -268,12 +282,25 @@ export default function AuditionForm() {
       )}
 
       <p className="hint">
-        The production team also sees <Link to="/profile">your profile</Link> with this form —
-        your stage history and headshot save everyone time. Prefer paper?{' '}
-        <Link to={`/audition/${id}/print`}>Print a blank form</Link>.
+        Prefer paper? <Link to={`/audition/${id}/print`}>Print a blank form</Link>.
       </p>
 
       <ResourceList productionId={id!} area="audition" />
+
+      <section>
+        <h2>Your profile — the directors see it with this form</h2>
+        <p className="hint" style={{ marginTop: 0 }}>
+          Your stage history, skills, and headshot save everyone time at the table. Edit it
+          right here — signing up saves any changes too. (It's also at{' '}
+          <Link to="/profile">My profile</Link>, and all of it is optional.)
+        </p>
+        <ProfileEditor
+          embedded
+          registerSave={(fn) => {
+            profileSave.current = fn
+          }}
+        />
+      </section>
 
       <section className="stack">
         <label>
