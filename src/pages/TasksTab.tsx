@@ -1,9 +1,11 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import SetupGuide from '../components/SetupGuide.tsx'
 import { pb } from '../lib/pb.ts'
 import { useAuth } from '../lib/auth.tsx'
 import { useProduction } from './Production.tsx'
+import { matchMember } from '../lib/breakdown.ts'
+import { csvField, parseCsv } from '../lib/trackers.ts'
 import { formatDay, memberName, LINE_NOTE_LABELS } from '../lib/types.ts'
 import type { LineNoteRecord, MemberRecord, TaskRecord } from '../lib/types.ts'
 
@@ -141,7 +143,178 @@ export default function TasksTab() {
       </section>
 
       {isManager && <NewTaskForm members={members} onAdded={load} />}
+      {isManager && <TaskCsv tasks={tasks} members={members} onImported={load} />}
     </div>
+  )
+}
+
+// Import a planning spreadsheet (one CSV) as tasks, and export the board
+// back out. Columns are matched loosely — a sheet with DUE / WHO / TYPE /
+// WHAT headers (the classic planning-workbook shape) imports as-is. WHO is
+// matched against roles and names; initials or strangers import unassigned.
+const TASK_COLS = {
+  title: ['what', 'task', 'todo', 'item', 'description', 'title'],
+  department: ['type', 'department', 'category', 'dept', 'area', 'phase'],
+  due: ['due', 'deadline', 'date', 'when'],
+  assignee: ['who', 'assignee', 'assigned', 'owner', 'person'],
+  done: ['done', 'complete', 'completed', 'status', 'check'],
+} as const
+type TaskCol = keyof typeof TASK_COLS
+
+function mapTaskHeaders(header: string[]): (TaskCol | null)[] {
+  const norm = (x: string) => x.toLowerCase().replace(/[^a-z0-9]/g, '')
+  return header.map((h) => {
+    const n = norm(h)
+    if (!n) return null
+    for (const [col, aliases] of Object.entries(TASK_COLS) as [TaskCol, readonly string[]][]) {
+      if (aliases.some((a) => n === a || n.includes(a))) return col
+    }
+    return null
+  })
+}
+
+// "2024-08-18", "2024-08-18 00:00:00", "8/18/2024", "Aug 18, 2024" → "2024-08-18".
+function parseDueDate(raw: string): string {
+  const s = raw.trim()
+  if (!s) return ''
+  const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (iso) return iso[0]
+  const us = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/)
+  if (us) return `${us[3]}-${us[1].padStart(2, '0')}-${us[2].padStart(2, '0')}`
+  const d = new Date(s)
+  if (!Number.isNaN(d.getTime())) {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  }
+  return ''
+}
+
+function TaskCsv({
+  tasks,
+  members,
+  onImported,
+}: {
+  tasks: TaskRecord[]
+  members: MemberRecord[]
+  onImported: () => Promise<void>
+}) {
+  const { production } = useProduction()
+  const [status, setStatus] = useState('')
+  const fileRef = useRef<HTMLInputElement>(null)
+  const pool = members.filter((m) => m.role !== 'guardian' && !m.claimedFrom)
+
+  async function importCsv(file: File) {
+    const rows = parseCsv(await file.text())
+    if (rows.length < 2) {
+      setStatus('That file needs a header row plus at least one task.')
+      return
+    }
+    const mapping = mapTaskHeaders(rows[0])
+    if (!mapping.includes('title')) {
+      setStatus(
+        `Couldn't find a task column (What / Task / Title) in the headers: ${rows[0].join(', ')}`,
+      )
+      return
+    }
+    setStatus(`Importing ${rows.length - 1} tasks…`)
+    const unmatched = new Set<string>()
+    let imported = 0
+    let badDates = 0
+    let assigned = 0
+    for (const row of rows.slice(1)) {
+      const data: Record<string, unknown> = { production: production.id }
+      row.forEach((cell, i) => {
+        const col = mapping[i]
+        if (!col) return
+        const value = cell.trim()
+        if (col === 'title') data.title = value.slice(0, 200)
+        else if (col === 'department') data.department = value.slice(0, 60)
+        else if (col === 'due') {
+          const d = parseDueDate(value)
+          if (d) data.due = d
+          else if (value) badDates++
+        } else if (col === 'done') {
+          data.done = /^(true|yes|y|x|✓|done|1)$/i.test(value)
+        } else if (col === 'assignee' && value) {
+          const m = matchMember(value, pool)
+          if (m) {
+            data.assignee = m.id
+            assigned++
+          } else {
+            unmatched.add(value)
+          }
+        }
+      })
+      if (!data.title) continue
+      // Messy sheets repeat their header row mid-list — don't import it.
+      if (/^(what|task|title|todo)$/i.test(String(data.title))) continue
+      await pb.collection('tasks').create(data)
+      imported++
+    }
+    await onImported()
+    setStatus(
+      `Imported ${imported} tasks. ✓` +
+        (assigned ? ` ${assigned} matched to people (they get the usual task email).` : '') +
+        (unmatched.size
+          ? ` Didn't recognize: ${[...unmatched].slice(0, 10).join(', ')}${
+              unmatched.size > 10 ? '…' : ''
+            } — those imported unassigned; assign them here when you're ready.`
+          : '') +
+        (badDates ? ` ${badDates} due dates couldn't be read and were left blank.` : ''),
+    )
+  }
+
+  function exportCsv() {
+    const header = ['Task', 'Type', 'Who', 'Due', 'Done']
+    const lines = tasks.map((t) => {
+      const m = members.find((x) => x.id === t.assignee)
+      return [
+        t.title,
+        t.department,
+        m ? memberName(m) : '',
+        t.due ? String(t.due).slice(0, 10) : '',
+        t.done ? 'yes' : '',
+      ]
+        .map((c) => csvField(String(c ?? '')))
+        .join(',')
+    })
+    const csv = [header.map(csvField).join(','), ...lines].join('\r\n') + '\r\n'
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }))
+    a.download = `${production.title} — To-do.csv`
+    a.click()
+    URL.revokeObjectURL(a.href)
+  }
+
+  return (
+    <section>
+      <div className="row" style={{ flexWrap: 'wrap' }}>
+        <button onClick={() => fileRef.current?.click()}>⬆ Import tasks from CSV</button>
+        <input
+          ref={fileRef}
+          type="file"
+          accept=".csv,text/csv"
+          className="sr-only"
+          aria-label="Import tasks from a CSV file"
+          onChange={(e) => {
+            const f = e.target.files?.[0]
+            e.target.value = ''
+            if (f) importCsv(f).catch(() => setStatus('Import failed — sorry.'))
+          }}
+        />
+        {tasks.length > 0 && <button onClick={exportCsv}>⬇ Export CSV</button>}
+      </div>
+      {status && (
+        <p className="hint" role="status">
+          {status}
+        </p>
+      )}
+      <p className="hint">
+        Got a planning spreadsheet? Export it as CSV (Google Sheets: File → Download → CSV, one
+        tab at a time) with columns like <em>What, Type, Who, Due, Done</em> and it lands here —
+        the Type column becomes the department groupings. Who is matched by role or name;
+        anything unrecognized just imports unassigned, and tasks never need an assignee.
+      </p>
+    </section>
   )
 }
 
