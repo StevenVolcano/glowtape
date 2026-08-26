@@ -16,6 +16,7 @@ export default function SignIn() {
   const [email, setEmail] = useState('')
   const [name, setName] = useState('')
   const [joinCode, setJoinCode] = useState(localStorage.getItem('gt-pending-code') ?? '')
+  const [ageBand, setAgeBand] = useState<'' | 'under13' | 'teen' | 'adult'>('')
   const [age, setAge] = useState('')
   const [phone, setPhone] = useState('')
   const [code, setCode] = useState('')
@@ -38,7 +39,7 @@ export default function SignIn() {
       if (method === 'email') {
         await pb.send('/api/glowtape/signup', {
           method: 'POST',
-          body: { email, name, code: joinCode, age: Number(age) || 0 },
+          body: { email, name, code: joinCode, band: ageBand, age: Number(age) || 0 },
         })
         if (joinCode.trim()) localStorage.setItem('gt-pending-code', joinCode.trim())
         const result = await pb.collection('users').requestOTP(email.trim().toLowerCase())
@@ -133,20 +134,61 @@ export default function SignIn() {
                   placeholder="Example: pat@gmail.com"
                   required
                 />
-                <label htmlFor="age">Your age</label>
-                <input
-                  id="age"
-                  type="number"
-                  inputMode="numeric"
-                  min="1"
-                  max="120"
-                  value={age}
-                  onChange={(e) => setAge(e.target.value)}
-                  placeholder="Age"
-                />
+                <span id="age-band-label" style={{ fontWeight: 600 }}>
+                  New here? How old are you?{' '}
+                  <span className="hint" style={{ fontWeight: 400 }}>
+                    (already have an account? skip this)
+                  </span>
+                </span>
+                <div className="chips" role="group" aria-labelledby="age-band-label">
+                  {(
+                    [
+                      ['under13', 'Under 13'],
+                      ['teen', '13–17'],
+                      ['adult', '18 or older'],
+                    ] as const
+                  ).map(([band, label]) => (
+                    <button
+                      type="button"
+                      key={band}
+                      className={`chip ${ageBand === band ? 'chip-active' : ''}`}
+                      aria-pressed={ageBand === band}
+                      onClick={() => setAgeBand(band)}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                {ageBand === 'under13' && (
+                  <p className="hint" role="status">
+                    Glow Tape accounts start at 13 — but you're not left out! Ask a parent or
+                    guardian to claim your role: they sign up instead, and they'll get your
+                    whole schedule and messages. (That's our safety model, on purpose.)
+                  </p>
+                )}
+                {ageBand === 'teen' && (
+                  <>
+                    <label htmlFor="age">Your age</label>
+                    <input
+                      id="age"
+                      type="number"
+                      inputMode="numeric"
+                      min="13"
+                      max="17"
+                      value={age}
+                      onChange={(e) => setAge(e.target.value)}
+                      placeholder="13–17"
+                      required
+                    />
+                    <p className="hint" style={{ margin: 0 }}>
+                      This just sets when grown-up features unlock automatically at 18. Your
+                      age is never shown to anyone and isn't kept — only the range.
+                    </p>
+                  </>
+                )}
                 <p className="hint" style={{ margin: 0 }}>
-                  We ask because theater includes kids — your age only sets the right safety
-                  protections. It's never shown to anyone, and only an age range is kept.
+                  We ask because theater includes kids — the range sets the right safety
+                  protections and nothing else.
                 </p>
                 <label htmlFor="joincode">Code</label>
                 <input
@@ -180,7 +222,15 @@ export default function SignIn() {
                 </p>
               </>
             )}
-            <button type="submit" disabled={busy}>
+            <button
+              type="submit"
+              disabled={
+                busy ||
+                (method === 'email' &&
+                  (ageBand === 'under13' ||
+                    (ageBand === 'teen' && (Number(age) < 13 || Number(age) > 17))))
+              }
+            >
               {busy ? 'Sending…' : method === 'email' ? 'Email me a sign-in code' : 'Text me a sign-in code'}
             </button>
             {method === 'email' && (

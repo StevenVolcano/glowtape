@@ -12,27 +12,46 @@
 // never used or seen. Idempotent: an existing email returns ok so the UI can
 // always follow with requestOTP.
 routerAdd("POST", "/api/glowtape/signup", (e) => {
-  const data = new DynamicModel({ email: "", name: "", code: "", age: 0 });
+  const data = new DynamicModel({ email: "", name: "", code: "", age: 0, band: "" });
   e.bindBody(data);
   const email = data.email.trim().toLowerCase();
   if (!email.includes("@")) {
     throw new BadRequestError("Please enter a valid email address.");
   }
-  const age = Math.floor(Number(data.age) || 0);
-  if (age < 1 || age > 120) {
-    throw new BadRequestError("Please enter your age.");
-  }
-  if (age < 13) {
-    throw new BadRequestError(
-      "Ask a parent or guardian to add you to your show — a grown-up in your production can set everything up, and they'll get your whole schedule.",
-    );
-  }
 
+  // Returning users skip the age question entirely — check for the account
+  // BEFORE validating anything about age.
   try {
     e.app.findAuthRecordByEmail("users", email);
     return e.json(200, { ok: true, existing: true });
   } catch {
-    // not found -> create, but only with a valid code
+    // not found -> create, but only with a valid code + an age band
+  }
+
+  // Age band (new UI: under13 / teen / adult chips) with the exact age only
+  // asked of teens, to compute when adult features unlock. Legacy fallback:
+  // older clients (or a stale PWA bundle) still send a bare numeric age.
+  const band = String(data.band || "").trim();
+  const age = Math.floor(Number(data.age) || 0);
+  const underThirteenMsg =
+    "Ask a parent or guardian to add you to your show — a grown-up in your production can set everything up, and they'll get your whole schedule.";
+  let teenAge = 0; // 0 = adult
+  if (band === "under13") {
+    throw new BadRequestError(underThirteenMsg);
+  } else if (band === "teen") {
+    if (age < 13 || age > 17) {
+      throw new BadRequestError("How old are you? Enter an age from 13 to 17.");
+    }
+    teenAge = age;
+  } else if (band === "adult") {
+    teenAge = 0;
+  } else {
+    // no band: legacy numeric-age path
+    if (age < 1 || age > 120) {
+      throw new BadRequestError("Please pick your age range.");
+    }
+    if (age < 13) throw new BadRequestError(underThirteenMsg);
+    if (age < 18) teenAge = age;
   }
 
   const code = data.code.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
@@ -71,10 +90,10 @@ routerAdd("POST", "/api/glowtape/signup", (e) => {
   record.set("verified", true); // possession of the emailed OTP code proves the address
   // emailVisibility stays false: managers read contacts via the gated route.
   // Age band only — the age itself is deliberately NOT stored (issue #9).
-  if (age < 18) {
+  if (teenAge) {
     record.set("ageBand", "teen");
     const roll = new Date();
-    roll.setFullYear(roll.getFullYear() + (18 - age));
+    roll.setFullYear(roll.getFullYear() + (18 - teenAge));
     record.set("teenUntil", roll.toISOString().replace("T", " "));
   } else {
     record.set("ageBand", "adult");
