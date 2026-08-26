@@ -176,9 +176,17 @@ the called placeholder. Use `lib.recipients` (emails) / `lib.recipientUserIds`
   Toll-free registration". Priority review window ends 2026-07-20. Twilio env
   vars are already on the server; SMS code paths log instead of sending until
   `GLOWTAPE_SMS_PROVIDER` works end-to-end.
-- **Email**: LIVE via Brevo SMTP, sender callboard@glowtape.net (Squarespace
-  forwards to steven@). DMARC deliberately skipped (conflicts with Squarespace
-  forwarding; DKIM is in place).
+- **Email**: LIVE via **Brevo HTTP API** (`pb_hooks/mailer.pb.js` binds
+  `onMailerSend`, intercepting ALL mail incl. PB password resets/OTPs;
+  activated by `GLOWTAPE_BREVO_API_KEY` in /etc/glowtape/env — without it the
+  hook e.next()s to plain SMTP). Brevo deactivated classic SMTP relay on the
+  shared Zucchini Volcano account (2026-08; HI2048 hit it first). Sender
+  callboard@glowtape.net (Squarespace forwards to steven@); bcc-only blasts
+  put the sender in "to" (Brevo requires one), so callboard@ gets an archive
+  copy of each blast; recipients chunked ≤90/call; attachments fall back to
+  SMTP. DMARC deliberately skipped (conflicts with Squarespace forwarding;
+  DKIM is in place). NOTE: Brevo free tier = ~300 emails/day SHARED with
+  HI2048, each recipient counts.
 - **Operator flag**: set on Steven's user record via the PB dashboard (needed
   for `/operator` and Stagehand access to every production).
 - **Backups**: nightly systemd timer → `glowtape-backup` (pb_data snapshots).
