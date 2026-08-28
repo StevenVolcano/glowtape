@@ -88,6 +88,7 @@ routerAdd(
     if (!lib.canManage(production, e.auth)) {
       throw new BadRequestError("Only the production team can request bios.");
     }
+    lib.assertNotArchived(production);
 
     const members = e.app.findRecordsByFilter("members", "production = {:p}", "", 500, 0, {
       p: production.id,

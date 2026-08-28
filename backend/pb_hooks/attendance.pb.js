@@ -27,6 +27,7 @@ routerAdd(
       throw new BadRequestError("Unknown event.");
     }
     const production = e.app.findRecordById("productions", event.get("production"));
+    lib.assertNotArchived(production);
 
     // Reporting for a specific member (a guardian on a child's behalf, or an
     // explicit self); otherwise fall back to the caller's own member row.
@@ -150,6 +151,7 @@ routerAdd(
     }
 
     const production = e.app.findRecordById("productions", event.get("production"));
+    lib.assertNotArchived(production);
     const time = lib.formatPacific(new Date(nowMs).toISOString()).split(", ").pop();
     const checked = [];
     for (const memberId of lib.toIdArray(data.members).slice(0, 20)) {

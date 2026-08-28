@@ -22,6 +22,7 @@ routerAdd(
       throw new BadRequestError("Unknown slot.");
     }
     const production = e.app.findRecordById("productions", slot.get("production"));
+    lib.assertNotArchived(production);
     const isManager = lib.canManage(production, e.auth);
     const ownsMember = (m) =>
       m.get("user") === e.auth.id || lib.toIdArray(m.get("guardians")).includes(e.auth.id);

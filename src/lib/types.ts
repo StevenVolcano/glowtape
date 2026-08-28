@@ -80,6 +80,7 @@ export interface ProductionRecord {
   breakdownStyle: '' | 'songs' | 'scenes' | 'pages'
   ticketUrl?: string
   quotes: string[] | null // director-entered lines for the Tonight page
+  archived?: boolean // wrapped show: dropped to "Past shows" and read-only
   expand?: { org?: OrgRecord }
 }
 

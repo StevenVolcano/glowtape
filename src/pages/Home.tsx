@@ -69,6 +69,8 @@ export default function Home() {
   const mine = productions.filter(
     (p) => p.managers.includes(user?.id ?? '') || memberProdIds.has(p.id),
   )
+  const active = mine.filter((p) => !p.archived)
+  const past = mine.filter((p) => p.archived)
   const openAuditions = productions.filter((p) => p.auditionOpen && !mine.includes(p))
   // The operator's production list includes every show on the server (API
   // rules let the Stagehand in anywhere); the rest go in their own section.
@@ -89,14 +91,15 @@ export default function Home() {
         <h2>Your productions</h2>
         {!loaded ? (
           <p>Loading…</p>
-        ) : mine.length === 0 ? (
+        ) : active.length === 0 ? (
           <p className="hint">
-            You're not in a production yet. Enter the join code your director or stage manager gave
-            you below.
+            {past.length > 0
+              ? 'No active productions right now — your past shows are below.'
+              : "You're not in a production yet. Enter the join code your director or stage manager gave you below."}
           </p>
         ) : (
           <ul className="cards">
-            {mine.map((p) => (
+            {active.map((p) => (
               <li key={p.id}>
                 <Link className="card card-link" to={`/production/${p.id}/schedule`}>
                   <strong>{p.title}</strong>
@@ -107,6 +110,23 @@ export default function Home() {
           </ul>
         )}
       </section>
+
+      {past.length > 0 && (
+        <section>
+          <h2>Past shows</h2>
+          <p className="hint">Archived productions — open to look back, read-only.</p>
+          <ul className="cards">
+            {past.map((p) => (
+              <li key={p.id}>
+                <Link className="card card-link" to={`/production/${p.id}/schedule`}>
+                  <strong>{p.title}</strong>
+                  <span className="pill">📦 archived</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {openAuditions.length > 0 && (
         <section>

@@ -14,6 +14,17 @@ import { DEFAULT_EVENT_KINDS, memberName, normalizePlaces, pbDate, productionPla
 import type { Place } from '../lib/types.ts'
 
 export default function AdminTab() {
+  const { archived } = useProduction()
+  // An archived show is read-only: the only management left is to bring it
+  // back. Everything else is hidden so nothing invites an edit that the
+  // backend would reject anyway.
+  if (archived) {
+    return (
+      <div>
+        <ArchiveSection />
+      </div>
+    )
+  }
   return (
     <div>
       <ManageJumpNav />
@@ -32,7 +43,60 @@ export default function AdminTab() {
       <ChannelsSection />
       <GroupsSection />
       <MembersSection />
+      <ArchiveSection />
     </div>
+  )
+}
+
+// Archive / unarchive the whole show. Archiving drops it into "Past shows" on
+// everyone's home screen and makes it read-only; unarchiving brings it back.
+// Nothing is deleted either way.
+function ArchiveSection() {
+  const { production, archived, reload } = useProduction()
+  const [busy, setBusy] = useState(false)
+
+  async function setArchived(next: boolean) {
+    if (next) {
+      const ok = window.confirm(
+        `Archive "${production.title}"? It moves to Past shows and becomes read-only for everyone — ` +
+          `no new events, messages, or edits. Nothing is deleted, and you can unarchive it anytime.`,
+      )
+      if (!ok) return
+    }
+    setBusy(true)
+    try {
+      await pb.collection('productions').update(production.id, { archived: next })
+      await reload()
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <section id="archive" className="golive">
+      <h2>{archived ? 'This show is archived' : 'Archive this show'}</h2>
+      {archived ? (
+        <>
+          <p className="hint">
+            It's in Past shows and read-only — no new events, messages, or edits. Unarchive it to
+            reopen everything exactly as it was.
+          </p>
+          <button onClick={() => setArchived(false)} disabled={busy}>
+            {busy ? 'Reopening…' : '↩ Unarchive this show'}
+          </button>
+        </>
+      ) : (
+        <>
+          <p className="hint">
+            When the run is over, archive the show to tuck it into Past shows and lock it as a
+            read-only record. Everything is preserved and you can bring it back anytime.
+          </p>
+          <button onClick={() => setArchived(true)} disabled={busy}>
+            {busy ? 'Archiving…' : '📦 Archive this show'}
+          </button>
+        </>
+      )}
+    </section>
   )
 }
 

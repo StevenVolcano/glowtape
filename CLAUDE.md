@@ -70,6 +70,7 @@ can pick up mid-project — read it fully before changing anything.
 | Production requests (director asks; operator edits+approves → org+production+manager membership created) | `pages/RequestProduction.tsx` | `pb_hooks/requests.pb.js` |
 | Community page `/community`: board + public calendar of audition/performance-kind events via `/api/glowtape/community-calendar` route (safe fields only); audition events link to the signup form; performance events show a 🎟 Buy-tickets link when set (`productions.ticketUrl` in Manage → Tickets wins, else the org's company box-office link resolved by `companies.org` relation id — no name matching; no link → no button); EventForm shows 🌍 notice on public kinds (`isCommunityKind`) + open-auditions nudge. Audition form is fed by `/api/glowtape/audition-info` (roles-on-offer checkboxes from uncast performer positions, audition-kind events, questions — auditioners aren't members, so a route, not rules) | `pages/Community.tsx`, `AuditionForm.tsx`, `AuditionPrint.tsx` | `pb_hooks/community.pb.js` |
 | Casting tab (manager-only): draft cast from audition signups in `cast_drafts` (manager-only collection), double-cast ⚠ + conflicts inline, finalize route assigns users to member rows after warning | `pages/CastingTab.tsx` | `pb_hooks/casting.pb.js`, migration `1754600000` |
+| Archive a show (manager toggles `productions.archived` in Manage → Archive this show): archived shows drop into "Past shows" on Home, show a read-only banner on every tab, hide the Casting tab + collapse Manage to just the unarchive control. Read-only enforced server-side (`archive.pb.js` request guard over all production-scoped collections + `assertNotArchived` in content routes). Nothing deleted; unarchive reopens it | `pages/Home.tsx`, `Production.tsx`, `AdminTab.tsx` | `pb_hooks/archive.pb.js`, `glowtape_lib.js` assertNotArchived, migration `1757900000` |
 | Schedule extras: manager "View as member" filter, print view (list + month grids) at `schedule/print[/:memberId]`, ack-all with confirm; contact sheet columns manager-only — **API-level since migration `1755500000`**: users.phone/phoneVerified/smsOptIn are hidden fields, emailVisibility=false for all (signup no longer sets it); managers read contacts via GET `/api/glowtape/contacts?production=` and the operator via POST `/api/glowtape/operator/emails` (both in `contacts.pb.js`). CAVEAT: when SMS_READY flips, PhoneSettings can no longer read own phone/smsOptIn from the auth record — it needs a self-status route and an opt-in route first. members.contactEmail/Phone (offline folks) are HIDDEN fields since migration `1757600000` — managers read them via the contacts route's `offline` map and write via POST `/api/glowtape/members/contact` (recipients() still emails them, never SMS); profiles.credits table (Year/Company/Show/Role) | `pages/SchedulePrint.tsx`, `ScheduleTab.tsx`, `PeopleTab.tsx`, `Profile.tsx` | migration `1754600000`, `glowtape_lib.js` recipients |
 | Accessibility: WCAG 2.2 AA pass done (labels, live regions, contrast tokens, per-view titles via `lib/useTitle.ts`); SECOND full audit 2026-07-18 (3 parallel reviews) fixed: swallowed submit errors app-wide (every create/update now catches → red `.error` + `role="alert"`; worst was the public AuditionForm), CastingTab failures no longer render green, file pickers keyboard-focusable (`.sr-only` not `hidden`), `button.link` joins the 44px floor (all ✕ removes), disabled-input styling, `.reaction` 44px, compact-mode icon buttons keep aria-labels, script-room popovers are labeled regions (not fake dialogs), pin markers padded hit areas, Slots chips aria-pressed + labels, ProgramPacket clipboard fallback = selectable textarea (not window.prompt), SignIn age explainer, PeopleTab empty state. KNOWN deliberate gaps: PDF canvas has NO text layer (script content is not screen-readable — my-lines/off-book are visual-only practice aids; revisit with pdf.js textLayer if a blind user needs the script room), light-only palette (no prefers-color-scheme — `:root` vars are centralized if ever wanted) | throughout | — |
 
@@ -133,13 +134,25 @@ data is yours" bullet — keep any future AI mentions consistent with this.
    does is status (cancel/restore), which the cancel hook + push hook watch.
 10. **`chown -R glowtape:glowtape backend`** after touching server files;
    services run as user `glowtape`.
+11. **Archived-show read-only** (`productions.archived`) is enforced in
+    `pb_hooks/archive.pb.js` via `onRecord{Create,Update,Delete}Request` guards
+    over every production-scoped content collection — these fire only on API
+    record requests, NOT on programmatic `app.save()` or internal cascades, so
+    the app's own bookkeeping is never blocked. Content written through a custom
+    route (events, casting/finalize, slots/book, attendance/*, bios/request,
+    members/contact, team-channel, line-notes/send) bypasses the request guard,
+    so each of those routes calls `lib.assertNotArchived(production)`. If you
+    add a production-scoped collection, add it to `archive.pb.js`'s list; if you
+    add a write route, call `assertNotArchived` — otherwise it stays writable on
+    archived shows. `channel_prefs` (muting) is intentionally left writable.
 
 ## Data model (collections)
 
 `users` (+phone/phoneVerified/smsOptIn/ageBand/teenUntil/operator) ·
 `orgs` (name, locations JSON) ·
 `productions` (org, title, status, joinCode, managers[denormalized user ids],
-eventKinds, locations, auditionOpen/Notes/Questions, breakdownStyle) ·
+eventKinds, locations, auditionOpen/Notes/Questions, breakdownStyle, ticketUrl,
+quotes, archived[read-only-when-true; enforced by `archive.pb.js`]) ·
 `members` (production, user?, role, position, roleCode, manager, multi,
 claimedFrom, minor, displayName, guardians[], noPhotos, bio) — THE identity
 row; pre-cast roles have empty user; children never have users ·

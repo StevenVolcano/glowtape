@@ -265,6 +265,9 @@ routerAdd(
       throw new BadRequestError("You're not in this production.");
     }
 
+    const lib = require(`${__hooks}/glowtape_lib.js`);
+    lib.assertNotArchived(e.app.findRecordById("productions", data.production));
+
     let channel;
     try {
       channel = e.app.findFirstRecordByFilter("channels", "production = {:p} && member = {:m}", {

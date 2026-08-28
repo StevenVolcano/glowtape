@@ -28,6 +28,7 @@ routerAdd(
     if (!lib.canManage(production, e.auth)) {
       throw new BadRequestError("Only the production team can finalize a cast.");
     }
+    lib.assertNotArchived(production);
 
     let draft;
     try {

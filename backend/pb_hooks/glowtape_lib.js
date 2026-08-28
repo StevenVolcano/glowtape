@@ -34,6 +34,68 @@ function canManage(production, auth) {
   return toIdArray(production.get("managers")).includes(auth.id);
 }
 
+// Archived shows are read-only. The record API is guarded in archive.pb.js;
+// custom routes that write content through app.save() call this so they're
+// blocked too. Pass the resolved production record.
+function assertNotArchived(production) {
+  if (production && production.get("archived")) {
+    throw new BadRequestError(
+      "This show is archived, so it's read-only. Unarchive it in Manage to make changes.",
+    );
+  }
+}
+
+// Owning production id for a record in a guarded content collection (see
+// archive.pb.js's list). Most carry a direct `production` relation; a few
+// resolve through a parent. Community rows (production = '') and missing
+// parents resolve to "" — never blocked.
+function ownerProductionId(app, name, record) {
+  try {
+    if (name === "acks" || name === "attendance") {
+      return String(app.findRecordById("events", record.get("event")).get("production") || "");
+    }
+    if (name === "announcement_acks") {
+      return String(app.findRecordById("announcements", record.get("announcement")).get("production") || "");
+    }
+    if (name === "messages") {
+      return String(app.findRecordById("channels", record.get("channel")).get("production") || "");
+    }
+    if (name === "reactions") {
+      const msg = app.findRecordById("messages", record.get("message"));
+      return String(app.findRecordById("channels", msg.get("channel")).get("production") || "");
+    }
+    return String(record.get("production") || "");
+  } catch {
+    return "";
+  }
+}
+
+// Block a record-API write when its production is archived. Called from the
+// onRecord*Request handlers in archive.pb.js (which require this lib inside
+// their own bodies — top-level hook functions don't exist when handlers fire).
+function guardArchivedWrite(e) {
+  if (e.hasSuperuserAuth()) return;
+  let name = "";
+  try {
+    name = e.collection.name;
+  } catch {
+    try {
+      name = e.record.collection().name;
+    } catch {
+      return; // can't tell the collection — fail open.
+    }
+  }
+  const pid = ownerProductionId(e.app, name, e.record);
+  if (!pid) return;
+  let prod;
+  try {
+    prod = e.app.findRecordById("productions", pid);
+  } catch {
+    return; // production gone — nothing to protect.
+  }
+  assertNotArchived(prod);
+}
+
 // --- email --------------------------------------------------------------------
 
 function recipients(app, productionId, calledMemberIds) {
@@ -491,6 +553,8 @@ function syncMemberAutoGroups(app, member) {
 module.exports = {
   pbNow,
   canManage,
+  assertNotArchived,
+  guardArchivedWrite,
   managerContacts,
   syncProductionManagers,
   syncMemberAutoGroups,

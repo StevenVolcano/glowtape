@@ -48,6 +48,9 @@ routerAdd(
     if (!lib.canManage(production, e.auth)) {
       throw new BadRequestError("Only the production team can add to the schedule.");
     }
+    if (production.get("archived")) {
+      throw new BadRequestError("This show is archived (read-only). Unarchive it in Manage to add events.");
+    }
 
     const collection = e.app.findCollectionByNameOrId("events");
     const created = [];
@@ -179,6 +182,9 @@ routerAdd(
         production = e.app.findRecordById("productions", rec.get("production"));
         if (!lib.canManage(production, e.auth)) {
           throw new BadRequestError("Only the production team can edit the schedule.");
+        }
+        if (production.get("archived")) {
+          throw new BadRequestError("This show is archived (read-only). Unarchive it in Manage to edit events.");
         }
       } else if (rec.get("production") !== production.id) {
         throw new BadRequestError("All events must belong to the same production.");

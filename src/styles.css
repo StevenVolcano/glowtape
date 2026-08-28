@@ -357,6 +357,17 @@ form.stack,
   color: var(--muted);
 }
 
+/* Read-only notice shown on every tab of an archived show. */
+.archived-banner {
+  background: var(--card);
+  border: 2px solid var(--ctrl);
+  border-left: 6px solid var(--accent);
+  border-radius: 10px;
+  padding: 0.6rem 0.85rem;
+  color: var(--ink);
+  font-weight: 600;
+}
+
 /* --- Tonight: the tape progress bar and the quote card --- */
 .tape-track {
   background: var(--paper);

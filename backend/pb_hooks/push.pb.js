@@ -215,6 +215,7 @@ routerAdd(
     if (!lib.canManage(production, e.auth)) {
       throw new BadRequestError("Only the production team can send line notes.");
     }
+    lib.assertNotArchived(production);
 
     const notes = e.app.findRecordsByFilter(
       "line_notes",

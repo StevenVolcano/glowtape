@@ -96,6 +96,7 @@ routerAdd(
     if (!lib.canManage(production, e.auth)) {
       throw new BadRequestError("Only the production team can edit contact info.");
     }
+    lib.assertNotArchived(production);
     if (data.contactEmail !== null) member.set("contactEmail", String(data.contactEmail).trim());
     if (data.contactPhone !== null) member.set("contactPhone", String(data.contactPhone).trim());
     e.app.save(member);

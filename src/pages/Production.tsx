@@ -28,6 +28,9 @@ export interface ProductionContextValue {
   members: MemberRecord[]
   myMember: MemberRecord | null
   isManager: boolean
+  // True when the show is archived: it's a read-only record. Components hide
+  // their edit affordances on this, and the backend blocks writes regardless.
+  archived: boolean
   reload: () => Promise<void>
 }
 
@@ -93,12 +96,13 @@ export default function Production() {
   // shows where they have no row of their own.
   const isManager = !!user && (production.managers.includes(user.id) || user.operator)
   const asStagehand = !!user?.operator && !myMember && !production.managers.includes(user.id)
+  const archived = !!production.archived
   // Absolute tab paths: relative links inside a splat route resolve against
   // the full current URL in react-router v7 and stack segments endlessly.
   const base = `/production/${production.id}`
 
   return (
-    <ProductionContext.Provider value={{ production, members, myMember, isManager, reload }}>
+    <ProductionContext.Provider value={{ production, members, myMember, isManager, archived, reload }}>
       <main className="page production">
         <header className="topbar">
           <Link to="/" className="link">
@@ -113,6 +117,14 @@ export default function Production() {
             access for setup and troubleshooting.
           </p>
         )}
+        {archived && (
+          <p className="archived-banner" role="status">
+            📦 This show is archived — it's a read-only record.{' '}
+            {isManager
+              ? 'Unarchive it in Manage to make changes.'
+              : 'Ask a manager to unarchive it to make changes.'}
+          </p>
+        )}
 
         <nav className="tabs" aria-label="Production sections">
           <NavLink to={`${base}/dashboard`}>Dashboard</NavLink>
@@ -123,7 +135,7 @@ export default function Production() {
           <NavLink to={`${base}/docs`}>Docs</NavLink>
           <NavLink to={`${base}/notes`}>Notes</NavLink>
           <NavLink to={`${base}/people`}>People</NavLink>
-          {isManager && <NavLink to={`${base}/casting`}>Casting</NavLink>}
+          {isManager && !archived && <NavLink to={`${base}/casting`}>Casting</NavLink>}
           {isManager && <NavLink to={`${base}/admin`}>Manage</NavLink>}
         </nav>
 
@@ -149,7 +161,7 @@ export default function Production() {
             }
           />
           <Route path="people" element={<PeopleTab />} />
-          {isManager && <Route path="casting" element={<CastingTab />} />}
+          {isManager && !archived && <Route path="casting" element={<CastingTab />} />}
           {isManager && <Route path="admin" element={<AdminTab />} />}
           {isManager && <Route path="bios" element={<BiosView />} />}
           {isManager && <Route path="packet" element={<ProgramPacket />} />}
