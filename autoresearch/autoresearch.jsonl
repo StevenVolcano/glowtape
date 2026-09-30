@@ -23,3 +23,4 @@
 {"type":"result","iteration":20,"commit":"6f26907","score":68.75,"delta":"-0.1","guard_pass":true,"status":"keep","description":"--error #b3372f -> #962c25 (5.4:1 -> 7.05:1), retry after min-delta fix","timestamp":"2026-09-30T15:15:26.457Z"}
 {"type":"result","iteration":21,"commit":"6139347","score":67.75,"delta":"-1","guard_pass":true,"status":"keep","description":"Paragraph-only links (check-in '→ Tonight's schedule') get 44px","timestamp":"2026-09-30T15:16:45.262Z"}
 {"type":"result","iteration":22,"commit":"c653033","score":65.75,"delta":"-2","guard_pass":true,"status":"keep","description":"Focus ring also on input:focus-within (date/time inner fields)","timestamp":"2026-09-30T15:18:28.059Z"}
+{"type":"result","iteration":23,"commit":"762b3cf","score":61.75,"delta":"-4","guard_pass":true,"status":"keep","description":"Month grid cells wrap (overflow-wrap:anywhere) instead of clipping","timestamp":"2026-09-30T15:19:52.361Z"}
