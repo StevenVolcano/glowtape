@@ -1036,3 +1036,10 @@ textarea + .row {
     border: 2px solid ButtonText;
   }
 }
+
+/* A link that is a paragraph by itself is a target, not prose. */
+p > a.link:only-child {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
