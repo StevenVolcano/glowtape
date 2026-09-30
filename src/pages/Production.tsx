@@ -1,5 +1,5 @@
-import { Suspense, createContext, lazy, useContext, useEffect, useState } from 'react'
-import { Link, NavLink, Navigate, Route, Routes, useParams } from 'react-router-dom'
+import { Suspense, createContext, lazy, useContext, useEffect, useRef, useState } from 'react'
+import { Link, NavLink, Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom'
 import { pb } from '../lib/pb.ts'
 import { useAuth } from '../lib/auth.tsx'
 import { TAGLINE } from '../lib/types.ts'
@@ -69,6 +69,21 @@ export default function Production() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
+  // On a phone the tab strip scrolls sideways; keep the current tab in view so
+  // "where am I?" is always answered. Scrolls the strip only, never the page.
+  const tabsRef = useRef<HTMLElement>(null)
+  const { pathname } = useLocation()
+  useEffect(() => {
+    const nav = tabsRef.current
+    const active = nav?.querySelector<HTMLElement>('a.active')
+    if (!nav || !active) return
+    const n = nav.getBoundingClientRect()
+    const a = active.getBoundingClientRect()
+    if (a.left < n.left || a.right > n.right) {
+      nav.scrollLeft += a.left - n.left - (n.width - a.width) / 2
+    }
+  }, [pathname, production])
+
   if (failed) {
     return (
       <main className="page">
@@ -126,7 +141,7 @@ export default function Production() {
           </p>
         )}
 
-        <nav className="tabs" aria-label="Production sections">
+        <nav className="tabs" aria-label="Production sections" ref={tabsRef}>
           <NavLink to={`${base}/dashboard`}>Dashboard</NavLink>
           <NavLink to={`${base}/schedule`}>Schedule</NavLink>
           <NavLink to={`${base}/messages`}>Messages</NavLink>
