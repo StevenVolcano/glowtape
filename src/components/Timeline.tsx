@@ -298,7 +298,7 @@ export default function TimelinePlanner({
           aria-label="Template name"
           value={templateName}
           onChange={(e) => setTemplateName(e.target.value)}
-          placeholder="Save these rows as a template — name it"
+          placeholder="Name this template"
           style={{ flex: 1, minWidth: '12rem' }}
         />
         <button type="button" className="link" disabled={busy || !templateName.trim()} onClick={saveAsTemplate}>
