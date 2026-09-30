@@ -223,7 +223,7 @@ form.stack,
 
 .row > label {
   /* share the row, but wrap before a field gets too narrow to read */
-  flex: 1 1 10rem;
+  flex: 1 1 12rem;
 }
 
 .row a.link {

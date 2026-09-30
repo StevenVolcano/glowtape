@@ -1,7 +1,7 @@
 # Autoresearch Dashboard — UI/UX
 
 **Constrained file:** `src/styles.css` · metric: UX debt (lower is better)
-**Baseline:** 734.05 | **Current best:** 5 | **Iterations:** 50/100
+**Baseline:** 734.05 | **Current best:** 3 | **Iterations:** 51/100
 **Guard:** no lost controls/text, no font shrink, build passes
 
 | # | Score | Delta | Guard | Status | Description |
@@ -56,5 +56,6 @@
 | 48 | 7 | -1 | PASS | keep | Request-form dates placeholder shortened |
 | 49 | 6 | -1 | PASS | keep | Timeline template-name placeholder shortened |
 | 50 | 5 | -1 | PASS | keep | New-channel placeholder: 'Channel — for example: Props' |
+| 51 | 3 | -2 | PASS | keep | Audition form error state gets an h1 + role=alert |
 
-**Kept:** 39 (+3 visual fixes) | **Discarded:** 8 | **Crashed:** 0 | **Guard failures:** 0
+**Kept:** 40 (+3 visual fixes) | **Discarded:** 8 | **Crashed:** 0 | **Guard failures:** 0
