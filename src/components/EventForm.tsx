@@ -302,7 +302,7 @@ export default function EventForm({
         aria-label="Event title"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
-        placeholder="Title — for example: Act II run-through"
+        placeholder="Title — for example: Act II run"
       />
       {isCommunityKind(kind) && (
         <p className="hint" role="status">
