@@ -130,7 +130,7 @@ export default function RequestProduction() {
             maxLength={300}
             value={timeline}
             onChange={(e) => setTimeline(e.target.value)}
-            placeholder="Example: rehearsals start Sept 2, opens Oct 24"
+            placeholder="Example: rehearsals start Sept 2"
           />
         </label>
         <label>
