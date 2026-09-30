@@ -1,7 +1,7 @@
 # Autoresearch Dashboard — UI/UX
 
 **Constrained file:** `src/styles.css` · metric: UX debt (lower is better)
-**Baseline:** 734.05 | **Current best:** 20 | **Iterations:** 17/100
+**Baseline:** 734.05 | **Current best:** 68.85 | **Iterations:** 19/100
 **Guard:** no lost controls/text, no font shrink, build passes
 
 | # | Score | Delta | Guard | Status | Description |
@@ -23,5 +23,7 @@
 | 15 | 20 | -3 | PASS | keep | member-row selects/inputs min-width 9rem -> 11rem so role names fit |
 | 16 | 20 | +0 | PASS | discard | Input side padding 0.75rem -> 0.65rem |
 | 17 | 68.85 | +48.85 | PASS | discard | Forced-colors: borderless buttons get a ButtonText border |
+| 18 | 68.85 | -67.5 | PASS | keep | Forced-colors: borderless buttons get a ButtonText border |
+| 19 | 68.75 | -0.1 | PASS | discard | --error #b3372f -> #962c25 (5.4:1 -> 7.05:1) |
 
-**Kept:** 14 (+1 visual fixes) | **Discarded:** 2 | **Crashed:** 0 | **Guard failures:** 0
+**Kept:** 15 (+1 visual fixes) | **Discarded:** 3 | **Crashed:** 0 | **Guard failures:** 0

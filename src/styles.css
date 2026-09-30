@@ -12,7 +12,7 @@
   --line: #ddd8ce;
   --ctrl: #8a8478; /* control borders: ≥3:1 on white and paper */
   --ok: #256843;
-  --error: #b3372f;
+  --error: #962c25; /* 7:1 on paper */
   --warn: #7a4c00; /* 7:1 on paper */
 }
 

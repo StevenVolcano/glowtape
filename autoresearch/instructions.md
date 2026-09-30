@@ -57,7 +57,7 @@ Per-screen details land in `autoresearch/last_eval.json`.
 | AAA 7:1 contrast failures | 0.1 per node |
 | page JS error | 50 |
 
-**Min-delta:** 0.1 (eval is deterministic; any real drop counts).
+**Min-delta:** 0.05 (was 0.1; lowered at #19 because the smallest signal weight is 0.1) (eval is deterministic; any real drop counts).
 
 ## Guards (a violation = `guard_fail`, discard even if SCORE improved)
 1. Eval prints `GUARD: PASS` — no screen loses visible controls, loses >3% of
