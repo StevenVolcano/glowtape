@@ -545,7 +545,7 @@ form.stack,
 .member-row input {
   width: auto;
   flex: 1;
-  min-width: 9rem;
+  min-width: 11rem;
 }
 
 /* --- Contact sheet --- */
