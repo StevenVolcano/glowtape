@@ -1,7 +1,7 @@
 # Autoresearch Dashboard — UI/UX
 
 **Constrained file:** `src/styles.css` · metric: UX debt (lower is better)
-**Baseline:** 734.05 | **Current best:** 1 | **Iterations:** 52/100
+**Baseline:** 734.05 | **Current best:** 5.5 | **Iterations:** 53/100
 **Guard:** no lost controls/text, no font shrink, build passes
 
 | # | Score | Delta | Guard | Status | Description |
@@ -58,5 +58,6 @@
 | 50 | 5 | -1 | PASS | keep | New-channel placeholder: 'Channel — for example: Props' |
 | 51 | 3 | -2 | PASS | keep | Audition form error state gets an h1 + role=alert |
 | 52 | 1 | -2 | PASS | keep | Row labels flex-basis 10rem -> 12rem (one field per line on phones) |
+| 53 | 5.5 | -20 | PASS | keep | Taken slot chips: dashed + muted (7:1) instead of opacity 0.6 |
 
-**Kept:** 41 (+3 visual fixes) | **Discarded:** 8 | **Crashed:** 0 | **Guard failures:** 0
+**Kept:** 42 (+3 visual fixes) | **Discarded:** 8 | **Crashed:** 0 | **Guard failures:** 0
