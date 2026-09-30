@@ -131,7 +131,7 @@ button.link {
   padding: 0.4rem;
   /* same 44px finger floor as every other control — the ✕ removes live here */
   min-height: 44px;
-  min-width: 2rem;
+  min-width: 44px;
 }
 
 input,
