@@ -1,7 +1,7 @@
 # Autoresearch Dashboard — UI/UX
 
 **Constrained file:** `src/styles.css` · metric: UX debt (lower is better)
-**Baseline:** 734.05 | **Current best:** 77.85 | **Iterations:** 8/100
+**Baseline:** 734.05 | **Current best:** 70.35 | **Iterations:** 9/100
 **Guard:** no lost controls/text, no font shrink, build passes
 
 | # | Score | Delta | Guard | Status | Description |
@@ -14,5 +14,6 @@
 | 6 | 146.05 | -18 | PASS | keep | Checkbox/radio wrapping labels become 44px flex rows |
 | 7 | 146.05 | +0 | PASS | keep_visual | Visual fix for #6: checkbox labels nowrap; member-row checkbox no longer stretched |
 | 8 | 77.85 | -68.2 | PASS | keep | Tab bar gap 4px -> 8px |
+| 9 | 70.35 | -7.5 | PASS | keep | Calendar-link row gap 4px -> 8px |
 
-**Kept:** 7 (+1 visual fixes) | **Discarded:** 0 | **Crashed:** 0 | **Guard failures:** 0
+**Kept:** 8 (+1 visual fixes) | **Discarded:** 0 | **Crashed:** 0 | **Guard failures:** 0
