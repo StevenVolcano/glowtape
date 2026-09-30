@@ -337,7 +337,7 @@ function NewSheetForm({ onAdded }: { onAdded: () => Promise<void> }) {
         aria-label="Where"
         value={location}
         onChange={(e) => setLocation(e.target.value)}
-        placeholder="Where — for example: costume shop, backstage left"
+        placeholder="Where — for example: costume shop"
       />
       <div className="row">
         <button type="submit" disabled={busy || count === 0}>
