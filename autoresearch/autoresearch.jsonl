@@ -7,3 +7,4 @@
 {"type":"result","iteration":5,"commit":"963797c","score":164.05,"delta":"-11","guard_pass":true,"status":"keep","description":"button.link min-width 2rem -> 44px (Edit, ✕)","timestamp":"2026-09-30T14:50:57.421Z"}
 {"type":"result","iteration":6,"commit":"97b1b6f","score":146.05,"delta":"-18","guard_pass":true,"status":"keep","description":"Checkbox/radio wrapping labels become 44px flex rows","timestamp":"2026-09-30T14:51:52.015Z"}
 {"type":"result","iteration":7,"commit":"fe20546","score":146.05,"delta":"+0","guard_pass":true,"status":"keep_visual","description":"Visual fix for #6: checkbox labels nowrap; member-row checkbox no longer stretched","timestamp":"2026-09-30T14:55:44.183Z"}
+{"type":"result","iteration":8,"commit":"5cfe832","score":77.85,"delta":"-68.2","guard_pass":true,"status":"keep","description":"Tab bar gap 4px -> 8px","timestamp":"2026-09-30T14:57:16.139Z"}
