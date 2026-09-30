@@ -10,18 +10,18 @@
   "medianFont": 15.64
  },
  "dashboard-dir": {
-  "controls": 18,
-  "text": 791,
+  "controls": 20,
+  "text": 873,
   "medianFont": 17
  },
  "schedule-dir": {
-  "controls": 84,
-  "text": 2580,
+  "controls": 101,
+  "text": 3076,
   "medianFont": 17
  },
  "messages-dir": {
-  "controls": 22,
-  "text": 422,
+  "controls": 25,
+  "text": 528,
   "medianFont": 17
  },
  "todo-dir": {
@@ -50,13 +50,13 @@
   "medianFont": 17
  },
  "manage": {
-  "controls": 177,
-  "text": 6953,
+  "controls": 187,
+  "text": 7500,
   "medianFont": 17
  },
  "casting": {
   "controls": 16,
-  "text": 1258,
+  "text": 1146,
   "medianFont": 17
  },
  "profile": {
@@ -66,32 +66,32 @@
  },
  "dashboard-cast": {
   "controls": 21,
-  "text": 945,
+  "text": 965,
   "medianFont": 17
  },
  "schedule-cast": {
-  "controls": 55,
-  "text": 1825,
+  "controls": 68,
+  "text": 2280,
   "medianFont": 17
  },
  "messages-cast": {
-  "controls": 19,
-  "text": 475,
+  "controls": 22,
+  "text": 581,
   "medianFont": 17
  },
  "desk:schedule-dir": {
-  "controls": 84,
-  "text": 2580,
+  "controls": 101,
+  "text": 3076,
   "medianFont": 17
  },
  "desk:manage": {
-  "controls": 177,
-  "text": 6953,
+  "controls": 187,
+  "text": 7500,
   "medianFont": 17
  },
  "desk:dashboard-cast": {
   "controls": 21,
-  "text": 945,
+  "text": 965,
   "medianFont": 17
  },
  "community-page": {
@@ -105,14 +105,14 @@
   "medianFont": 17
  },
  "audition-form": {
-  "controls": 1,
-  "text": 96,
+  "controls": 17,
+  "text": 1489,
   "medianFont": 17
  },
  "schedule-print": {
   "controls": 13,
-  "text": 903,
-  "medianFont": 12.24
+  "text": 1053,
+  "medianFont": 14.45
  },
  "checkin": {
   "controls": 11,
@@ -121,7 +121,7 @@
  },
  "packet": {
   "controls": 14,
-  "text": 1099,
+  "text": 1199,
   "medianFont": 17
  },
  "bios": {
@@ -131,22 +131,22 @@
  },
  "note-open": {
   "controls": 19,
-  "text": 309,
+  "text": 308,
   "medianFont": 15.64
  },
  "operator": {
-  "controls": 45,
-  "text": 2307,
+  "controls": 46,
+  "text": 2447,
   "medianFont": 17
  },
  "rollcall": {
-  "controls": 88,
-  "text": 2712,
+  "controls": 105,
+  "text": 3208,
   "medianFont": 17
  },
  "timeline-edit": {
-  "controls": 89,
-  "text": 2923,
+  "controls": 106,
+  "text": 3419,
   "medianFont": 17
  },
  "sm:signin": {
@@ -156,22 +156,22 @@
  },
  "sm:dashboard-cast": {
   "controls": 21,
-  "text": 945,
+  "text": 965,
   "medianFont": 17
  },
  "sm:schedule-cast": {
-  "controls": 55,
-  "text": 1825,
+  "controls": 68,
+  "text": 2280,
   "medianFont": 17
  },
  "sm:messages-cast": {
-  "controls": 19,
-  "text": 475,
+  "controls": 22,
+  "text": 581,
   "medianFont": 17
  },
  "sm:manage": {
-  "controls": 177,
-  "text": 6953,
+  "controls": 187,
+  "text": 7500,
   "medianFont": 17
  },
  "sm:todo-dir": {

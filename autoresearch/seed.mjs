@@ -19,7 +19,8 @@ async function first(col, filter) {
 // Operator (Glow Tape Stagehand) account for the /operator console screen.
 if (!(await first('users', "email='operator@test.local'"))) await create('users', { email: 'operator@test.local', name: 'Olive Operator', password: 'x-pass-12345', passwordConfirm: 'x-pass-12345', verified: true, operator: true });
 const existing = await first('productions', "title='Our Town'");
-if (existing && !process.env.RESEED) { const note = await first('notes', `production='${existing.id}'`);
+const SEED_V = 'A small town, a big heart. [seed v2]';
+if (existing && existing.description === SEED_V && !process.env.RESEED) { const note = await first('notes', `production='${existing.id}'`);
   const ev = await first('events', `production='${existing.id}'`);
   console.log(JSON.stringify({ already: true, production: existing.id, note: note?.id, event: ev?.id })); process.exit(0); }
 if (existing) await fetch(`${PB}/api/collections/productions/records/${existing.id}`, { method: 'DELETE', headers: H });
@@ -28,7 +29,7 @@ const mkUser = async (email, name) => (await first('users', `email='${email}'`))
 const dir = await mkUser('director@test.local', 'Dana Director');
 const actor = await mkUser('actor@test.local', 'Alex Actor');
 const org = await create('orgs', { name: 'Driftwood Players' });
-const prod = await create('productions', { org: org.id, title: 'Our Town', writtenBy: 'Thornton Wilder', managers: [dir.id], status: 'rehearsal', description: 'A small town, a big heart.' });
+const prod = await create('productions', { org: org.id, title: 'Our Town', writtenBy: 'Thornton Wilder', managers: [dir.id], status: 'rehearsal', description: SEED_V, auditionOpen: true, auditionNotes: 'Bring a one-minute monologue. No experience needed.', auditionQuestions: ['Any schedule conflicts we should know about?'] });
 const dm = await create('members', { production: prod.id, user: dir.id, role: 'director', position: 'Director', manager: true });
 const am = await create('members', { production: prod.id, user: actor.id, role: 'performer', position: 'Emily Webb' });
 for (const pos of ['George Gibbs', 'Stage Manager', 'Mrs. Webb']) await create('members', { production: prod.id, role: 'performer', position: pos });
@@ -42,5 +43,23 @@ await create('tasks', { production: prod.id, title: 'Find a ladder', department:
 await create('tracker_items', { production: prod.id, tracker: 'props', name: 'Ladder', status: 'needed' }).catch(e => console.error(e.message));
 await create('notes', { production: prod.id, author: dir.id, title: 'Act 1 notes', body: 'Projection in scene 2.' }).catch(e => console.error(e.message));
 const ch = await first('channels', `production='${prod.id}' && name='All Call'`);
-if (ch) await create('messages', { channel: ch.id, author: actor.id, body: 'See everyone Tuesday!' }).catch(e => console.error(e.message));
+const soft = (p) => p.catch((e) => console.error(e.message));
+if (ch) {
+  const m1 = await soft(create('messages', { channel: ch.id, author: dir.id, text: 'Welcome, everyone! First read-through is Monday at 6.' }));
+  await soft(create('messages', { channel: ch.id, author: actor.id, text: 'See everyone Monday!' }));
+  if (m1) { await soft(create('reactions', { message: m1.id, user: actor.id, emoji: '🎭' })); await soft(create('reactions', { message: m1.id, user: dir.id, emoji: '👍' })); }
+}
+// Richer state so more of the UI is on screen (round 3).
+const others = (await fetch(`${PB}/api/collections/members/records?filter=${encodeURIComponent(`production='${prod.id}' && user=''`)}`, { headers: H }).then(j)).items;
+await soft(create('units', { production: prod.id, name: 'Opening: Grover\'s Corners', act: 'Act 1', pages: '1-6', order: 1, onstage: [am.id, others[0].id], notes: 'Stage Manager narrates' }));
+await soft(create('units', { production: prod.id, name: 'The soda fountain', act: 'Act 2', pages: '40-44', order: 2, onstage: [am.id, others[0].id] }));
+await soft(create('units', { production: prod.id, name: 'Goodbye, world', act: 'Act 3', pages: '70-75', order: 3, onstage: [am.id] }));
+for (const [kind, name, status] of [['props', 'Ladder', 'needed'], ['props', 'Two ironing boards', 'found'], ['costumes', 'Emily wedding dress', 'fitting'], ['sound_cues', 'Train whistle', '']]) await soft(create('tracker_items', { production: prod.id, tracker: kind, name, status }));
+for (const [h, m] of [[17, 0], [17, 15], [17, 30]]) await soft(create('slots', { production: prod.id, title: 'Costume fittings', start: day(9, h).replace(':00:00', `:${String(m).padStart(2, '0')}:00`), minutes: 15, location: 'Green room', member: h === 17 && m === 0 ? am.id : '' }));
+const party = await soft(create('events', { production: prod.id, title: 'Cast party', kind: 'Cast Party', start: day(18, 19), end: day(18, 22), location: 'Driftwood Playhouse', status: 'scheduled', bringCategories: ['Mains', 'Desserts', 'Drinks'] }));
+if (party) await soft(create('bring_items', { production: prod.id, event: party.id, user: actor.id, item: 'Lemon bars', category: 'Desserts' }));
+await soft(fetch(`${PB}/api/collections/events/records/${evs[0].id}`, { method: 'PATCH', headers: H, body: JSON.stringify({ timeline: [{ title: 'Warm-ups', minutes: 15 }, { title: 'Act 1 scenes 1-3', minutes: 90 }, { title: 'Notes', minutes: 15 }] }) }));
+await soft(create('conflicts', { production: prod.id, user: actor.id, start: day(12, 0), end: day(12, 0), note: 'Work trip' }));
+await soft(create('profiles', { user: actor.id, pronouns: 'she/her', experience: 'Annie (2023), Our Town reading', skills: 'alto, tap' }));
+await soft(create('auditions', { production: prod.id, user: actor.id, roles: 'Emily Webb', answers: { 'Any schedule conflicts we should know about?': 'One work trip in October' } }));
 console.log(JSON.stringify({ production: prod.id, director: dir.id, actor: actor.id, event: evs[0].id }));
