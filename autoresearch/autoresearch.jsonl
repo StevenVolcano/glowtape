@@ -61,3 +61,4 @@
 {"type":"result","iteration":56,"commit":"d8001a3","score":4,"delta":"-2","guard_pass":true,"status":"keep","description":"Sibling control rows directly inside a section get 0.5rem between them","timestamp":"2026-09-30T16:15:20.953Z"}
 {"type":"result","iteration":57,"commit":"d8ea2c0","score":3,"delta":"-1","guard_pass":true,"status":"keep","description":"Show report audience field: drop fixed 6rem width (fills its label)","timestamp":"2026-09-30T16:17:09.902Z"}
 {"type":"result","iteration":58,"commit":"3362ebb","score":2,"delta":"-1","guard_pass":true,"status":"keep","description":"Sign-up sheet location placeholder shortened","timestamp":"2026-09-30T16:18:41.391Z"}
+{"type":"result","iteration":59,"commit":"8e45713","score":2,"delta":"+0","guard_pass":true,"status":"keep_visual","description":"Typed text in fields is normal weight (was inheriting bold from wrapping labels)","timestamp":"2026-09-30T16:20:57.799Z"}
