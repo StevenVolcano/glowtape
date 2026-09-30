@@ -298,7 +298,7 @@ export default function ProfileEditor({
           maxLength={400}
           value={skills}
           onChange={(e) => setSkills(e.target.value)}
-          placeholder="Example: tenor, tap, stage combat, sewing, follow spot"
+          placeholder="Example: tenor, tap, sewing"
         />
       </label>
 
