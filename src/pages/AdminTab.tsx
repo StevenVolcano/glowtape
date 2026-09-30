@@ -1772,7 +1772,7 @@ function ResourcesSection() {
             aria-label="Resource title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Title — for example: Act 1 rehearsal track"
+            placeholder="Title — for example: Act 1 track"
           />
         </div>
         <div className="row">

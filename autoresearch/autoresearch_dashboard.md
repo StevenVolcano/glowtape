@@ -1,7 +1,7 @@
 # Autoresearch Dashboard — UI/UX
 
 **Constrained file:** `src/styles.css` · metric: UX debt (lower is better)
-**Baseline:** 734.05 | **Current best:** 11 | **Iterations:** 42/100
+**Baseline:** 734.05 | **Current best:** 10 | **Iterations:** 43/100
 **Guard:** no lost controls/text, no font shrink, build passes
 
 | # | Score | Delta | Guard | Status | Description |
@@ -48,5 +48,6 @@
 | 40 | 14 | -1 | PASS | keep | Home join-code placeholder shortened |
 | 41 | 12 | -2 | PASS | keep | Add-role placeholder shortened |
 | 42 | 11 | -1 | PASS | keep | Busy-hours label placeholder shortened |
+| 43 | 10 | -1 | PASS | keep | Event title placeholder shortened |
 
-**Kept:** 33 (+3 visual fixes) | **Discarded:** 6 | **Crashed:** 0 | **Guard failures:** 0
+**Kept:** 34 (+3 visual fixes) | **Discarded:** 6 | **Crashed:** 0 | **Guard failures:** 0
