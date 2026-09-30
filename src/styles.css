@@ -1005,3 +1005,12 @@ body.kiosk .legal-links {
   align-items: center;
   min-height: 44px;
 }
+
+/* A label wrapped around a checkbox/radio is the tap target: 44px tall. */
+label:has(> input[type='checkbox']),
+label:has(> input[type='radio']) {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 44px;
+}

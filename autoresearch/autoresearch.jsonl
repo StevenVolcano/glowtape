@@ -4,3 +4,4 @@
 {"type":"result","iteration":2,"commit":"cd16f0c","score":210.05,"delta":"-17","guard_pass":true,"status":"keep","description":"Topbar links (← All productions / ← Home) get 44px inline-flex box","timestamp":"2026-09-30T14:48:04.181Z"}
 {"type":"result","iteration":3,"commit":"9e3ceb3","score":195.05,"delta":"-15","guard_pass":true,"status":"keep","description":"Event-line map links get 44px inline-flex hit box","timestamp":"2026-09-30T14:48:58.096Z"}
 {"type":"result","iteration":4,"commit":"64746e8","score":175.05,"delta":"-20","guard_pass":true,"status":"keep","description":"Plain-list and card-stack standalone links get 44px","timestamp":"2026-09-30T14:50:09.121Z"}
+{"type":"result","iteration":5,"commit":"963797c","score":164.05,"delta":"-11","guard_pass":true,"status":"keep","description":"button.link min-width 2rem -> 44px (Edit, ✕)","timestamp":"2026-09-30T14:50:57.421Z"}
