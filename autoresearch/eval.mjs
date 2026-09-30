@@ -87,7 +87,8 @@ for (const [name, who, path] of SCREENS) {
     const hitBox = (el) => {
       if (el.matches('input, select, textarea')) {
         const lab = el.closest('label') || (el.id && document.querySelector(`label[for="${el.id}"]`));
-        if (lab && vis(lab)) return lab.getBoundingClientRect();
+        // Either the control or its label can take the tap — use the bigger one.
+        if (lab && vis(lab)) { const a = lab.getBoundingClientRect(), b = el.getBoundingClientRect(); return a.width * a.height >= b.width * b.height ? a : b; }
         if (el.classList.contains('sr-only')) return null;
       }
       return el.getBoundingClientRect();
