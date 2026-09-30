@@ -996,3 +996,12 @@ body.kiosk .legal-links {
   align-items: center;
   min-height: 44px;
 }
+
+/* Stand-alone links (a list of links, or a link on its own line in a card)
+   are targets, not prose: 44px tall. */
+.plain-list > li > a,
+.card.stack > a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
