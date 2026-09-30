@@ -16,8 +16,12 @@ async function first(col, filter) {
   const r = await fetch(`${PB}/api/collections/${col}/records?filter=${encodeURIComponent(filter)}`, { headers: H }).then(j);
   return r.items?.[0];
 }
+// Operator (Glow Tape Stagehand) account for the /operator console screen.
+if (!(await first('users', "email='operator@test.local'"))) await create('users', { email: 'operator@test.local', name: 'Olive Operator', password: 'x-pass-12345', passwordConfirm: 'x-pass-12345', verified: true, operator: true });
 const existing = await first('productions', "title='Our Town'");
-if (existing && !process.env.RESEED) { console.log(JSON.stringify({ already: true, production: existing.id })); process.exit(0); }
+if (existing && !process.env.RESEED) { const note = await first('notes', `production='${existing.id}'`);
+  const ev = await first('events', `production='${existing.id}'`);
+  console.log(JSON.stringify({ already: true, production: existing.id, note: note?.id, event: ev?.id })); process.exit(0); }
 if (existing) await fetch(`${PB}/api/collections/productions/records/${existing.id}`, { method: 'DELETE', headers: H });
 
 const mkUser = async (email, name) => (await first('users', `email='${email}'`)) || create('users', { email, name, password: 'x-pass-12345', passwordConfirm: 'x-pass-12345', verified: true });

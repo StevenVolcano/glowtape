@@ -1,7 +1,7 @@
 # Autoresearch Dashboard — UI/UX
 
 **Constrained file:** `src/styles.css` · metric: UX debt (lower is better)
-**Baseline:** 734.05 | **Current best:** 23 | **Iterations:** 14/100
+**Baseline:** 734.05 | **Current best:** 20 | **Iterations:** 16/100
 **Guard:** no lost controls/text, no font shrink, build passes
 
 | # | Score | Delta | Guard | Status | Description |
@@ -20,5 +20,7 @@
 | 12 | 29.75 | -27.6 | PASS | keep | --muted #6b6478 -> #544e63 (5.1:1 -> 7.15:1, AAA on paper and white) |
 | 13 | 23.5 | -6.25 | PASS | keep | Pills 0.8rem -> 0.85rem (13.6px -> 14.45px) |
 | 14 | 23 | -0.5 | PASS | keep | Chat author line 0.8rem -> 0.85rem |
+| 15 | 20 | -3 | PASS | keep | member-row selects/inputs min-width 9rem -> 11rem so role names fit |
+| 16 | 20 | +0 | PASS | discard | Input side padding 0.75rem -> 0.65rem |
 
-**Kept:** 13 (+1 visual fixes) | **Discarded:** 0 | **Crashed:** 0 | **Guard failures:** 0
+**Kept:** 14 (+1 visual fixes) | **Discarded:** 1 | **Crashed:** 0 | **Guard failures:** 0

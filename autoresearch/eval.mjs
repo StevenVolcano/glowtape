@@ -48,6 +48,24 @@ const SCREENS = [
   ['desk:schedule-dir', 'director', `/production/${P}/schedule`],
   ['desk:manage', 'director', `/production/${P}/admin`],
   ['desk:dashboard-cast', 'actor', `/production/${P}/dashboard`],
+  // Round 1b additions: more pages, small phones (320px), opened states.
+  ['community-page', 'actor', '/community'],
+  ['request-page', 'director', '/request-production'],
+  ['audition-form', 'actor', `/audition/${P}`],
+  ['schedule-print', 'director', `/production/${P}/schedule/print`],
+  ['checkin', 'actor', `/production/${P}/signin/${seed.event}`],
+  ['packet', 'director', `/production/${P}/packet`],
+  ['bios', 'director', `/production/${P}/bios`],
+  ['note-open', 'director', `/production/${P}/notes/${seed.note}`],
+  ['operator', 'operator', '/operator'],
+  ['rollcall', 'director', `/production/${P}/schedule`, 'Roll call'],
+  ['timeline-edit', 'director', `/production/${P}/schedule`, 'Plan the timeline'],
+  ['sm:signin', null, '/'],
+  ['sm:dashboard-cast', 'actor', `/production/${P}/dashboard`],
+  ['sm:schedule-cast', 'actor', `/production/${P}/schedule`],
+  ['sm:messages-cast', 'actor', `/production/${P}/messages`],
+  ['sm:manage', 'director', `/production/${P}/admin`],
+  ['sm:todo-dir', 'director', `/production/${P}/todo`],
 ];
 
 const preview = spawn('npx', ['vite', 'preview', '--port', String(PORT), '--strictPort', '--host', '127.0.0.1'], { stdio: 'ignore' });
@@ -56,16 +74,16 @@ for (let i = 0; i < 50; i++) { try { await fetch(APP); break; } catch { await ne
 const axeSource = readFileSync('node_modules/axe-core/axe.min.js', 'utf8');
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' });
 const IMPACT = { critical: 10, serious: 5, moderate: 2, minor: 1 };
-const W = { axe: 1, tap: 1, crowded: 0.5, overflow: 25, inputZoom: 2, clippedPh: 1, tinyText: 0.25, noFocus: 2, aaa: 0.1, error: 50 };
-const tokens = { director: await tokenFor('director@test.local'), actor: await tokenFor('actor@test.local') };
+const W = { forced: 0.5, spacingClip: 1, spacingOverflow: 10, axe: 1, tap: 1, crowded: 0.5, overflow: 25, inputZoom: 2, clippedPh: 1, tinyText: 0.25, noFocus: 2, aaa: 0.1, error: 50 };
+const tokens = { director: await tokenFor('director@test.local'), actor: await tokenFor('actor@test.local'), operator: await tokenFor('operator@test.local') };
 const results = {};
 let total = 0;
 if (shots) mkdirSync('autoresearch/shots', { recursive: true });
 
 const only = (process.argv.find((a) => a.startsWith('--only=')) || '').slice(7);
-for (const [name, who, path] of SCREENS) {
+for (const [name, who, path, action] of SCREENS) {
   if (only && !only.split(',').includes(name)) continue;
-  const ctx = await browser.newContext({ viewport: name.startsWith('desk:') ? { width: 1280, height: 800 } : { width: 390, height: 844 }, deviceScaleFactor: 1, reducedMotion: 'reduce', timezoneId: 'America/Los_Angeles' });
+  const ctx = await browser.newContext({ viewport: name.startsWith('desk:') ? { width: 1280, height: 800 } : name.startsWith('sm:') ? { width: 320, height: 640 } : { width: 390, height: 844 }, deviceScaleFactor: 1, reducedMotion: 'reduce', timezoneId: 'America/Los_Angeles' });
   await ctx.addInitScript(([auth]) => {
     localStorage.clear();
     if (auth) localStorage.setItem('pocketbase_auth', JSON.stringify(auth));
@@ -75,6 +93,11 @@ for (const [name, who, path] of SCREENS) {
   page.on('pageerror', (e) => errors.push(String(e)));
   await page.goto(APP + path, { waitUntil: 'networkidle' });
   await page.waitForTimeout(300);
+  if (action) {
+    await page.getByRole('button', { name: action }).first().click();
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(300);
+  }
   await page.addScriptTag({ content: axeSource });
   const axe = await page.evaluate(async () => {
     const r = await window.axe.run(document, { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa', 'best-practice'] }, resultTypes: ['violations'] });
@@ -158,6 +181,34 @@ for (const [name, who, path] of SCREENS) {
     const r = await window.axe.run(document, { runOnly: ['color-contrast-enhanced'], resultTypes: ['violations'] });
     return { n: r.violations.reduce((s, v) => s + v.nodes.length, 0), list: r.violations.flatMap((v) => v.nodes.map((nd) => `${nd.target.join(' ')} ${(/contrast of ([\d.]+)/.exec(nd.failureSummary || '') || [])[1] || ''} ${(/foreground color: (#\w+)/.exec(nd.failureSummary || '') || [])[1] || ''} on ${(/background color: (#\w+)/.exec(nd.failureSummary || '') || [])[1] || ''}`)) };
   });
+  // Windows High Contrast / forced colors: backgrounds are dropped, so a
+  // button or chip with no border becomes floating text.
+  await page.emulateMedia({ forcedColors: 'active' });
+  const forced = await page.evaluate(() => {
+    const vis = (el) => { const r = el.getBoundingClientRect(); const s = getComputedStyle(el); return r.width > 0 && r.height > 0 && s.visibility !== 'hidden' && s.display !== 'none'; };
+    const list = [];
+    for (const el of document.querySelectorAll('button, .chip, .jump-chip, [role=button]')) {
+      if (!vis(el) || el.classList.contains('link')) continue;
+      const s = getComputedStyle(el);
+      if (parseFloat(s.borderTopWidth) === 0 && parseFloat(s.borderBottomWidth) === 0 && s.outlineStyle === 'none') list.push(`${el.tagName.toLowerCase()}${el.className ? '.' + String(el.className).split(' ')[0] : ''} "${el.textContent.trim().slice(0, 20)}"`);
+    }
+    return list;
+  });
+  await page.emulateMedia({ forcedColors: 'none' });
+  // WCAG 1.4.12 text spacing: user overrides must not clip content.
+  await page.addStyleTag({ content: '* { line-height: 1.5 !important; letter-spacing: 0.12em !important; word-spacing: 0.16em !important; } p { margin-bottom: 2em !important; }' });
+  await page.waitForTimeout(100);
+  const spacing = await page.evaluate(() => {
+    const list = [];
+    for (const el of document.body.querySelectorAll('*')) {
+      const s = getComputedStyle(el);
+      if (s.display === 'none' || el.closest('.sr-only')) continue;
+      if (!['hidden', 'clip'].includes(s.overflowX) && !['hidden', 'clip'].includes(s.overflowY)) continue;
+      if (!el.textContent.trim()) continue;
+      if (el.scrollHeight > el.clientHeight + 2 || el.scrollWidth > el.clientWidth + 2) list.push(`${el.tagName.toLowerCase()}.${String(el.className).split(' ')[0]} "${el.textContent.trim().slice(0, 20)}"`);
+    }
+    return { list, overflow: document.documentElement.scrollWidth > window.innerWidth + 1 };
+  });
   if (shots) {
     await page.screenshot({ path: `autoresearch/shots/${name}.png`, fullPage: true });
     // Readable chunks of long pages for human review.
@@ -166,9 +217,9 @@ for (const [name, who, path] of SCREENS) {
     for (let y = 0, i = 0; y < h && i < 12; y += 1400, i++) await page.screenshot({ path: `autoresearch/shots/${name.replace(':', '_')}-${i}.png`, fullPage: true, clip: { x: 0, y, width: vw, height: Math.min(1400, h - y) } });
   }
   const axePts = axe.reduce((s, v) => s + (IMPACT[v.impact] || 1) * v.n, 0);
-  const pts = Math.round((W.axe * axePts + W.tap * dom.small.length + W.crowded * dom.crowded + W.overflow * (dom.overflow ? 1 : 0) + W.inputZoom * dom.zoom + W.clippedPh * dom.clippedPh + W.tinyText * dom.tinyText + W.noFocus * noFocus + W.aaa * aaa.n + W.error * errors.length) * 100) / 100;
+  const pts = Math.round((W.axe * axePts + W.tap * dom.small.length + W.crowded * dom.crowded + W.overflow * (dom.overflow ? 1 : 0) + W.inputZoom * dom.zoom + W.clippedPh * dom.clippedPh + W.tinyText * dom.tinyText + W.noFocus * noFocus + W.aaa * aaa.n + W.forced * forced.length + W.spacingClip * spacing.list.length + W.spacingOverflow * (spacing.overflow ? 1 : 0) + W.error * errors.length) * 100) / 100;
   total += pts;
-  results[name] = { pts, axePts, axe, tapSmall: dom.small.length, small: dom.small.slice(0, 12), crowded: dom.crowded, crowdList: dom.crowdList, clippedPh: dom.clippedPh, tinyText: dom.tinyText, noFocus, noFocusList, aaa: aaa.n, aaaList: aaa.list, phList: dom.phList, tinyList: dom.tinyList, zoom: dom.zoom, overflow: dom.overflow, errors, controls: dom.controls, text: dom.text, medianFont: dom.medianFont };
+  results[name] = { pts, forced: forced.length, forcedList: forced.slice(0, 15), spacingClip: spacing.list.length, spacingList: spacing.list.slice(0, 15), spacingOverflow: spacing.overflow, axePts, axe, tapSmall: dom.small.length, small: dom.small.slice(0, 12), crowded: dom.crowded, crowdList: dom.crowdList, clippedPh: dom.clippedPh, tinyText: dom.tinyText, noFocus, noFocusList, aaa: aaa.n, aaaList: aaa.list, phList: dom.phList, tinyList: dom.tinyList, zoom: dom.zoom, overflow: dom.overflow, errors, controls: dom.controls, text: dom.text, medianFont: dom.medianFont };
   if (verbose) console.log(name, pts, JSON.stringify({ axe: axe.map((v) => `${v.id}:${v.impact}x${v.n}`), small: dom.small, crowded: dom.crowded, crowdList: dom.crowdList, clippedPh: dom.clippedPh, tiny: dom.tinyText, noFocusList, aaa: aaa.n, zoom: dom.zoom, overflow: dom.overflow, errors }));
   await ctx.close();
 }
@@ -191,6 +242,6 @@ if (process.argv.includes('--write-guard')) {
   }
 }
 writeFileSync('autoresearch/last_eval.json', JSON.stringify({ total, guard, why, results }, null, 1));
-console.log(Object.entries(results).map(([k, v]) => `${k.padEnd(15)} ${String(v.pts).padStart(6)}  axe=${v.axePts} tap=${v.tapSmall} crowd=${v.crowded} tiny=${v.tinyText} focus=${v.noFocus} aaa=${v.aaa} ph=${v.clippedPh} zoom=${v.zoom}${v.overflow ? ' OVERFLOW' : ''}${v.errors.length ? ' ERR' : ''}`).join('\n'));
+console.log(Object.entries(results).map(([k, v]) => `${k.padEnd(15)} ${String(v.pts).padStart(6)}  axe=${v.axePts} tap=${v.tapSmall} crowd=${v.crowded} tiny=${v.tinyText} focus=${v.noFocus} aaa=${v.aaa} ph=${v.clippedPh} zoom=${v.zoom} forced=${v.forced} tspace=${v.spacingClip}${v.spacingOverflow ? '+OVF' : ''}${v.overflow ? ' OVERFLOW' : ''}${v.errors.length ? ' ERR' : ''}`).join('\n'));
 console.log(`GUARD: ${guard ? 'PASS' : 'FAIL ' + why.join('; ')}`);
 console.log(`SCORE: ${Math.round(total * 100) / 100}`);

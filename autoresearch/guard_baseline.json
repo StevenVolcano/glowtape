@@ -93,5 +93,90 @@
   "controls": 21,
   "text": 945,
   "medianFont": 17
+ },
+ "community-page": {
+  "controls": 14,
+  "text": 822,
+  "medianFont": 15.64
+ },
+ "request-page": {
+  "controls": 9,
+  "text": 517,
+  "medianFont": 17
+ },
+ "audition-form": {
+  "controls": 1,
+  "text": 96,
+  "medianFont": 17
+ },
+ "schedule-print": {
+  "controls": 13,
+  "text": 903,
+  "medianFont": 12.24
+ },
+ "checkin": {
+  "controls": 11,
+  "text": 250,
+  "medianFont": 17
+ },
+ "packet": {
+  "controls": 14,
+  "text": 1099,
+  "medianFont": 17
+ },
+ "bios": {
+  "controls": 13,
+  "text": 289,
+  "medianFont": 15.64
+ },
+ "note-open": {
+  "controls": 19,
+  "text": 309,
+  "medianFont": 15.64
+ },
+ "operator": {
+  "controls": 45,
+  "text": 2307,
+  "medianFont": 17
+ },
+ "rollcall": {
+  "controls": 88,
+  "text": 2712,
+  "medianFont": 17
+ },
+ "timeline-edit": {
+  "controls": 89,
+  "text": 2923,
+  "medianFont": 17
+ },
+ "sm:signin": {
+  "controls": 12,
+  "text": 581,
+  "medianFont": 17
+ },
+ "sm:dashboard-cast": {
+  "controls": 21,
+  "text": 945,
+  "medianFont": 17
+ },
+ "sm:schedule-cast": {
+  "controls": 55,
+  "text": 1825,
+  "medianFont": 17
+ },
+ "sm:messages-cast": {
+  "controls": 19,
+  "text": 475,
+  "medianFont": 17
+ },
+ "sm:manage": {
+  "controls": 177,
+  "text": 6953,
+  "medianFont": 17
+ },
+ "sm:todo-dir": {
+  "controls": 31,
+  "text": 2504,
+  "medianFont": 17
  }
 }
