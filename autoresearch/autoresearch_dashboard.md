@@ -1,7 +1,7 @@
 # Autoresearch Dashboard — UI/UX
 
 **Constrained file:** `src/styles.css` · metric: UX debt (lower is better)
-**Baseline:** 734.05 | **Current best:** 25 | **Iterations:** 34/100
+**Baseline:** 734.05 | **Current best:** 23 | **Iterations:** 35/100
 **Guard:** no lost controls/text, no font shrink, build passes
 
 | # | Score | Delta | Guard | Status | Description |
@@ -40,5 +40,6 @@
 | 32 | 33 | -2 | PASS | keep | Playwright/composer credit becomes a 2-row textarea (long credits fit) |
 | 33 | 27 | -6 | PASS | keep | Operator ticket-link placeholder shortened to fit (aria-label names the company) |
 | 34 | 25 | -2 | PASS | keep | Production ticket-link placeholder shortened to fit phones |
+| 35 | 23 | -2 | PASS | keep | Sign-in name placeholder: 'First and last name' (fits phones) |
 
-**Kept:** 26 (+2 visual fixes) | **Discarded:** 6 | **Crashed:** 0 | **Guard failures:** 0
+**Kept:** 27 (+2 visual fixes) | **Discarded:** 6 | **Crashed:** 0 | **Guard failures:** 0

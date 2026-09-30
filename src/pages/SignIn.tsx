@@ -196,7 +196,7 @@ export default function SignIn() {
                   type="text"
                   value={joinCode}
                   onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-                  placeholder="From your production or the organizer"
+                  placeholder="From your show or organizer"
                 />
                 <p className="hint">
                   New accounts need a code — a production join code, a role code, or a community
