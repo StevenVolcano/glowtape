@@ -86,7 +86,7 @@ for (let i = 0; i < 50; i++) { try { await fetch(APP); break; } catch { await ne
 const axeSource = readFileSync('node_modules/axe-core/axe.min.js', 'utf8');
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' });
 const IMPACT = { critical: 10, serious: 5, moderate: 2, minor: 1 };
-const W = { forced: 0.5, spacingClip: 1, spacingOverflow: 10, axe: 1, tap: 1, crowded: 0.5, overflow: 25, inputZoom: 2, clippedPh: 1, tinyText: 0.25, noFocus: 2, aaa: 0.1, error: 50 };
+const W = { tabHidden: 5, forced: 0.5, spacingClip: 1, spacingOverflow: 10, axe: 1, tap: 1, crowded: 0.5, overflow: 25, inputZoom: 2, clippedPh: 1, tinyText: 0.25, noFocus: 2, aaa: 0.1, error: 50 };
 const tokens = { director: await tokenFor('director@test.local'), actor: await tokenFor('actor@test.local'), operator: await tokenFor('operator@test.local') };
 const results = {};
 let total = 0;
@@ -109,6 +109,13 @@ for (const [name, who, path, action] of SCREENS) {
     await page.getByRole('button', { name: action }).first().click();
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(300);
+  }
+  if (shots) {
+    await page.screenshot({ path: `autoresearch/shots/${name}.png`, fullPage: true });
+    // Readable chunks of long pages for human review.
+    const h = await page.evaluate(() => document.documentElement.scrollHeight);
+    const vw = page.viewportSize().width;
+    for (let y = 0, i = 0; y < h && i < 12; y += 1400, i++) await page.screenshot({ path: `autoresearch/shots/${name.replace(':', '_')}-${i}.png`, fullPage: true, clip: { x: 0, y, width: vw, height: Math.min(1400, h - y) } });
   }
   await page.addScriptTag({ content: axeSource });
   const axe = await page.evaluate(async () => {
@@ -169,9 +176,13 @@ for (const [name, who, path, action] of SCREENS) {
       if (parseFloat(getComputedStyle(el).fontSize) < 14) { tinyText++; tinyList.push(`${el.tagName.toLowerCase()}.${String(el.className).split(' ')[0]} ${getComputedStyle(el).fontSize} "${t.textContent.trim().slice(0, 20)}"`); }
     }
     const overflow = document.documentElement.scrollWidth > window.innerWidth + 1;
+    // "Where am I?": the active tab must be on screen, not scrolled out of the strip.
+    const act = document.querySelector('.tabs a.active');
+    let tabHidden = false;
+    if (act) { const r = act.getBoundingClientRect(), t = act.parentElement.getBoundingClientRect(); tabHidden = r.left < t.left - 1 || r.right > t.right + 1; }
     const text = document.body.innerText.replace(/\s+/g, ' ').trim().length;
     const fonts = [...document.querySelectorAll('p, li, td, label, span')].filter(vis).map((e) => parseFloat(getComputedStyle(e).fontSize)).sort((a, b) => a - b);
-    return { controls: ctrls.length, small, crowded, crowdList, phList, tinyList, zoom, clippedPh, tinyText, overflow, text, medianFont: fonts.length ? fonts[fonts.length >> 1] : 0 };
+    return { tabHidden, controls: ctrls.length, small, crowded, crowdList, phList, tinyList, zoom, clippedPh, tinyText, overflow, text, medianFont: fonts.length ? fonts[fonts.length >> 1] : 0 };
   });
   // Focus visibility: tab through the first 20 stops; each must show an outline
   // or box-shadow ring (or change background) while focused.
@@ -193,13 +204,6 @@ for (const [name, who, path, action] of SCREENS) {
     const r = await window.axe.run(document, { runOnly: ['color-contrast-enhanced'], resultTypes: ['violations'] });
     return { n: r.violations.reduce((s, v) => s + v.nodes.length, 0), list: r.violations.flatMap((v) => v.nodes.map((nd) => `${nd.target.join(' ')} ${(/contrast of ([\d.]+)/.exec(nd.failureSummary || '') || [])[1] || ''} ${(/foreground color: (#\w+)/.exec(nd.failureSummary || '') || [])[1] || ''} on ${(/background color: (#\w+)/.exec(nd.failureSummary || '') || [])[1] || ''}`)) };
   });
-  if (shots) {
-    await page.screenshot({ path: `autoresearch/shots/${name}.png`, fullPage: true });
-    // Readable chunks of long pages for human review.
-    const h = await page.evaluate(() => document.documentElement.scrollHeight);
-    const vw = page.viewportSize().width;
-    for (let y = 0, i = 0; y < h && i < 12; y += 1400, i++) await page.screenshot({ path: `autoresearch/shots/${name.replace(':', '_')}-${i}.png`, fullPage: true, clip: { x: 0, y, width: vw, height: Math.min(1400, h - y) } });
-  }
   // Windows High Contrast / forced colors: backgrounds are dropped, so a
   // button or chip with no border becomes floating text.
   await page.emulateMedia({ forcedColors: 'active' });
@@ -229,9 +233,9 @@ for (const [name, who, path, action] of SCREENS) {
     return { list, overflow: document.documentElement.scrollWidth > window.innerWidth + 1 };
   });
   const axePts = axe.reduce((s, v) => s + (IMPACT[v.impact] || 1) * v.n, 0);
-  const pts = Math.round((W.axe * axePts + W.tap * dom.small.length + W.crowded * dom.crowded + W.overflow * (dom.overflow ? 1 : 0) + W.inputZoom * dom.zoom + W.clippedPh * dom.clippedPh + W.tinyText * dom.tinyText + W.noFocus * noFocus + W.aaa * aaa.n + W.forced * forced.length + W.spacingClip * spacing.list.length + W.spacingOverflow * (spacing.overflow ? 1 : 0) + W.error * errors.length) * 100) / 100;
+  const pts = Math.round((W.axe * axePts + W.tap * dom.small.length + W.crowded * dom.crowded + W.overflow * (dom.overflow ? 1 : 0) + W.inputZoom * dom.zoom + W.clippedPh * dom.clippedPh + W.tinyText * dom.tinyText + W.noFocus * noFocus + W.aaa * aaa.n + W.tabHidden * (dom.tabHidden ? 1 : 0) + W.forced * forced.length + W.spacingClip * spacing.list.length + W.spacingOverflow * (spacing.overflow ? 1 : 0) + W.error * errors.length) * 100) / 100;
   total += pts;
-  results[name] = { pts, forced: forced.length, forcedList: forced.slice(0, 15), spacingClip: spacing.list.length, spacingList: spacing.list.slice(0, 15), spacingOverflow: spacing.overflow, axePts, axe, tapSmall: dom.small.length, small: dom.small.slice(0, 12), crowded: dom.crowded, crowdList: dom.crowdList, clippedPh: dom.clippedPh, tinyText: dom.tinyText, noFocus, noFocusList, aaa: aaa.n, aaaList: aaa.list, phList: dom.phList, tinyList: dom.tinyList, zoom: dom.zoom, overflow: dom.overflow, errors, controls: dom.controls, text: dom.text, medianFont: dom.medianFont };
+  results[name] = { pts, tabHidden: dom.tabHidden, forced: forced.length, forcedList: forced.slice(0, 15), spacingClip: spacing.list.length, spacingList: spacing.list.slice(0, 15), spacingOverflow: spacing.overflow, axePts, axe, tapSmall: dom.small.length, small: dom.small.slice(0, 12), crowded: dom.crowded, crowdList: dom.crowdList, clippedPh: dom.clippedPh, tinyText: dom.tinyText, noFocus, noFocusList, aaa: aaa.n, aaaList: aaa.list, phList: dom.phList, tinyList: dom.tinyList, zoom: dom.zoom, overflow: dom.overflow, errors, controls: dom.controls, text: dom.text, medianFont: dom.medianFont };
   if (verbose) console.log(name, pts, JSON.stringify({ axe: axe.map((v) => `${v.id}:${v.impact}x${v.n}`), small: dom.small, crowded: dom.crowded, crowdList: dom.crowdList, clippedPh: dom.clippedPh, tiny: dom.tinyText, noFocusList, aaa: aaa.n, zoom: dom.zoom, overflow: dom.overflow, errors }));
   await ctx.close();
 }
@@ -254,6 +258,6 @@ if (process.argv.includes('--write-guard')) {
   }
 }
 writeFileSync('autoresearch/last_eval.json', JSON.stringify({ total, guard, why, results }, null, 1));
-console.log(Object.entries(results).map(([k, v]) => `${k.padEnd(15)} ${String(v.pts).padStart(6)}  axe=${v.axePts} tap=${v.tapSmall} crowd=${v.crowded} tiny=${v.tinyText} focus=${v.noFocus} aaa=${v.aaa} ph=${v.clippedPh} zoom=${v.zoom} forced=${v.forced} tspace=${v.spacingClip}${v.spacingOverflow ? '+OVF' : ''}${v.overflow ? ' OVERFLOW' : ''}${v.errors.length ? ' ERR' : ''}`).join('\n'));
+console.log(Object.entries(results).map(([k, v]) => `${k.padEnd(15)} ${String(v.pts).padStart(6)}  axe=${v.axePts} tap=${v.tapSmall} crowd=${v.crowded} tiny=${v.tinyText} focus=${v.noFocus} aaa=${v.aaa} ph=${v.clippedPh} zoom=${v.zoom}${v.tabHidden ? ' TABHIDDEN' : ''} forced=${v.forced} tspace=${v.spacingClip}${v.spacingOverflow ? '+OVF' : ''}${v.overflow ? ' OVERFLOW' : ''}${v.errors.length ? ' ERR' : ''}`).join('\n'));
 console.log(`GUARD: ${guard ? 'PASS' : 'FAIL ' + why.join('; ')}`);
 console.log(`SCORE: ${Math.round(total * 100) / 100}`);
