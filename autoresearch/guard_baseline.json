@@ -21,7 +21,7 @@
  },
  "messages-dir": {
   "controls": 25,
-  "text": 528,
+  "text": 529,
   "medianFont": 17
  },
  "todo-dir": {
@@ -76,7 +76,7 @@
  },
  "messages-cast": {
   "controls": 22,
-  "text": 581,
+  "text": 582,
   "medianFont": 17
  },
  "desk:schedule-dir": {
@@ -135,13 +135,13 @@
   "medianFont": 15.64
  },
  "operator": {
-  "controls": 47,
-  "text": 2587,
+  "controls": 48,
+  "text": 2727,
   "medianFont": 17
  },
  "rollcall": {
-  "controls": 105,
-  "text": 3209,
+  "controls": 106,
+  "text": 3291,
   "medianFont": 17
  },
  "timeline-edit": {
@@ -166,7 +166,7 @@
  },
  "sm:messages-cast": {
   "controls": 22,
-  "text": 581,
+  "text": 582,
   "medianFont": 17
  },
  "sm:manage": {
@@ -205,8 +205,8 @@
   "medianFont": 17
  },
  "poster": {
-  "controls": 11,
-  "text": 249,
+  "controls": 13,
+  "text": 610,
   "medianFont": 15.64
  },
  "audition-print": {
@@ -231,7 +231,7 @@
  },
  "tab:messages-cast": {
   "controls": 22,
-  "text": 581,
+  "text": 582,
   "medianFont": 17
  }
 }

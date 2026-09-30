@@ -19,9 +19,9 @@ async function first(col, filter) {
 // Operator (Glow Tape Stagehand) account for the /operator console screen.
 if (!(await first('users', "email='operator@test.local'"))) await create('users', { email: 'operator@test.local', name: 'Olive Operator', password: 'x-pass-12345', passwordConfirm: 'x-pass-12345', verified: true, operator: true });
 const existing = await first('productions', "title='Our Town'");
-const SEED_V = 'A small town, a big heart. [seed v3]';
+const SEED_V = 'A small town, a big heart. [seed v4]';
 if (existing && existing.description === SEED_V && !process.env.RESEED) { const note = await first('notes', `production='${existing.id}'`);
-  const ev = await first('events', `production='${existing.id}'`);
+  const ev = await first('events', `production='${existing.id}' && signinCode!=''`);
   const res = await first('resources', `production='${existing.id}'`);
   console.log(JSON.stringify({ already: true, production: existing.id, note: note?.id, event: ev?.id, resource: res?.id })); process.exit(0); }
 if (existing) await fetch(`${PB}/api/collections/productions/records/${existing.id}`, { method: 'DELETE', headers: H });
@@ -34,10 +34,11 @@ const prod = await create('productions', { org: org.id, title: 'Our Town', writt
 const dm = await create('members', { production: prod.id, user: dir.id, role: 'director', position: 'Director', manager: true });
 const am = await create('members', { production: prod.id, user: actor.id, role: 'performer', position: 'Emily Webb' });
 for (const pos of ['George Gibbs', 'Stage Manager', 'Mrs. Webb']) await create('members', { production: prod.id, role: 'performer', position: pos });
+const SIGNIN = 'DOOR42';
 const day = (d, h) => { const t = new Date(Date.UTC(2026, 9, d, h + 7)); return t.toISOString().replace('T', ' '); };
 const evs = [];
 for (const [d, kind, title] of [[5, 'Rehearsal', 'Act 1 blocking'], [7, 'Rehearsal', 'Act 2 blocking'], [12, 'Tech', 'Tech run'], [16, 'Performance', 'Opening night'], [17, 'Performance', 'Closing']]) {
-  evs.push(await create('events', { production: prod.id, title, kind, start: day(d, 18), end: day(d, 21), location: 'Driftwood Playhouse', status: 'scheduled' }));
+  evs.push(await create('events', { production: prod.id, title, kind, start: day(d, 18), end: day(d, 21), location: 'Driftwood Playhouse', status: 'scheduled', signinCode: evs.length === 0 ? 'DOOR42' : '' }));
 }
 await create('announcements', { production: prod.id, author: dir.id, title: 'Welcome to Our Town!', body: 'Scripts are in the Docs tab.', pinned: true });
 await create('tasks', { production: prod.id, title: 'Find a ladder', department: 'Set', assignee: am.id });
@@ -79,4 +80,4 @@ await soft(create('profiles', { user: actor.id, pronouns: 'she/her', experience:
   if (!r.ok) console.error('resource', await r.text());
 }
 await soft(create('auditions', { production: prod.id, user: actor.id, roles: 'Emily Webb', answers: { 'Any schedule conflicts we should know about?': 'One work trip in October' } }));
-console.log(JSON.stringify({ production: prod.id, director: dir.id, actor: actor.id, event: evs[0].id }));
+console.log(JSON.stringify({ signin: 'DOOR42', production: prod.id, director: dir.id, actor: actor.id, event: evs[0].id }));

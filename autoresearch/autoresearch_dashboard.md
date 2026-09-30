@@ -1,7 +1,7 @@
 # Autoresearch Dashboard — UI/UX
 
 **Constrained file:** `src/styles.css` · metric: UX debt (lower is better)
-**Baseline:** 734.05 | **Current best:** 2 | **Iterations:** 62/100
+**Baseline:** 734.05 | **Current best:** 2 | **Iterations:** 63/100
 **Guard:** no lost controls/text, no font shrink, build passes
 
 | # | Score | Delta | Guard | Status | Description |
@@ -68,5 +68,6 @@
 | 60 | 2 | +0 | PASS | keep_visual | Space between the Pinned pill and the announcement title |
 | 61 | 2 | +0 | PASS | keep_visual | 44px list-link rule scoped to link-only lists (.link-list); pills never wrap |
 | 62 | 2 | +0 | PASS | keep_visual | Setup checklist: status box stays beside the step text |
+| 63 | 2 | -65 | PASS | keep | Active tab scrolls into view in the tab strip on load/navigation |
 
-**Kept:** 47 (+7 visual fixes) | **Discarded:** 8 | **Crashed:** 0 | **Guard failures:** 0
+**Kept:** 48 (+7 visual fixes) | **Discarded:** 8 | **Crashed:** 0 | **Guard failures:** 0

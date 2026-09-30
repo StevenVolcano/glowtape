@@ -53,7 +53,7 @@ const SCREENS = [
   ['request-page', 'director', '/request-production'],
   ['audition-form', 'actor', `/audition/${P}`],
   ['schedule-print', 'director', `/production/${P}/schedule/print`],
-  ['checkin', 'actor', `/production/${P}/signin/${seed.event}`],
+  ['checkin', 'actor', `/production/${P}/signin/${seed.event}?c=DOOR42`],
   ['packet', 'director', `/production/${P}/packet`],
   ['bios', 'director', `/production/${P}/bios`],
   ['note-open', 'director', `/production/${P}/notes/${seed.note}`],
