@@ -596,7 +596,7 @@ function TicketsSection() {
           value={url}
           onChange={(e) => setUrl(e.target.value)}
           onBlur={save}
-          placeholder="Example: driftwoodplayers.com/sound-of-music-tickets"
+          placeholder="Example: yoursite.com/tickets"
           style={{ flex: 1 }}
         />
         {saved && <span className="acked" role="status">{saved}</span>}
