@@ -103,7 +103,6 @@ export default function ShowReport({ event }: { event: EventRecord }) {
             value={audience}
             onChange={(e) => setAudience(e.target.value)}
             placeholder="Example: 142"
-            style={{ width: '6rem' }}
           />
         </label>
         <label>
