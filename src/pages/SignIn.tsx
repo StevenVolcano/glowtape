@@ -121,7 +121,7 @@ export default function SignIn() {
                   autoComplete="name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="As it should appear on the contact sheet"
+                  placeholder="First and last name"
                   required
                 />
                 <label htmlFor="email">Email</label>

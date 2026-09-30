@@ -34,3 +34,4 @@
 {"type":"result","iteration":31,"commit":"50677c1","score":35,"delta":"-3","guard_pass":true,"status":"keep","description":"Event-types list becomes a 2-row textarea (whole standard list visible)","timestamp":"2026-09-30T15:32:55.095Z"}
 {"type":"result","iteration":32,"commit":"f34a2b4","score":33,"delta":"-2","guard_pass":true,"status":"keep","description":"Playwright/composer credit becomes a 2-row textarea (long credits fit)","timestamp":"2026-09-30T15:34:05.696Z"}
 {"type":"result","iteration":33,"commit":"ac8bae8","score":27,"delta":"-6","guard_pass":true,"status":"keep","description":"Operator ticket-link placeholder shortened to fit (aria-label names the company)","timestamp":"2026-09-30T15:35:37.840Z"}
+{"type":"result","iteration":34,"commit":"8748e72","score":25,"delta":"-2","guard_pass":true,"status":"keep","description":"Production ticket-link placeholder shortened to fit phones","timestamp":"2026-09-30T15:36:48.659Z"}
