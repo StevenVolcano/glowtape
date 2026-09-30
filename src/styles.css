@@ -1022,3 +1022,8 @@ label:has(> input[type='radio']) {
   width: 1.4rem;
   min-width: 0;
 }
+
+/* A textarea followed directly by its action row needs breathing room. */
+textarea + .row {
+  margin-top: 0.75rem;
+}
