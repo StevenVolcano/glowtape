@@ -1,7 +1,7 @@
 # Autoresearch Dashboard — UI/UX
 
 **Constrained file:** `src/styles.css` · metric: UX debt (lower is better)
-**Baseline:** 734.05 | **Current best:** 67.75 | **Iterations:** 21/100
+**Baseline:** 734.05 | **Current best:** 65.75 | **Iterations:** 22/100
 **Guard:** no lost controls/text, no font shrink, build passes
 
 | # | Score | Delta | Guard | Status | Description |
@@ -27,5 +27,6 @@
 | 19 | 68.75 | -0.1 | PASS | discard | --error #b3372f -> #962c25 (5.4:1 -> 7.05:1) |
 | 20 | 68.75 | -0.1 | PASS | keep | --error #b3372f -> #962c25 (5.4:1 -> 7.05:1), retry after min-delta fix |
 | 21 | 67.75 | -1 | PASS | keep | Paragraph-only links (check-in '→ Tonight's schedule') get 44px |
+| 22 | 65.75 | -2 | PASS | keep | Focus ring also on input:focus-within (date/time inner fields) |
 
-**Kept:** 17 (+1 visual fixes) | **Discarded:** 3 | **Crashed:** 0 | **Guard failures:** 0
+**Kept:** 18 (+1 visual fixes) | **Discarded:** 3 | **Crashed:** 0 | **Guard failures:** 0
