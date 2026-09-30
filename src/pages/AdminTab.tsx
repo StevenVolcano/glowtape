@@ -1224,7 +1224,7 @@ function AddRoleForm({ onAdded }: { onAdded: () => Promise<void> }) {
         aria-label="Role or position name"
         value={position}
         onChange={(e) => setPosition(e.target.value)}
-        placeholder="Add a role before casting — for example: Ophelia or Ensemble"
+        placeholder="New role — for example: Ophelia"
       />
       <select aria-label="Role type" value={role} onChange={(e) => setRole(e.target.value as MemberRole)}>
         {(Object.keys(ROLE_LABELS) as MemberRole[]).map((r) => (
