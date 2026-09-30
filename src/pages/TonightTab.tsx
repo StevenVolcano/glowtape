@@ -307,7 +307,7 @@ export default function TonightTab() {
         {needs.length > 0 && (
           <div className="card stack">
             <strong>Needs you</strong>
-            <ul className="plain-list">
+            <ul className="plain-list link-list">
               {needs.map((n) => (
                 <li key={n.key}>
                   <Link className="link" to={n.to}>
@@ -339,7 +339,7 @@ export default function TonightTab() {
             <p className="hint" style={{ margin: 0 }}>
               Welcome to the show! A few small things and you're all set:
             </p>
-            <ul className="plain-list">
+            <ul className="plain-list link-list">
               {settled.map((s) => (
                 <li key={s.key}>
                   {s.done ? (

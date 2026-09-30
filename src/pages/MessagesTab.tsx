@@ -152,7 +152,7 @@ function Announcements() {
           const count = acks.filter((k) => k.announcement === a.id).length
           return (
             <li key={a.id} className="card announcement">
-              {a.pinned && <span className="pill">Pinned</span>}{a.pinned && " "}
+              {a.pinned && <span className="pill">Pinned</span>}{a.pinned && ' '}
               <strong>{a.title}</strong>
               {a.body && <p>{a.body}</p>}
               <div className="hint">— {a.expand?.author?.name}</div>
