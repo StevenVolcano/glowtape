@@ -1027,3 +1027,12 @@ label:has(> input[type='radio']) {
 textarea + .row {
   margin-top: 0.75rem;
 }
+
+/* Windows High Contrast / forced colors drops backgrounds, so borderless
+   buttons would float as plain text — give them a system-colored edge. */
+@media (forced-colors: active) {
+  button:not(.link),
+  .jump-chip {
+    border: 2px solid ButtonText;
+  }
+}

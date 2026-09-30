@@ -11,7 +11,10 @@ const L = 'autoresearch/autoresearch.jsonl';
 const lines = readFileSync(L, 'utf8').trim().split('\n').map((l) => JSON.parse(l));
 const cfg = lines[0];
 const res = lines.filter((l) => l.type === 'result');
-const best = Math.min(cfg.baseline, ...res.filter((r) => r.status.startsWith('keep') || r.status === 'baseline').map((r) => r.score));
+// Best = latest baseline (re-baselines reset the scale) or any keep after it.
+const lastBase = res.map((r) => r.status).lastIndexOf('baseline');
+const since = lastBase >= 0 ? res.slice(lastBase) : res;
+const best = Math.min(lastBase >= 0 ? Infinity : cfg.baseline, ...since.filter((r) => r.status.startsWith('keep') || r.status === 'baseline').map((r) => r.score));
 const iteration = res.filter((r) => r.status !== 'baseline').length + 1;
 let score = null, guard = null, status, out = '';
 try {
