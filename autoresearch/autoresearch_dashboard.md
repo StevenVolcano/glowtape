@@ -1,7 +1,7 @@
 # Autoresearch Dashboard — UI/UX
 
 **Constrained file:** `src/styles.css` · metric: UX debt (lower is better)
-**Baseline:** 734.05 | **Current best:** 51 | **Iterations:** 24/100
+**Baseline:** 734.05 | **Current best:** 51 | **Iterations:** 26/100
 **Guard:** no lost controls/text, no font shrink, build passes
 
 | # | Score | Delta | Guard | Status | Description |
@@ -30,5 +30,7 @@
 | 22 | 65.75 | -2 | PASS | keep | Focus ring also on input:focus-within (date/time inner fields) |
 | 23 | 61.75 | -4 | PASS | keep | Month grid cells wrap (overflow-wrap:anywhere) instead of clipping |
 | 24 | 51 | -10.75 | PASS | keep | Month grid 0.72rem -> 0.85rem on screen (print keeps 0.72rem) |
+| 25 | 51 | +0 | PASS | keep_visual | hyphens:auto on month-grid + contact-sheet cells (no mid-word splits on real phones) |
+| 26 | 54 | +3 | PASS | discard | Row labels/inputs flex-basis 10rem so fields wrap instead of squeezing |
 
-**Kept:** 20 (+1 visual fixes) | **Discarded:** 3 | **Crashed:** 0 | **Guard failures:** 0
+**Kept:** 20 (+2 visual fixes) | **Discarded:** 4 | **Crashed:** 0 | **Guard failures:** 0
