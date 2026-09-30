@@ -806,7 +806,7 @@ function ChannelsSection() {
           aria-label="New channel name"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="New channel — for example: Costumes"
+          placeholder="Channel — for example: Props"
         />
         <select
           aria-label="Who can see it"
