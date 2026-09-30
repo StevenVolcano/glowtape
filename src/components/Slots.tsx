@@ -174,7 +174,7 @@ export default function SlotsSection() {
                       }
                       if (s.member) {
                         return (
-                          <span key={s.id} className="chip" style={{ opacity: 0.6 }}>
+                          <span key={s.id} className="chip chip-taken">
                             {timeOf(s.start)} — {nameOf(s.member)}
                             {isManager && (
                               <button

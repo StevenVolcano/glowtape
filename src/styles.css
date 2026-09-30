@@ -1055,3 +1055,13 @@ p > a.link:only-child {
   align-items: center;
   min-height: 44px;
 }
+
+/* A slot someone else booked: clearly "not yours" without fading the name
+   below readable contrast (it used to be opacity 0.6). */
+.chip-taken {
+  display: inline-flex;
+  align-items: center;
+  border-style: dashed;
+  color: var(--muted);
+  background: var(--paper);
+}
