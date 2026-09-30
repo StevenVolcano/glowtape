@@ -1,7 +1,7 @@
 # Autoresearch Dashboard — UI/UX
 
 **Constrained file:** `src/styles.css` · metric: UX debt (lower is better)
-**Baseline:** 734.05 | **Current best:** 23 | **Iterations:** 35/100
+**Baseline:** 734.05 | **Current best:** 22 | **Iterations:** 36/100
 **Guard:** no lost controls/text, no font shrink, build passes
 
 | # | Score | Delta | Guard | Status | Description |
@@ -41,5 +41,6 @@
 | 33 | 27 | -6 | PASS | keep | Operator ticket-link placeholder shortened to fit (aria-label names the company) |
 | 34 | 25 | -2 | PASS | keep | Production ticket-link placeholder shortened to fit phones |
 | 35 | 23 | -2 | PASS | keep | Sign-in name placeholder: 'First and last name' (fits phones) |
+| 36 | 22 | -1 | PASS | keep | Sign-in code placeholder shortened |
 
-**Kept:** 27 (+2 visual fixes) | **Discarded:** 6 | **Crashed:** 0 | **Guard failures:** 0
+**Kept:** 28 (+2 visual fixes) | **Discarded:** 6 | **Crashed:** 0 | **Guard failures:** 0

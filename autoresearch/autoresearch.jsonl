@@ -36,3 +36,4 @@
 {"type":"result","iteration":33,"commit":"ac8bae8","score":27,"delta":"-6","guard_pass":true,"status":"keep","description":"Operator ticket-link placeholder shortened to fit (aria-label names the company)","timestamp":"2026-09-30T15:35:37.840Z"}
 {"type":"result","iteration":34,"commit":"8748e72","score":25,"delta":"-2","guard_pass":true,"status":"keep","description":"Production ticket-link placeholder shortened to fit phones","timestamp":"2026-09-30T15:36:48.659Z"}
 {"type":"result","iteration":35,"commit":"4ba7e06","score":23,"delta":"-2","guard_pass":true,"status":"keep","description":"Sign-in name placeholder: 'First and last name' (fits phones)","timestamp":"2026-09-30T15:38:46.174Z"}
+{"type":"result","iteration":36,"commit":"9e02795","score":22,"delta":"-1","guard_pass":true,"status":"keep","description":"Sign-in code placeholder shortened","timestamp":"2026-09-30T15:39:55.956Z"}
