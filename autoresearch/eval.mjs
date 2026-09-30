@@ -96,11 +96,11 @@ for (const [name, who, path] of SCREENS) {
       return el.getBoundingClientRect();
     };
     const inlineText = (el) => el.tagName === 'A' && getComputedStyle(el).display === 'inline' && el.parentElement && el.parentElement.textContent.trim().length > el.textContent.trim().length + 20;
-    const small = [], boxes = [];
+    const small = [], boxes = [], boxEls = [], crowdList = [];
     for (const el of ctrls) {
       const r = hitBox(el); if (!r) continue;
       if (inlineText(el)) continue;
-      boxes.push(r);
+      boxes.push(r); boxEls.push(desc(el, r));
       if (r.height < 44 || r.width < 44) small.push(desc(el, r));
     }
     // Target spacing: distinct targets whose hit boxes sit < 8px apart.
@@ -111,7 +111,7 @@ for (const [name, who, path] of SCREENS) {
       const dx = Math.max(0, Math.max(a.left, b.left) - Math.min(a.right, b.right));
       const dy = Math.max(0, Math.max(a.top, b.top) - Math.min(a.bottom, b.bottom));
       const overlap = dx === 0 && dy === 0;
-      if (!overlap && Math.max(dx, dy) < 8) crowded++;
+      if (!overlap && Math.max(dx, dy) < 8) { crowded++; if (crowdList.length < 15) crowdList.push(`${boxEls[boxes.indexOf(a)]} <${Math.round(Math.max(dx, dy))}px> ${boxEls[boxes.indexOf(b)]}`); }
     }
     const zoom = [...document.querySelectorAll('input, select, textarea')].filter(vis).filter((el) => parseFloat(getComputedStyle(el).fontSize) < 16).length;
     // Placeholders cut off by their input's width.
@@ -136,7 +136,7 @@ for (const [name, who, path] of SCREENS) {
     const overflow = document.documentElement.scrollWidth > window.innerWidth + 1;
     const text = document.body.innerText.replace(/\s+/g, ' ').trim().length;
     const fonts = [...document.querySelectorAll('p, li, td, label, span')].filter(vis).map((e) => parseFloat(getComputedStyle(e).fontSize)).sort((a, b) => a - b);
-    return { controls: ctrls.length, small, crowded, zoom, clippedPh, tinyText, overflow, text, medianFont: fonts.length ? fonts[fonts.length >> 1] : 0 };
+    return { controls: ctrls.length, small, crowded, crowdList, zoom, clippedPh, tinyText, overflow, text, medianFont: fonts.length ? fonts[fonts.length >> 1] : 0 };
   });
   // Focus visibility: tab through the first 20 stops; each must show an outline
   // or box-shadow ring (or change background) while focused.
@@ -168,8 +168,8 @@ for (const [name, who, path] of SCREENS) {
   const axePts = axe.reduce((s, v) => s + (IMPACT[v.impact] || 1) * v.n, 0);
   const pts = Math.round((W.axe * axePts + W.tap * dom.small.length + W.crowded * dom.crowded + W.overflow * (dom.overflow ? 1 : 0) + W.inputZoom * dom.zoom + W.clippedPh * dom.clippedPh + W.tinyText * dom.tinyText + W.noFocus * noFocus + W.aaa * aaa + W.error * errors.length) * 100) / 100;
   total += pts;
-  results[name] = { pts, axePts, axe, tapSmall: dom.small.length, small: dom.small.slice(0, 12), crowded: dom.crowded, clippedPh: dom.clippedPh, tinyText: dom.tinyText, noFocus, noFocusList, aaa, zoom: dom.zoom, overflow: dom.overflow, errors, controls: dom.controls, text: dom.text, medianFont: dom.medianFont };
-  if (verbose) console.log(name, pts, JSON.stringify({ axe: axe.map((v) => `${v.id}:${v.impact}x${v.n}`), small: dom.small, crowded: dom.crowded, clippedPh: dom.clippedPh, tiny: dom.tinyText, noFocusList, aaa, zoom: dom.zoom, overflow: dom.overflow, errors }));
+  results[name] = { pts, axePts, axe, tapSmall: dom.small.length, small: dom.small.slice(0, 12), crowded: dom.crowded, crowdList: dom.crowdList, clippedPh: dom.clippedPh, tinyText: dom.tinyText, noFocus, noFocusList, aaa, zoom: dom.zoom, overflow: dom.overflow, errors, controls: dom.controls, text: dom.text, medianFont: dom.medianFont };
+  if (verbose) console.log(name, pts, JSON.stringify({ axe: axe.map((v) => `${v.id}:${v.impact}x${v.n}`), small: dom.small, crowded: dom.crowded, crowdList: dom.crowdList, clippedPh: dom.clippedPh, tiny: dom.tinyText, noFocusList, aaa, zoom: dom.zoom, overflow: dom.overflow, errors }));
   await ctx.close();
 }
 await browser.close();
