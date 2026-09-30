@@ -178,6 +178,7 @@ textarea:disabled {
 }
 
 input:focus,
+input:focus-within,
 select:focus,
 textarea:focus,
 button:focus-visible,

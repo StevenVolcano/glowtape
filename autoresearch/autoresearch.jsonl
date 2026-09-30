@@ -21,3 +21,4 @@
 {"type":"result","iteration":18,"commit":"cb5c2a7","score":68.85,"delta":"-67.5","guard_pass":true,"status":"keep","description":"Forced-colors: borderless buttons get a ButtonText border","timestamp":"2026-09-30T15:12:23.067Z"}
 {"type":"result","iteration":19,"commit":null,"score":68.75,"delta":"-0.1","guard_pass":true,"status":"discard","description":"--error #b3372f -> #962c25 (5.4:1 -> 7.05:1)","timestamp":"2026-09-30T15:14:03.959Z"}
 {"type":"result","iteration":20,"commit":"6f26907","score":68.75,"delta":"-0.1","guard_pass":true,"status":"keep","description":"--error #b3372f -> #962c25 (5.4:1 -> 7.05:1), retry after min-delta fix","timestamp":"2026-09-30T15:15:26.457Z"}
+{"type":"result","iteration":21,"commit":"6139347","score":67.75,"delta":"-1","guard_pass":true,"status":"keep","description":"Paragraph-only links (check-in '→ Tonight's schedule') get 44px","timestamp":"2026-09-30T15:16:45.262Z"}
