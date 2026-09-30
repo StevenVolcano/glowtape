@@ -1092,8 +1092,9 @@ function MembersSection() {
               }}
             />
             {!m.user && !m.claimedFrom && (
-              <input
+              <textarea
                 aria-label={`Casting notes for ${memberName(m)}`}
+                rows={2}
                 style={{ width: '100%' }}
                 maxLength={500}
                 defaultValue={m.roleNotes}
@@ -1231,8 +1232,9 @@ function AddRoleForm({ onAdded }: { onAdded: () => Promise<void> }) {
           </option>
         ))}
       </select>
-      <input
+      <textarea
         aria-label="Casting notes"
+        rows={2}
         maxLength={500}
         value={roleNotes}
         onChange={(e) => setRoleNotes(e.target.value)}

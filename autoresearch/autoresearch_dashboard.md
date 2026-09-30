@@ -1,7 +1,7 @@
 # Autoresearch Dashboard — UI/UX
 
 **Constrained file:** `src/styles.css` · metric: UX debt (lower is better)
-**Baseline:** 734.05 | **Current best:** 51 | **Iterations:** 26/100
+**Baseline:** 734.05 | **Current best:** 50 | **Iterations:** 29/100
 **Guard:** no lost controls/text, no font shrink, build passes
 
 | # | Score | Delta | Guard | Status | Description |
@@ -32,5 +32,8 @@
 | 24 | 51 | -10.75 | PASS | keep | Month grid 0.72rem -> 0.85rem on screen (print keeps 0.72rem) |
 | 25 | 51 | +0 | PASS | keep_visual | hyphens:auto on month-grid + contact-sheet cells (no mid-word splits on real phones) |
 | 26 | 54 | +3 | PASS | discard | Row labels/inputs flex-basis 10rem so fields wrap instead of squeezing |
+| 27 | 50 | -1 | PASS | keep | Row labels flex-basis 10rem (labels only) so fields wrap instead of squeezing |
+| 28 | 95 | +45 | PASS | discard | Text field + button rows: field flex 1 1 15rem, button wraps under on phones |
+| 29 | 50 | +0 | PASS | discard | Phone: single field+button rows give the field the full line |
 
-**Kept:** 20 (+2 visual fixes) | **Discarded:** 4 | **Crashed:** 0 | **Guard failures:** 0
+**Kept:** 21 (+2 visual fixes) | **Discarded:** 6 | **Crashed:** 0 | **Guard failures:** 0
