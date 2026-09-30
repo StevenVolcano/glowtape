@@ -16,7 +16,7 @@
  },
  "schedule-dir": {
   "controls": 101,
-  "text": 3076,
+  "text": 3077,
   "medianFont": 17
  },
  "messages-dir": {
@@ -35,8 +35,8 @@
   "medianFont": 15.64
  },
  "docs": {
-  "controls": 12,
-  "text": 390,
+  "controls": 14,
+  "text": 459,
   "medianFont": 15.64
  },
  "notes": {
@@ -50,8 +50,8 @@
   "medianFont": 17
  },
  "manage": {
-  "controls": 187,
-  "text": 7500,
+  "controls": 190,
+  "text": 7558,
   "medianFont": 17
  },
  "casting": {
@@ -81,12 +81,12 @@
  },
  "desk:schedule-dir": {
   "controls": 101,
-  "text": 3076,
+  "text": 3077,
   "medianFont": 17
  },
  "desk:manage": {
-  "controls": 187,
-  "text": 7500,
+  "controls": 190,
+  "text": 7558,
   "medianFont": 17
  },
  "desk:dashboard-cast": {
@@ -135,18 +135,18 @@
   "medianFont": 15.64
  },
  "operator": {
-  "controls": 46,
-  "text": 2447,
+  "controls": 47,
+  "text": 2587,
   "medianFont": 17
  },
  "rollcall": {
   "controls": 105,
-  "text": 3208,
+  "text": 3209,
   "medianFont": 17
  },
  "timeline-edit": {
   "controls": 106,
-  "text": 3419,
+  "text": 3420,
   "medianFont": 17
  },
  "sm:signin": {
@@ -170,13 +170,68 @@
   "medianFont": 17
  },
  "sm:manage": {
-  "controls": 187,
-  "text": 7500,
+  "controls": 190,
+  "text": 7558,
   "medianFont": 17
  },
  "sm:todo-dir": {
   "controls": 31,
   "text": 2504,
+  "medianFont": 17
+ },
+ "script-cast": {
+  "controls": 22,
+  "text": 689,
+  "medianFont": 17
+ },
+ "script-dir": {
+  "controls": 27,
+  "text": 818,
+  "medianFont": 17
+ },
+ "sm:script-cast": {
+  "controls": 22,
+  "text": 689,
+  "medianFont": 17
+ },
+ "showreport": {
+  "controls": 109,
+  "text": 3343,
+  "medianFont": 17
+ },
+ "newsheet": {
+  "controls": 108,
+  "text": 3206,
+  "medianFont": 17
+ },
+ "poster": {
+  "controls": 11,
+  "text": 249,
+  "medianFont": 15.64
+ },
+ "audition-print": {
+  "controls": 2,
+  "text": 899,
+  "medianFont": 17
+ },
+ "tab:dashboard-cast": {
+  "controls": 21,
+  "text": 965,
+  "medianFont": 17
+ },
+ "tab:schedule-dir": {
+  "controls": 101,
+  "text": 3077,
+  "medianFont": 17
+ },
+ "tab:manage": {
+  "controls": 190,
+  "text": 7558,
+  "medianFont": 17
+ },
+ "tab:messages-cast": {
+  "controls": 22,
+  "text": 581,
   "medianFont": 17
  }
 }

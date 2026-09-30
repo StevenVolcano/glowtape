@@ -19,10 +19,11 @@ async function first(col, filter) {
 // Operator (Glow Tape Stagehand) account for the /operator console screen.
 if (!(await first('users', "email='operator@test.local'"))) await create('users', { email: 'operator@test.local', name: 'Olive Operator', password: 'x-pass-12345', passwordConfirm: 'x-pass-12345', verified: true, operator: true });
 const existing = await first('productions', "title='Our Town'");
-const SEED_V = 'A small town, a big heart. [seed v2]';
+const SEED_V = 'A small town, a big heart. [seed v3]';
 if (existing && existing.description === SEED_V && !process.env.RESEED) { const note = await first('notes', `production='${existing.id}'`);
   const ev = await first('events', `production='${existing.id}'`);
-  console.log(JSON.stringify({ already: true, production: existing.id, note: note?.id, event: ev?.id })); process.exit(0); }
+  const res = await first('resources', `production='${existing.id}'`);
+  console.log(JSON.stringify({ already: true, production: existing.id, note: note?.id, event: ev?.id, resource: res?.id })); process.exit(0); }
 if (existing) await fetch(`${PB}/api/collections/productions/records/${existing.id}`, { method: 'DELETE', headers: H });
 
 const mkUser = async (email, name) => (await first('users', `email='${email}'`)) || create('users', { email, name, password: 'x-pass-12345', passwordConfirm: 'x-pass-12345', verified: true });
@@ -61,5 +62,21 @@ if (party) await soft(create('bring_items', { production: prod.id, event: party.
 await soft(fetch(`${PB}/api/collections/events/records/${evs[0].id}`, { method: 'PATCH', headers: H, body: JSON.stringify({ timeline: [{ title: 'Warm-ups', minutes: 15 }, { title: 'Act 1 scenes 1-3', minutes: 90 }, { title: 'Notes', minutes: 15 }] }) }));
 await soft(create('conflicts', { production: prod.id, user: actor.id, start: day(12, 0), end: day(12, 0), note: 'Work trip' }));
 await soft(create('profiles', { user: actor.id, pronouns: 'she/her', experience: 'Annie (2023), Our Town reading', skills: 'alto, tap' }));
+// A small script PDF for the script room (round 4).
+{
+  const { createRequire } = await import('node:module');
+  const { PDFDocument, StandardFonts } = createRequire(import.meta.url)('pdf-lib');
+  const doc = await PDFDocument.create(); const font = await doc.embedFont(StandardFonts.Helvetica);
+  for (let i = 0; i < 3; i++) {
+    const pg = doc.addPage([612, 792]);
+    const lines = ['STAGE MANAGER:', 'This play is called Our Town.', 'EMILY:', 'Mama, am I pretty?', 'MRS. WEBB:', 'Yes, of course you are.'];
+    lines.forEach((t, k) => pg.drawText(t, { x: 72, y: 700 - k * 24, size: 14, font }));
+  }
+  const fd = new FormData();
+  fd.append('production', prod.id); fd.append('area', 'show'); fd.append('title', 'Our Town — rehearsal script'); fd.append('audience', 'everyone');
+  fd.append('file', new Blob([await doc.save()], { type: 'application/pdf' }), 'script.pdf');
+  const r = await fetch(`${PB}/api/collections/resources/records`, { method: 'POST', headers: { Authorization: admin.token }, body: fd });
+  if (!r.ok) console.error('resource', await r.text());
+}
 await soft(create('auditions', { production: prod.id, user: actor.id, roles: 'Emily Webb', answers: { 'Any schedule conflicts we should know about?': 'One work trip in October' } }));
 console.log(JSON.stringify({ production: prod.id, director: dir.id, actor: actor.id, event: evs[0].id }));

@@ -66,6 +66,18 @@ const SCREENS = [
   ['sm:messages-cast', 'actor', `/production/${P}/messages`],
   ['sm:manage', 'director', `/production/${P}/admin`],
   ['sm:todo-dir', 'director', `/production/${P}/todo`],
+  // Round 4: script room, more opened states, door poster, tablet width.
+  ['script-cast', 'actor', `/production/${P}/script/${seed.resource}`],
+  ['script-dir', 'director', `/production/${P}/script/${seed.resource}`],
+  ['sm:script-cast', 'actor', `/production/${P}/script/${seed.resource}`],
+  ['showreport', 'director', `/production/${P}/schedule`, 'Show report'],
+  ['newsheet', 'director', `/production/${P}/schedule`, 'New sign-up sheet'],
+  ['poster', 'director', `/production/${P}/signin/${seed.event}/poster`],
+  ['audition-print', 'director', `/audition/${P}/print`],
+  ['tab:dashboard-cast', 'actor', `/production/${P}/dashboard`],
+  ['tab:schedule-dir', 'director', `/production/${P}/schedule`],
+  ['tab:manage', 'director', `/production/${P}/admin`],
+  ['tab:messages-cast', 'actor', `/production/${P}/messages`],
 ];
 
 const preview = spawn('npx', ['vite', 'preview', '--port', String(PORT), '--strictPort', '--host', '127.0.0.1'], { stdio: 'ignore' });
@@ -83,7 +95,7 @@ if (shots) mkdirSync('autoresearch/shots', { recursive: true });
 const only = (process.argv.find((a) => a.startsWith('--only=')) || '').slice(7);
 for (const [name, who, path, action] of SCREENS) {
   if (only && !only.split(',').includes(name)) continue;
-  const ctx = await browser.newContext({ viewport: name.startsWith('desk:') ? { width: 1280, height: 800 } : name.startsWith('sm:') ? { width: 320, height: 640 } : { width: 390, height: 844 }, deviceScaleFactor: 1, reducedMotion: 'reduce', timezoneId: 'America/Los_Angeles' });
+  const ctx = await browser.newContext({ viewport: name.startsWith('desk:') ? { width: 1280, height: 800 } : name.startsWith('sm:') ? { width: 320, height: 640 } : name.startsWith('tab:') ? { width: 768, height: 1024 } : { width: 390, height: 844 }, deviceScaleFactor: 1, reducedMotion: 'reduce', timezoneId: 'America/Los_Angeles' });
   await ctx.addInitScript(([auth]) => {
     localStorage.clear();
     if (auth) localStorage.setItem('pocketbase_auth', JSON.stringify(auth));
