@@ -12,3 +12,4 @@
 {"type":"result","iteration":10,"commit":"2b40a6e","score":58.35,"delta":"-12","guard_pass":true,"status":"keep","description":"Edit-table cell padding 0.2rem -> 0.25rem (8px between stacked inputs)","timestamp":"2026-09-30T14:58:58.319Z"}
 {"type":"result","iteration":11,"commit":"7f6f499","score":57.35,"delta":"-1","guard_pass":true,"status":"keep","description":"Space between a textarea and the button row under it","timestamp":"2026-09-30T14:59:48.955Z"}
 {"type":"result","iteration":12,"commit":"603b0b8","score":29.75,"delta":"-27.6","guard_pass":true,"status":"keep","description":"--muted #6b6478 -> #544e63 (5.1:1 -> 7.15:1, AAA on paper and white)","timestamp":"2026-09-30T15:01:35.785Z"}
+{"type":"result","iteration":13,"commit":"9de6d6c","score":23.5,"delta":"-6.25","guard_pass":true,"status":"keep","description":"Pills 0.8rem -> 0.85rem (13.6px -> 14.45px)","timestamp":"2026-09-30T15:02:26.321Z"}

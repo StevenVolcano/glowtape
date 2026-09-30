@@ -1,7 +1,7 @@
 # Autoresearch Dashboard — UI/UX
 
 **Constrained file:** `src/styles.css` · metric: UX debt (lower is better)
-**Baseline:** 734.05 | **Current best:** 29.75 | **Iterations:** 12/100
+**Baseline:** 734.05 | **Current best:** 23.5 | **Iterations:** 13/100
 **Guard:** no lost controls/text, no font shrink, build passes
 
 | # | Score | Delta | Guard | Status | Description |
@@ -18,5 +18,6 @@
 | 10 | 58.35 | -12 | PASS | keep | Edit-table cell padding 0.2rem -> 0.25rem (8px between stacked inputs) |
 | 11 | 57.35 | -1 | PASS | keep | Space between a textarea and the button row under it |
 | 12 | 29.75 | -27.6 | PASS | keep | --muted #6b6478 -> #544e63 (5.1:1 -> 7.15:1, AAA on paper and white) |
+| 13 | 23.5 | -6.25 | PASS | keep | Pills 0.8rem -> 0.85rem (13.6px -> 14.45px) |
 
-**Kept:** 11 (+1 visual fixes) | **Discarded:** 0 | **Crashed:** 0 | **Guard failures:** 0
+**Kept:** 12 (+1 visual fixes) | **Discarded:** 0 | **Crashed:** 0 | **Guard failures:** 0
