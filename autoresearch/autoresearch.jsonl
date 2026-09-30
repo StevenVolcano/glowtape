@@ -32,3 +32,4 @@
 {"type":"result","iteration":29,"commit":null,"score":50,"delta":"+0","guard_pass":true,"status":"discard","description":"Phone: single field+button rows give the field the full line","timestamp":"2026-09-30T15:29:39.776Z"}
 {"type":"result","iteration":30,"commit":"6e24520","score":38,"delta":"-12","guard_pass":true,"status":"keep","description":"Casting-notes fields become 2-row textareas so the example is readable","timestamp":"2026-09-30T15:31:26.552Z"}
 {"type":"result","iteration":31,"commit":"50677c1","score":35,"delta":"-3","guard_pass":true,"status":"keep","description":"Event-types list becomes a 2-row textarea (whole standard list visible)","timestamp":"2026-09-30T15:32:55.095Z"}
+{"type":"result","iteration":32,"commit":"f34a2b4","score":33,"delta":"-2","guard_pass":true,"status":"keep","description":"Playwright/composer credit becomes a 2-row textarea (long credits fit)","timestamp":"2026-09-30T15:34:05.696Z"}

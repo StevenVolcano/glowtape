@@ -1,7 +1,7 @@
 # Autoresearch Dashboard — UI/UX
 
 **Constrained file:** `src/styles.css` · metric: UX debt (lower is better)
-**Baseline:** 734.05 | **Current best:** 35 | **Iterations:** 31/100
+**Baseline:** 734.05 | **Current best:** 33 | **Iterations:** 32/100
 **Guard:** no lost controls/text, no font shrink, build passes
 
 | # | Score | Delta | Guard | Status | Description |
@@ -37,5 +37,6 @@
 | 29 | 50 | +0 | PASS | discard | Phone: single field+button rows give the field the full line |
 | 30 | 38 | -12 | PASS | keep | Casting-notes fields become 2-row textareas so the example is readable |
 | 31 | 35 | -3 | PASS | keep | Event-types list becomes a 2-row textarea (whole standard list visible) |
+| 32 | 33 | -2 | PASS | keep | Playwright/composer credit becomes a 2-row textarea (long credits fit) |
 
-**Kept:** 23 (+2 visual fixes) | **Discarded:** 6 | **Crashed:** 0 | **Guard failures:** 0
+**Kept:** 24 (+2 visual fixes) | **Discarded:** 6 | **Crashed:** 0 | **Guard failures:** 0

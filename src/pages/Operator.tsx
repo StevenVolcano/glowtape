@@ -257,7 +257,7 @@ function CompaniesSection() {
                 aria-label={`Ticket link for ${c.name}`}
                 defaultValue={c.ticketUrl ?? ''}
                 onBlur={(e) => saveField(c, 'ticketUrl', e.target.value.trim())}
-                placeholder="Ticket link — for example: driftwoodplayers.com/tickets"
+                placeholder="Box-office ticket link"
               />
             </div>
           </li>
