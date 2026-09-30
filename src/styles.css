@@ -989,3 +989,10 @@ body.kiosk .legal-links {
   align-items: center;
   min-height: 44px;
 }
+
+/* Event-card map links: a 44px tall hit box without changing the card's look. */
+.event-line > a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
