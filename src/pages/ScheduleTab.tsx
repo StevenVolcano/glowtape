@@ -1028,7 +1028,7 @@ function WeeklyHoursForm({
         aria-label="What keeps you busy"
         value={note}
         onChange={(e) => setNote(e.target.value)}
-        placeholder="What is it — for example: work, night class"
+        placeholder="What is it — for example: work"
       />
       <button type="submit" disabled={busy || days.size === 0 || !fromTime || !toTime}>
         {forLabel ? `Add ${forLabel}'s busy hours` : 'Add my busy hours'}

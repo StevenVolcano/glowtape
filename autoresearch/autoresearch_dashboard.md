@@ -1,7 +1,7 @@
 # Autoresearch Dashboard — UI/UX
 
 **Constrained file:** `src/styles.css` · metric: UX debt (lower is better)
-**Baseline:** 734.05 | **Current best:** 14 | **Iterations:** 40/100
+**Baseline:** 734.05 | **Current best:** 12 | **Iterations:** 41/100
 **Guard:** no lost controls/text, no font shrink, build passes
 
 | # | Score | Delta | Guard | Status | Description |
@@ -46,5 +46,6 @@
 | 38 | 17 | +0 | PASS | keep_visual | Conflict reason placeholder back on the 'for example:' convention |
 | 39 | 15 | -2 | PASS | keep | To-do placeholder shortened to fit |
 | 40 | 14 | -1 | PASS | keep | Home join-code placeholder shortened |
+| 41 | 12 | -2 | PASS | keep | Add-role placeholder shortened |
 
-**Kept:** 31 (+3 visual fixes) | **Discarded:** 6 | **Crashed:** 0 | **Guard failures:** 0
+**Kept:** 32 (+3 visual fixes) | **Discarded:** 6 | **Crashed:** 0 | **Guard failures:** 0
