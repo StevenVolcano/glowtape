@@ -11,7 +11,7 @@
  },
  "dashboard-dir": {
   "controls": 18,
-  "text": 789,
+  "text": 791,
   "medianFont": 17
  },
  "schedule-dir": {
@@ -66,7 +66,7 @@
  },
  "dashboard-cast": {
   "controls": 21,
-  "text": 943,
+  "text": 945,
   "medianFont": 17
  },
  "schedule-cast": {
@@ -91,7 +91,7 @@
  },
  "desk:dashboard-cast": {
   "controls": 21,
-  "text": 943,
+  "text": 945,
   "medianFont": 17
  }
 }

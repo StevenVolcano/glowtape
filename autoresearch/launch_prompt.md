@@ -1,7 +1,7 @@
 Read `autoresearch/instructions.md` and `CLAUDE.md`, then `src/styles.css`.
 
 Start PocketBase if it isn't running (`cd backend && ./pocketbase serve --http 127.0.0.1:8090 &`),
-run `node autoresearch/eval.mjs` once and confirm SCORE 728.05 + GUARD: PASS
+run `node autoresearch/eval.mjs` once and confirm SCORE 734.05 + GUARD: PASS
 (record as the `baseline` line if autoresearch.jsonl has none).
 
 Then run 100 iterations. Each iteration: pick ONE idea from the strategy (use

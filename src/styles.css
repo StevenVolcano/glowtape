@@ -250,6 +250,17 @@ form.stack,
   box-shadow: 0 1px 3px rgba(36, 31, 46, 0.06), 0 4px 14px rgba(36, 31, 46, 0.045);
 }
 
+/* .card's display:block used to win over .stack, so "card stack" boxes ran
+   their lines together ("Act 1 blockingMon, Oct 5"). */
+.card.stack {
+  display: flex;
+}
+
+.card.stack > button.link,
+.card.stack > a {
+  align-self: flex-start;
+}
+
 .card-link {
   display: flex;
   justify-content: space-between;

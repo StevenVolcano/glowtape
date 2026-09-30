@@ -42,7 +42,7 @@ Needs PocketBase running: `cd backend && ./pocketbase serve --http 127.0.0.1:809
 Per-screen details land in `autoresearch/last_eval.json`.
 
 ## Metric
-`SCORE` = total UX debt points, **LOWER IS BETTER**. Baseline **728.05**
+`SCORE` = total UX debt points, **LOWER IS BETTER**. Baseline **734.05** (after the .card.stack fix; was 728.05)
 (3 identical runs → fully deterministic). Per screen:
 | signal | weight |
 |---|---|
