@@ -500,7 +500,8 @@ function PresetsSection() {
       <div className="stack">
         <label>
           Event types (comma-separated; leave empty for the standard list)
-          <input
+          <textarea
+            rows={2}
             value={kinds}
             onChange={(e) => setKinds(e.target.value)}
             placeholder={'Standard list: ' + DEFAULT_EVENT_KINDS.join(', ')}

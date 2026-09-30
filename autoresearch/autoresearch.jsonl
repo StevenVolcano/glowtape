@@ -30,3 +30,4 @@
 {"type":"result","iteration":27,"commit":"f0f8951","score":50,"delta":"-1","guard_pass":true,"status":"keep","description":"Row labels flex-basis 10rem (labels only) so fields wrap instead of squeezing","timestamp":"2026-09-30T15:27:12.212Z"}
 {"type":"result","iteration":28,"commit":null,"score":95,"delta":"+45","guard_pass":true,"status":"discard","description":"Text field + button rows: field flex 1 1 15rem, button wraps under on phones","timestamp":"2026-09-30T15:28:27.778Z"}
 {"type":"result","iteration":29,"commit":null,"score":50,"delta":"+0","guard_pass":true,"status":"discard","description":"Phone: single field+button rows give the field the full line","timestamp":"2026-09-30T15:29:39.776Z"}
+{"type":"result","iteration":30,"commit":"6e24520","score":38,"delta":"-12","guard_pass":true,"status":"keep","description":"Casting-notes fields become 2-row textareas so the example is readable","timestamp":"2026-09-30T15:31:26.552Z"}
