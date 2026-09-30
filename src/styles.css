@@ -138,6 +138,7 @@ input,
 select,
 textarea {
   font: inherit;
+  font-weight: 400; /* what you type is never bold, even inside a bold <label> */
   padding: 0.6rem 0.75rem;
   min-height: 44px;
   border: 2px solid var(--ctrl);
