@@ -907,6 +907,11 @@ body.kiosk .legal-links {
   margin-bottom: 0.7rem;
 }
 
+/* keep each step's ⬜/✅ beside its text instead of on a line of its own */
+.setup-steps .row {
+  flex-wrap: nowrap;
+}
+
 .setup-done strong {
   color: var(--muted);
 }

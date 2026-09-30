@@ -1,7 +1,7 @@
 # Autoresearch Dashboard — UI/UX
 
 **Constrained file:** `src/styles.css` · metric: UX debt (lower is better)
-**Baseline:** 734.05 | **Current best:** 2 | **Iterations:** 60/100
+**Baseline:** 734.05 | **Current best:** 2 | **Iterations:** 61/100
 **Guard:** no lost controls/text, no font shrink, build passes
 
 | # | Score | Delta | Guard | Status | Description |
@@ -66,5 +66,6 @@
 | 58 | 2 | -1 | PASS | keep | Sign-up sheet location placeholder shortened |
 | 59 | 2 | +0 | PASS | keep_visual | Typed text in fields is normal weight (was inheriting bold from wrapping labels) |
 | 60 | 2 | +0 | PASS | keep_visual | Space between the Pinned pill and the announcement title |
+| 61 | 2 | +0 | PASS | keep_visual | 44px list-link rule scoped to link-only lists (.link-list); pills never wrap |
 
-**Kept:** 47 (+5 visual fixes) | **Discarded:** 8 | **Crashed:** 0 | **Guard failures:** 0
+**Kept:** 47 (+6 visual fixes) | **Discarded:** 8 | **Crashed:** 0 | **Guard failures:** 0
