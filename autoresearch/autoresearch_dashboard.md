@@ -1,7 +1,7 @@
 # Autoresearch Dashboard — UI/UX
 
 **Constrained file:** `src/styles.css` · metric: UX debt (lower is better)
-**Baseline:** 734.05 | **Current best:** 38 | **Iterations:** 30/100
+**Baseline:** 734.05 | **Current best:** 35 | **Iterations:** 31/100
 **Guard:** no lost controls/text, no font shrink, build passes
 
 | # | Score | Delta | Guard | Status | Description |
@@ -36,5 +36,6 @@
 | 28 | 95 | +45 | PASS | discard | Text field + button rows: field flex 1 1 15rem, button wraps under on phones |
 | 29 | 50 | +0 | PASS | discard | Phone: single field+button rows give the field the full line |
 | 30 | 38 | -12 | PASS | keep | Casting-notes fields become 2-row textareas so the example is readable |
+| 31 | 35 | -3 | PASS | keep | Event-types list becomes a 2-row textarea (whole standard list visible) |
 
-**Kept:** 22 (+2 visual fixes) | **Discarded:** 6 | **Crashed:** 0 | **Guard failures:** 0
+**Kept:** 23 (+2 visual fixes) | **Discarded:** 6 | **Crashed:** 0 | **Guard failures:** 0

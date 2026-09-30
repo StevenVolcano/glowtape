@@ -1440,7 +1440,8 @@ function AuditionsSection() {
       <div className="stack" style={{ marginTop: '0.5rem' }}>
         <label>
           Playwright / composer credit (shown under the title)
-          <input
+          <textarea
+            rows={2}
             maxLength={200}
             value={writtenBy}
             onChange={(e) => setWrittenBy(e.target.value)}
