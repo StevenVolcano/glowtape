@@ -1,7 +1,7 @@
 # Autoresearch Dashboard — UI/UX
 
 **Constrained file:** `src/styles.css` · metric: UX debt (lower is better)
-**Baseline:** 734.05 | **Current best:** 58.35 | **Iterations:** 10/100
+**Baseline:** 734.05 | **Current best:** 57.35 | **Iterations:** 11/100
 **Guard:** no lost controls/text, no font shrink, build passes
 
 | # | Score | Delta | Guard | Status | Description |
@@ -16,5 +16,6 @@
 | 8 | 77.85 | -68.2 | PASS | keep | Tab bar gap 4px -> 8px |
 | 9 | 70.35 | -7.5 | PASS | keep | Calendar-link row gap 4px -> 8px |
 | 10 | 58.35 | -12 | PASS | keep | Edit-table cell padding 0.2rem -> 0.25rem (8px between stacked inputs) |
+| 11 | 57.35 | -1 | PASS | keep | Space between a textarea and the button row under it |
 
-**Kept:** 9 (+1 visual fixes) | **Discarded:** 0 | **Crashed:** 0 | **Guard failures:** 0
+**Kept:** 10 (+1 visual fixes) | **Discarded:** 0 | **Crashed:** 0 | **Guard failures:** 0

@@ -8,7 +8,7 @@
   --lamp: #cdef55; /* glow-tape green */
   --lamp-dark: #a3c437;
   --accent: #4a3f66;
-  --muted: #6b6478;
+  --muted: #544e63; /* 7:1 (AAA) on paper and on white */
   --line: #ddd8ce;
   --ctrl: #8a8478; /* control borders: ≥3:1 on white and paper */
   --ok: #256843;

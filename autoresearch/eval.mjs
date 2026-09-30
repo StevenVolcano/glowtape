@@ -116,12 +116,12 @@ for (const [name, who, path] of SCREENS) {
     const zoom = [...document.querySelectorAll('input, select, textarea')].filter(vis).filter((el) => parseFloat(getComputedStyle(el).fontSize) < 16).length;
     // Placeholders cut off by their input's width.
     const cv = document.createElement('canvas').getContext('2d');
-    let clippedPh = 0;
+    let clippedPh = 0; const phList = [], tinyList = [];
     for (const el of [...document.querySelectorAll('input[placeholder], textarea[placeholder]')].filter(vis)) {
       if (el.tagName === 'TEXTAREA') continue;
       const s = getComputedStyle(el); cv.font = `italic ${s.fontSize} ${s.fontFamily}`;
       const avail = el.clientWidth - parseFloat(s.paddingLeft) - parseFloat(s.paddingRight);
-      if (cv.measureText(el.placeholder).width > avail + 1) clippedPh++;
+      if (cv.measureText(el.placeholder).width > avail + 1) { clippedPh++; phList.push(`${Math.round(avail)}px "${el.placeholder.slice(0, 40)}"`); }
     }
     // Small text: visible text-bearing leaf elements under 14px.
     let tinyText = 0;
@@ -131,12 +131,12 @@ for (const [name, who, path] of SCREENS) {
       const t = walker.currentNode; const el = t.parentElement;
       if (!el || seen.has(el) || !t.textContent.trim() || !vis(el) || el.closest('.sr-only')) continue;
       seen.add(el);
-      if (parseFloat(getComputedStyle(el).fontSize) < 14) tinyText++;
+      if (parseFloat(getComputedStyle(el).fontSize) < 14) { tinyText++; tinyList.push(`${el.tagName.toLowerCase()}.${String(el.className).split(' ')[0]} ${getComputedStyle(el).fontSize} "${t.textContent.trim().slice(0, 20)}"`); }
     }
     const overflow = document.documentElement.scrollWidth > window.innerWidth + 1;
     const text = document.body.innerText.replace(/\s+/g, ' ').trim().length;
     const fonts = [...document.querySelectorAll('p, li, td, label, span')].filter(vis).map((e) => parseFloat(getComputedStyle(e).fontSize)).sort((a, b) => a - b);
-    return { controls: ctrls.length, small, crowded, crowdList, zoom, clippedPh, tinyText, overflow, text, medianFont: fonts.length ? fonts[fonts.length >> 1] : 0 };
+    return { controls: ctrls.length, small, crowded, crowdList, phList, tinyList, zoom, clippedPh, tinyText, overflow, text, medianFont: fonts.length ? fonts[fonts.length >> 1] : 0 };
   });
   // Focus visibility: tab through the first 20 stops; each must show an outline
   // or box-shadow ring (or change background) while focused.
@@ -156,7 +156,7 @@ for (const [name, who, path] of SCREENS) {
   // AAA (7:1) contrast is reported separately at low weight — a "nice to have".
   const aaa = await page.evaluate(async () => {
     const r = await window.axe.run(document, { runOnly: ['color-contrast-enhanced'], resultTypes: ['violations'] });
-    return r.violations.reduce((s, v) => s + v.nodes.length, 0);
+    return { n: r.violations.reduce((s, v) => s + v.nodes.length, 0), list: r.violations.flatMap((v) => v.nodes.map((nd) => `${nd.target.join(' ')} ${(/contrast of ([\d.]+)/.exec(nd.failureSummary || '') || [])[1] || ''} ${(/foreground color: (#\w+)/.exec(nd.failureSummary || '') || [])[1] || ''} on ${(/background color: (#\w+)/.exec(nd.failureSummary || '') || [])[1] || ''}`)) };
   });
   if (shots) {
     await page.screenshot({ path: `autoresearch/shots/${name}.png`, fullPage: true });
@@ -166,10 +166,10 @@ for (const [name, who, path] of SCREENS) {
     for (let y = 0, i = 0; y < h && i < 12; y += 1400, i++) await page.screenshot({ path: `autoresearch/shots/${name.replace(':', '_')}-${i}.png`, fullPage: true, clip: { x: 0, y, width: vw, height: Math.min(1400, h - y) } });
   }
   const axePts = axe.reduce((s, v) => s + (IMPACT[v.impact] || 1) * v.n, 0);
-  const pts = Math.round((W.axe * axePts + W.tap * dom.small.length + W.crowded * dom.crowded + W.overflow * (dom.overflow ? 1 : 0) + W.inputZoom * dom.zoom + W.clippedPh * dom.clippedPh + W.tinyText * dom.tinyText + W.noFocus * noFocus + W.aaa * aaa + W.error * errors.length) * 100) / 100;
+  const pts = Math.round((W.axe * axePts + W.tap * dom.small.length + W.crowded * dom.crowded + W.overflow * (dom.overflow ? 1 : 0) + W.inputZoom * dom.zoom + W.clippedPh * dom.clippedPh + W.tinyText * dom.tinyText + W.noFocus * noFocus + W.aaa * aaa.n + W.error * errors.length) * 100) / 100;
   total += pts;
-  results[name] = { pts, axePts, axe, tapSmall: dom.small.length, small: dom.small.slice(0, 12), crowded: dom.crowded, crowdList: dom.crowdList, clippedPh: dom.clippedPh, tinyText: dom.tinyText, noFocus, noFocusList, aaa, zoom: dom.zoom, overflow: dom.overflow, errors, controls: dom.controls, text: dom.text, medianFont: dom.medianFont };
-  if (verbose) console.log(name, pts, JSON.stringify({ axe: axe.map((v) => `${v.id}:${v.impact}x${v.n}`), small: dom.small, crowded: dom.crowded, crowdList: dom.crowdList, clippedPh: dom.clippedPh, tiny: dom.tinyText, noFocusList, aaa, zoom: dom.zoom, overflow: dom.overflow, errors }));
+  results[name] = { pts, axePts, axe, tapSmall: dom.small.length, small: dom.small.slice(0, 12), crowded: dom.crowded, crowdList: dom.crowdList, clippedPh: dom.clippedPh, tinyText: dom.tinyText, noFocus, noFocusList, aaa: aaa.n, aaaList: aaa.list, phList: dom.phList, tinyList: dom.tinyList, zoom: dom.zoom, overflow: dom.overflow, errors, controls: dom.controls, text: dom.text, medianFont: dom.medianFont };
+  if (verbose) console.log(name, pts, JSON.stringify({ axe: axe.map((v) => `${v.id}:${v.impact}x${v.n}`), small: dom.small, crowded: dom.crowded, crowdList: dom.crowdList, clippedPh: dom.clippedPh, tiny: dom.tinyText, noFocusList, aaa: aaa.n, zoom: dom.zoom, overflow: dom.overflow, errors }));
   await ctx.close();
 }
 await browser.close();

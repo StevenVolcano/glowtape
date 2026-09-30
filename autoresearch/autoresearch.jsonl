@@ -10,3 +10,4 @@
 {"type":"result","iteration":8,"commit":"5cfe832","score":77.85,"delta":"-68.2","guard_pass":true,"status":"keep","description":"Tab bar gap 4px -> 8px","timestamp":"2026-09-30T14:57:16.139Z"}
 {"type":"result","iteration":9,"commit":"df7f3c8","score":70.35,"delta":"-7.5","guard_pass":true,"status":"keep","description":"Calendar-link row gap 4px -> 8px","timestamp":"2026-09-30T14:57:58.291Z"}
 {"type":"result","iteration":10,"commit":"2b40a6e","score":58.35,"delta":"-12","guard_pass":true,"status":"keep","description":"Edit-table cell padding 0.2rem -> 0.25rem (8px between stacked inputs)","timestamp":"2026-09-30T14:58:58.319Z"}
+{"type":"result","iteration":11,"commit":"7f6f499","score":57.35,"delta":"-1","guard_pass":true,"status":"keep","description":"Space between a textarea and the button row under it","timestamp":"2026-09-30T14:59:48.955Z"}
