@@ -38,3 +38,4 @@
 {"type":"result","iteration":35,"commit":"4ba7e06","score":23,"delta":"-2","guard_pass":true,"status":"keep","description":"Sign-in name placeholder: 'First and last name' (fits phones)","timestamp":"2026-09-30T15:38:46.174Z"}
 {"type":"result","iteration":36,"commit":"9e02795","score":22,"delta":"-1","guard_pass":true,"status":"keep","description":"Sign-in code placeholder shortened","timestamp":"2026-09-30T15:39:55.956Z"}
 {"type":"result","iteration":37,"commit":"24019da","score":17,"delta":"-5","guard_pass":true,"status":"keep","description":"Conflict reason placeholder shortened to fit","timestamp":"2026-09-30T15:41:04.683Z"}
+{"type":"result","iteration":38,"commit":"67e9c15","score":17,"delta":"+0","guard_pass":true,"status":"keep_visual","description":"Conflict reason placeholder back on the 'for example:' convention","timestamp":"2026-09-30T15:42:32.876Z"}

@@ -1,7 +1,7 @@
 # Autoresearch Dashboard — UI/UX
 
 **Constrained file:** `src/styles.css` · metric: UX debt (lower is better)
-**Baseline:** 734.05 | **Current best:** 17 | **Iterations:** 37/100
+**Baseline:** 734.05 | **Current best:** 17 | **Iterations:** 38/100
 **Guard:** no lost controls/text, no font shrink, build passes
 
 | # | Score | Delta | Guard | Status | Description |
@@ -43,5 +43,6 @@
 | 35 | 23 | -2 | PASS | keep | Sign-in name placeholder: 'First and last name' (fits phones) |
 | 36 | 22 | -1 | PASS | keep | Sign-in code placeholder shortened |
 | 37 | 17 | -5 | PASS | keep | Conflict reason placeholder shortened to fit |
+| 38 | 17 | +0 | PASS | keep_visual | Conflict reason placeholder back on the 'for example:' convention |
 
-**Kept:** 29 (+2 visual fixes) | **Discarded:** 6 | **Crashed:** 0 | **Guard failures:** 0
+**Kept:** 29 (+3 visual fixes) | **Discarded:** 6 | **Crashed:** 0 | **Guard failures:** 0

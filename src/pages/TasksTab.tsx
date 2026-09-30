@@ -442,7 +442,7 @@ function NewTaskForm({
           aria-label="Task"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="What needs doing — for example: source a fainting couch"
+          placeholder="Task — for example: find a couch"
         />
         <div className="row">
           <input
