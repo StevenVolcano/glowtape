@@ -1065,3 +1065,9 @@ p > a.link:only-child {
   color: var(--muted);
   background: var(--paper);
 }
+
+/* Control rows stacked straight inside a section (no .stack gap) would
+   otherwise touch — keep 8px+ between neighbouring targets. */
+section > :is(.row, .chips) + :is(.row, .chips) {
+  margin-top: 0.5rem;
+}
