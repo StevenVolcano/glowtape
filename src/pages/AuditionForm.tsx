@@ -126,7 +126,10 @@ export default function AuditionForm() {
   if (failed) {
     return (
       <main className="page">
-        <p className="error">Couldn't open this audition form — signups may not be open yet.</p>
+        <h1>Audition signup</h1>
+        <p className="error" role="alert">
+          Couldn't open this audition form — signups may not be open yet.
+        </p>
         <Link to="/community">← Back to the community calendar</Link>
       </main>
     )

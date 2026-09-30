@@ -1,7 +1,7 @@
 # Autoresearch Dashboard — UI/UX
 
 **Constrained file:** `src/styles.css` · metric: UX debt (lower is better)
-**Baseline:** 734.05 | **Current best:** 6 | **Iterations:** 49/100
+**Baseline:** 734.05 | **Current best:** 5 | **Iterations:** 50/100
 **Guard:** no lost controls/text, no font shrink, build passes
 
 | # | Score | Delta | Guard | Status | Description |
@@ -55,5 +55,6 @@
 | 47 | 8 | -1 | PASS | keep | Profile skills placeholder shortened |
 | 48 | 7 | -1 | PASS | keep | Request-form dates placeholder shortened |
 | 49 | 6 | -1 | PASS | keep | Timeline template-name placeholder shortened |
+| 50 | 5 | -1 | PASS | keep | New-channel placeholder: 'Channel — for example: Props' |
 
-**Kept:** 38 (+3 visual fixes) | **Discarded:** 8 | **Crashed:** 0 | **Guard failures:** 0
+**Kept:** 39 (+3 visual fixes) | **Discarded:** 8 | **Crashed:** 0 | **Guard failures:** 0
