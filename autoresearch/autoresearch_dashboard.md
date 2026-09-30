@@ -1,7 +1,7 @@
 # Autoresearch Dashboard — UI/UX
 
 **Constrained file:** `src/styles.css` · metric: UX debt (lower is better)
-**Baseline:** 734.05 | **Current best:** 164.05 | **Iterations:** 5/100
+**Baseline:** 734.05 | **Current best:** 146.05 | **Iterations:** 6/100
 **Guard:** no lost controls/text, no font shrink, build passes
 
 | # | Score | Delta | Guard | Status | Description |
@@ -11,5 +11,6 @@
 | 3 | 195.05 | -15 | PASS | keep | Event-line map links get 44px inline-flex hit box |
 | 4 | 175.05 | -20 | PASS | keep | Plain-list and card-stack standalone links get 44px |
 | 5 | 164.05 | -11 | PASS | keep | button.link min-width 2rem -> 44px (Edit, ✕) |
+| 6 | 146.05 | -18 | PASS | keep | Checkbox/radio wrapping labels become 44px flex rows |
 
-**Kept:** 5 | **Discarded:** 0 | **Crashed:** 0 | **Guard failures:** 0
+**Kept:** 6 | **Discarded:** 0 | **Crashed:** 0 | **Guard failures:** 0

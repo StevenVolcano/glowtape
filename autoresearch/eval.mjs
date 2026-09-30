@@ -62,7 +62,9 @@ const results = {};
 let total = 0;
 if (shots) mkdirSync('autoresearch/shots', { recursive: true });
 
+const only = (process.argv.find((a) => a.startsWith('--only=')) || '').slice(7);
 for (const [name, who, path] of SCREENS) {
+  if (only && !only.split(',').includes(name)) continue;
   const ctx = await browser.newContext({ viewport: name.startsWith('desk:') ? { width: 1280, height: 800 } : { width: 390, height: 844 }, deviceScaleFactor: 1, reducedMotion: 'reduce', timezoneId: 'America/Los_Angeles' });
   await ctx.addInitScript(([auth]) => {
     localStorage.clear();
@@ -156,7 +158,13 @@ for (const [name, who, path] of SCREENS) {
     const r = await window.axe.run(document, { runOnly: ['color-contrast-enhanced'], resultTypes: ['violations'] });
     return r.violations.reduce((s, v) => s + v.nodes.length, 0);
   });
-  if (shots) await page.screenshot({ path: `autoresearch/shots/${name}.png`, fullPage: true });
+  if (shots) {
+    await page.screenshot({ path: `autoresearch/shots/${name}.png`, fullPage: true });
+    // Readable chunks of long pages for human review.
+    const h = await page.evaluate(() => document.documentElement.scrollHeight);
+    const vw = page.viewportSize().width;
+    for (let y = 0, i = 0; y < h && i < 12; y += 1400, i++) await page.screenshot({ path: `autoresearch/shots/${name.replace(':', '_')}-${i}.png`, fullPage: true, clip: { x: 0, y, width: vw, height: Math.min(1400, h - y) } });
+  }
   const axePts = axe.reduce((s, v) => s + (IMPACT[v.impact] || 1) * v.n, 0);
   const pts = Math.round((W.axe * axePts + W.tap * dom.small.length + W.crowded * dom.crowded + W.overflow * (dom.overflow ? 1 : 0) + W.inputZoom * dom.zoom + W.clippedPh * dom.clippedPh + W.tinyText * dom.tinyText + W.noFocus * noFocus + W.aaa * aaa + W.error * errors.length) * 100) / 100;
   total += pts;

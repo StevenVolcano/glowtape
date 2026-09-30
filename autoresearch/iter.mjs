@@ -4,11 +4,14 @@
 import { execSync } from 'node:child_process';
 import { readFileSync, writeFileSync, appendFileSync } from 'node:fs';
 const desc = process.argv[2] || '(no description)';
+// --visual: a fix for a regression the metric can't see (found by eyeballing
+// screenshots) — kept if the score does not get worse.
+const visual = process.argv.includes('--visual');
 const L = 'autoresearch/autoresearch.jsonl';
 const lines = readFileSync(L, 'utf8').trim().split('\n').map((l) => JSON.parse(l));
 const cfg = lines[0];
 const res = lines.filter((l) => l.type === 'result');
-const best = Math.min(cfg.baseline, ...res.filter((r) => r.status === 'keep' || r.status === 'baseline').map((r) => r.score));
+const best = Math.min(cfg.baseline, ...res.filter((r) => r.status.startsWith('keep') || r.status === 'baseline').map((r) => r.score));
 const iteration = res.filter((r) => r.status !== 'baseline').length + 1;
 let score = null, guard = null, status, out = '';
 try {
@@ -19,20 +22,20 @@ try {
 let commit = null;
 if (score === null) status = 'crash';
 else if (!guard) status = score < best - cfg.min_delta ? 'guard_fail' : 'discard';
-else if (score < best - cfg.min_delta) {
+else if (score < best - cfg.min_delta || (visual && score <= best)) {
   try {
     execSync('npx tsc -b', { stdio: 'ignore' });
     execSync(`git commit -qam ${JSON.stringify(`ux: ${desc} (autoresearch #${iteration}, ${best}→${score})`)}`);
     commit = execSync('git rev-parse --short HEAD').toString().trim();
-    status = 'keep';
+    status = visual && score >= best ? 'keep_visual' : 'keep';
   } catch { status = 'crash'; }
 } else status = 'discard';
-if (status !== 'keep') execSync('git checkout -- src/styles.css');
+if (!status.startsWith('keep')) execSync('git checkout -- src/styles.css');
 const delta = score === null ? null : (score - best >= 0 ? '+' : '') + (Math.round((score - best) * 100) / 100);
 const entry = { type: 'result', iteration, commit, score, delta, guard_pass: guard, status, description: desc, timestamp: new Date().toISOString() };
 appendFileSync(L, JSON.stringify(entry) + '\n');
 const all = [...res, entry].filter((r) => r.status !== 'baseline');
-const cur = Math.min(best, status === 'keep' ? score : Infinity);
+const cur = Math.min(best, status.startsWith('keep') ? score : Infinity);
 const count = (s) => all.filter((r) => r.status === s).length;
 writeFileSync('autoresearch/autoresearch_dashboard.md', `# Autoresearch Dashboard — UI/UX
 
@@ -44,6 +47,6 @@ writeFileSync('autoresearch/autoresearch_dashboard.md', `# Autoresearch Dashboar
 |---|-------|-------|-------|--------|-------------|
 ${all.map((r) => `| ${r.iteration} | ${r.score ?? '—'} | ${r.delta ?? '—'} | ${r.guard_pass === null ? '—' : r.guard_pass ? 'PASS' : 'FAIL'} | ${r.status} | ${r.description} |`).join('\n')}
 
-**Kept:** ${count('keep')} | **Discarded:** ${count('discard')} | **Crashed:** ${count('crash')} | **Guard failures:** ${count('guard_fail')}
+**Kept:** ${count('keep')} (+${count('keep_visual')} visual fixes) | **Discarded:** ${count('discard')} | **Crashed:** ${count('crash')} | **Guard failures:** ${count('guard_fail')}
 `);
 console.log(`#${iteration} ${status} score=${score} best_before=${best} ${guard === false ? out.match(/GUARD: .*/)?.[0] : ''}`);

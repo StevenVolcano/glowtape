@@ -1010,7 +1010,15 @@ body.kiosk .legal-links {
 label:has(> input[type='checkbox']),
 label:has(> input[type='radio']) {
   display: flex;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 0.5rem;
   min-height: 44px;
+}
+
+/* .member-row's flex:1 inputs must not stretch a checkbox across the row. */
+.member-row input[type='checkbox'] {
+  flex: none;
+  width: 1.4rem;
+  min-width: 0;
 }
