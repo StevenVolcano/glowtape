@@ -562,6 +562,7 @@ form.stack,
   padding: 0.5rem 0.6rem;
   border-bottom: 1px solid var(--line);
   word-break: break-word;
+  hyphens: auto; /* narrow phone columns: "Drift-wood", not "Driftwoo d" */
 }
 
 /* --- Join code --- */
@@ -856,6 +857,7 @@ body.kiosk .legal-links {
   height: 3.6rem;
   font-size: 0.85rem;
   overflow-wrap: anywhere; /* wrap inside the cell instead of clipping */
+  hyphens: auto; /* "Re-hearsal", not "Rehe arsal" */
 }
 
 @media print {

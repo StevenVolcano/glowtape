@@ -181,6 +181,13 @@ for (const [name, who, path, action] of SCREENS) {
     const r = await window.axe.run(document, { runOnly: ['color-contrast-enhanced'], resultTypes: ['violations'] });
     return { n: r.violations.reduce((s, v) => s + v.nodes.length, 0), list: r.violations.flatMap((v) => v.nodes.map((nd) => `${nd.target.join(' ')} ${(/contrast of ([\d.]+)/.exec(nd.failureSummary || '') || [])[1] || ''} ${(/foreground color: (#\w+)/.exec(nd.failureSummary || '') || [])[1] || ''} on ${(/background color: (#\w+)/.exec(nd.failureSummary || '') || [])[1] || ''}`)) };
   });
+  if (shots) {
+    await page.screenshot({ path: `autoresearch/shots/${name}.png`, fullPage: true });
+    // Readable chunks of long pages for human review.
+    const h = await page.evaluate(() => document.documentElement.scrollHeight);
+    const vw = page.viewportSize().width;
+    for (let y = 0, i = 0; y < h && i < 12; y += 1400, i++) await page.screenshot({ path: `autoresearch/shots/${name.replace(':', '_')}-${i}.png`, fullPage: true, clip: { x: 0, y, width: vw, height: Math.min(1400, h - y) } });
+  }
   // Windows High Contrast / forced colors: backgrounds are dropped, so a
   // button or chip with no border becomes floating text.
   await page.emulateMedia({ forcedColors: 'active' });
@@ -209,13 +216,6 @@ for (const [name, who, path, action] of SCREENS) {
     }
     return { list, overflow: document.documentElement.scrollWidth > window.innerWidth + 1 };
   });
-  if (shots) {
-    await page.screenshot({ path: `autoresearch/shots/${name}.png`, fullPage: true });
-    // Readable chunks of long pages for human review.
-    const h = await page.evaluate(() => document.documentElement.scrollHeight);
-    const vw = page.viewportSize().width;
-    for (let y = 0, i = 0; y < h && i < 12; y += 1400, i++) await page.screenshot({ path: `autoresearch/shots/${name.replace(':', '_')}-${i}.png`, fullPage: true, clip: { x: 0, y, width: vw, height: Math.min(1400, h - y) } });
-  }
   const axePts = axe.reduce((s, v) => s + (IMPACT[v.impact] || 1) * v.n, 0);
   const pts = Math.round((W.axe * axePts + W.tap * dom.small.length + W.crowded * dom.crowded + W.overflow * (dom.overflow ? 1 : 0) + W.inputZoom * dom.zoom + W.clippedPh * dom.clippedPh + W.tinyText * dom.tinyText + W.noFocus * noFocus + W.aaa * aaa.n + W.forced * forced.length + W.spacingClip * spacing.list.length + W.spacingOverflow * (spacing.overflow ? 1 : 0) + W.error * errors.length) * 100) / 100;
   total += pts;
