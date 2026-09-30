@@ -981,3 +981,11 @@ body.kiosk .legal-links {
     font-size: 11pt;
   }
 }
+
+/* --- UX pass (autoresearch round 1) --- */
+/* Back links in the top bar get the same 44px finger floor as buttons. */
+.topbar a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
