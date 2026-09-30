@@ -1,0 +1,97 @@
+{
+ "signin": {
+  "controls": 12,
+  "text": 581,
+  "medianFont": 17
+ },
+ "home": {
+  "controls": 18,
+  "text": 1301,
+  "medianFont": 15.64
+ },
+ "dashboard-dir": {
+  "controls": 18,
+  "text": 789,
+  "medianFont": 17
+ },
+ "schedule-dir": {
+  "controls": 84,
+  "text": 2580,
+  "medianFont": 17
+ },
+ "messages-dir": {
+  "controls": 22,
+  "text": 422,
+  "medianFont": 17
+ },
+ "todo-dir": {
+  "controls": 31,
+  "text": 2504,
+  "medianFont": 17
+ },
+ "sheets": {
+  "controls": 20,
+  "text": 384,
+  "medianFont": 15.64
+ },
+ "docs": {
+  "controls": 12,
+  "text": 390,
+  "medianFont": 15.64
+ },
+ "notes": {
+  "controls": 13,
+  "text": 379,
+  "medianFont": 15.64
+ },
+ "people": {
+  "controls": 12,
+  "text": 428,
+  "medianFont": 17
+ },
+ "manage": {
+  "controls": 177,
+  "text": 6953,
+  "medianFont": 17
+ },
+ "casting": {
+  "controls": 16,
+  "text": 1258,
+  "medianFont": 17
+ },
+ "profile": {
+  "controls": 6,
+  "text": 439,
+  "medianFont": 17
+ },
+ "dashboard-cast": {
+  "controls": 21,
+  "text": 943,
+  "medianFont": 17
+ },
+ "schedule-cast": {
+  "controls": 55,
+  "text": 1825,
+  "medianFont": 17
+ },
+ "messages-cast": {
+  "controls": 19,
+  "text": 475,
+  "medianFont": 17
+ },
+ "desk:schedule-dir": {
+  "controls": 84,
+  "text": 2580,
+  "medianFont": 17
+ },
+ "desk:manage": {
+  "controls": 177,
+  "text": 6953,
+  "medianFont": 17
+ },
+ "desk:dashboard-cast": {
+  "controls": 21,
+  "text": 943,
+  "medianFont": 17
+ }
+}
