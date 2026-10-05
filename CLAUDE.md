@@ -96,7 +96,9 @@ information is NEVER used for AI training. (The older "never fed to AI"
 wording was retired when the operator-only Claude connector shipped.) The app
 was BUILT with a combination of human and AI resources (stated honestly,
 never hidden). Wording lives in the help.html FAQ ("Does Glow Tape use AI?"),
-the help.html Stagehand FAQ, the privacy.html "AI" section and the
+the help.html Stagehand FAQ, the privacy.html "AI" section (both it and the
+help FAQ also carry the caveat that a show's production team may use AI tools
+of their own outside Glow Tape, incl. show info they can see) and the
 why-glowtape.html "Your data is yours" bullet — keep them consistent.
 
 ## Critical gotchas (violating these breaks production)
