@@ -279,7 +279,7 @@ routerAdd(
       channel = new Record(col);
       channel.set("production", data.production);
       channel.set("member", member.id);
-      channel.set("name", `🔒 ${e.auth.get("name")} & team`);
+      channel.set("name", `🔒 ${e.auth.get("name")} & managers`);
       e.app.save(channel);
     }
 

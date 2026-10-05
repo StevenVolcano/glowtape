@@ -213,7 +213,7 @@ routerAdd(
       throw new BadRequestError("Unknown production.");
     }
     if (!lib.canManage(production, e.auth)) {
-      throw new BadRequestError("Only the production team can send line notes.");
+      throw new BadRequestError("Only managers can send line notes.");
     }
     lib.assertNotArchived(production);
 
@@ -288,7 +288,7 @@ onRecordUpdateRequest((e) => {
       const original = e.record.original();
       for (const f of ["production", "resource", "member", "author", "page", "x", "y", "kind", "text", "snippet", "notified"]) {
         if (String(e.record.get(f)) !== String(original.get(f))) {
-          throw new BadRequestError("You can mark a line note done — editing it is for the production team.");
+          throw new BadRequestError("You can mark a line note done — editing it is for managers.");
         }
       }
     }

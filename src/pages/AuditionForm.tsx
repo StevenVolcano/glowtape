@@ -187,8 +187,8 @@ export default function AuditionForm() {
       setExisting(rec)
       setSaved(
         existing
-          ? 'Updated — the production team sees your latest answers. ✓'
-          : "You're signed up! The production team has your form. Break a leg! 🎭",
+          ? "Updated — the show's managers see your latest answers. ✓"
+          : "You're signed up! The show's managers have your form. Break a leg! 🎭",
       )
       setJustSignedUp(true)
     } catch (err) {

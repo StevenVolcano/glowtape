@@ -781,7 +781,7 @@ export default function ScriptRoom() {
       {!compact && (
         <p className="hint">
           Pick a tool, then use the page: 📝 notes pin to a spot you tap, ✏️ draws, 🖍
-          highlights, 🧽 erases your marks. 📌 notes and marks from the production team are
+          highlights, 🧽 erases your marks. 📌 notes and marks from managers are
           seen by everyone; yours are yours alone. Everything saves by itself the moment you
           make it — there's nothing to save manually.
         </p>
@@ -880,7 +880,7 @@ export default function ScriptRoom() {
       {mode === 'line' && !compact && (
         <p className="hint no-print">
           Tap the line in the script, then say whose it was and what happened — they get it
-          instantly and check it off once it's solid. Only they (and the team) see it.
+          instantly and check it off once it's solid. Only they (and the managers) see it.
         </p>
       )}
       {mode === 'highlight' && (
@@ -1229,7 +1229,7 @@ export default function ScriptRoom() {
             </button>
           </div>
           <p className="hint" style={{ margin: 0 }}>
-            It lands on their To-Do tab, and only they (and the production team) can see it.
+            It lands on their To-Do tab, and only they (and the managers) can see it.
             No phones buzz yet — when you're done for the night, tap 📣 in the list below to
             send everyone their notes in one notification each.
           </p>

@@ -266,6 +266,14 @@ verifies deployments from his phone and reports back, often with screenshots.
   text, `aria-pressed` on toggle chips, `aria-expanded` on disclosures,
   th scope, contrast ≥ 4.5:1 text / 3:1 controls (tokens `--ctrl`, `--ok`
   already tuned), `useTitle()` on new pages.
+- **"Managers", not "production team"** (Steven, 2026-10-05): anything gated by
+  Manage access (`canManage` / `manager` flag / channel audience `team` / docs
+  audience `team`) is worded "managers" in the UI, help.html and error messages;
+  the seeded channel is "🔒 Managers" (migration `1758400000` renamed existing
+  ones). "Production team" is kept only for the real team list — ProgramPacket,
+  the audition handout's team names, the AI caveat in help/privacy. A show's
+  wider team (music director, choreographer…) without Manage access lives in a
+  hand-made "Production team" role group with its own 🔒 group channel.
 - **One email per human action** — bulk operations send a single digest.
 - Chat identity: "First L. (Role)" via `chatName()` in `lib/types.ts`.
 - **Youth safety invariants**: no DMs ever (team channels always include all

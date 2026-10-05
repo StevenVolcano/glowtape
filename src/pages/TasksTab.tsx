@@ -357,7 +357,7 @@ function LineNotesSection() {
     <section>
       <h2>🎯 Line notes ({mine.length})</h2>
       <p className="hint">
-        Notes from the team about lines to look at before next time. Check one off once
+        Notes from the managers about lines to look at before next time. Check one off once
         you've got it down.
       </p>
       <ul className="plain-list">

@@ -46,7 +46,7 @@ export default function DocsTab() {
               Add documents in <Link to={`${base}/admin#resources`}>Manage → Documents &amp; links</Link>.
             </>
           ) : (
-            ' The production team can post scripts, tracks, and forms here.'
+            ' Managers can post scripts, tracks, and forms here.'
           )}
         </p>
       )}

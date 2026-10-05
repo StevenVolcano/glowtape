@@ -137,7 +137,7 @@ function production(app, ctx, id, lib) {
   } catch {
     throw new Error("Unknown production — call list_productions for ids.");
   }
-  if (!lib.canManage(p, ctx.user)) throw new Error("You're not on the production team for that show.");
+  if (!lib.canManage(p, ctx.user)) throw new Error("You're not a manager of that show.");
   return p;
 }
 
@@ -222,7 +222,7 @@ const TOOLS = [
   },
   {
     name: "get_contacts",
-    description: "Contact sheet for a show: names, emails and phones of members, guardians and auditioners (production-team only).",
+    description: "Contact sheet for a show: names, emails and phones of members, guardians and auditioners (managers only).",
     inputSchema: { type: "object", properties: { production: { type: "string" } }, required: ["production"] },
     annotations: { readOnlyHint: true },
     run(app, ctx, args, lib) {

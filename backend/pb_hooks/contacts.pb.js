@@ -21,7 +21,7 @@ routerAdd(
       throw new BadRequestError("Unknown production.");
     }
     if (!lib.canManage(production, e.auth)) {
-      throw new BadRequestError("Only the production team can see contact details.");
+      throw new BadRequestError("Only managers can see contact details.");
     }
 
     // Everyone attached to this production: members' users, their guardians,
@@ -95,7 +95,7 @@ routerAdd(
     }
     const production = e.app.findRecordById("productions", member.get("production"));
     if (!lib.canManage(production, e.auth)) {
-      throw new BadRequestError("Only the production team can edit contact info.");
+      throw new BadRequestError("Only managers can edit contact info.");
     }
     lib.assertNotArchived(production);
     if (typeof body.contactEmail === "string") member.set("contactEmail", body.contactEmail.trim());

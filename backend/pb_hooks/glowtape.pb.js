@@ -291,7 +291,7 @@ onRecordAfterCreateSuccess((e) => {
     ["All Call", "all", false, ""],
     ["🔒 Cast", "all", false, castGroup.id],
     ["🔒 Crew", "all", false, crewGroup.id],
-    ["🔒 Production Team", "team", false, ""],
+    ["🔒 Managers", "team", false, ""],
     ["Off Topic", "all", true, ""],
   ];
   for (const [name, audience, defaultMuted, group] of defaults) {

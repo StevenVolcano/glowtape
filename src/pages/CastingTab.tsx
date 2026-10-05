@@ -41,7 +41,7 @@ export default function CastingTab() {
     load().catch(() => setLoaded(true))
   }, [production.id])
 
-  if (!isManager) return <p className="hint">The casting table is for the production team.</p>
+  if (!isManager) return <p className="hint">The casting table is for managers.</p>
 
   // Roles you can draft into: real placeholder rows. Already-cast and child
   // roles show for context but aren't assignable here.
@@ -176,7 +176,7 @@ export default function CastingTab() {
       <section>
         <h2>Casting</h2>
         <p className="hint">
-          Your private worksheet — nobody outside the production team can see it. Draft the
+          Your private worksheet — nobody but the managers can see it. Draft the
           cast from audition signups, sleep on it, then finalize. Need to re-read someone's
           answers? <Link to={`${base}/admin#auditions`}>Review the audition forms</Link>.
         </p>

@@ -209,11 +209,11 @@ function TeamChannelButton({
   return (
     <p>
       <button className="link" onClick={open} disabled={busy}>
-        🔒 Message the production team privately
+        🔒 Message the managers privately
       </button>
       <span className="hint">
         {' '}
-        — a channel just between you (and your guardians) and the whole production team.
+        — a channel just between you (and your guardians) and all the show's managers.
       </span>
     </p>
   )

@@ -703,7 +703,7 @@ function BiosSection() {
               audience === 'performers'
                 ? 'Performers only'
                 : audience === 'team'
-                  ? 'Production team'
+                  ? 'Managers'
                   : 'Everyone'
             }" yet — pick a different group below, or add people in People & roles first.`
           : `${withBio} of ${eligible} bios written for this group. Requesting creates a to-do
@@ -719,7 +719,7 @@ function BiosSection() {
           >
             <option value="everyone">Everyone</option>
             <option value="performers">Performers only</option>
-            <option value="team">Production team</option>
+            <option value="team">Managers</option>
           </select>
         </label>
         <label>
@@ -760,7 +760,7 @@ function ChannelsSection() {
     all: 'Everyone in the show',
     cast: 'Cast',
     crew: 'Crew',
-    team: '🔒 Production team only',
+    team: '🔒 Managers only',
   } as const
 
   async function load() {
@@ -835,7 +835,7 @@ function ChannelsSection() {
             />
             <span className="hint">
               {c.group
-                ? `🔒 ${groups.find((g) => g.id === c.group)?.name ?? 'group'} + production team`
+                ? `🔒 ${groups.find((g) => g.id === c.group)?.name ?? 'group'} + managers`
                 : AUDIENCE_LABELS[c.audience]}
             </span>
             {c.archived ? (
@@ -863,10 +863,10 @@ function ChannelsSection() {
           onChange={(e) => setAudience(e.target.value as typeof audience)}
         >
           <option value="all">Everyone in the show</option>
-          <option value="team">🔒 Production team only</option>
+          <option value="team">🔒 Managers only</option>
           {groups.map((g) => (
             <option key={g.id} value={`group:${g.id}`}>
-              🔒 {g.name} + production team only
+              🔒 {g.name} + managers only
             </option>
           ))}
         </select>
@@ -878,7 +878,7 @@ function ChannelsSection() {
         The 🔒 means what it says: locked channels are enforced on the server — people outside
         the audience can't read them, and notifications only go to people who can. A 🔒 group
         channel is visible to that group's members (parents of any children in it included)
-        plus the production team; <em>Cast</em> and <em>Crew</em> are groups that fill
+        plus the managers; <em>Cast</em> and <em>Crew</em> are groups that fill
         themselves in from people's roles. Archiving hides a channel without deleting its
         messages; restore it any time. Set up more groups under <em>Groups</em> above.
       </p>
@@ -1587,7 +1587,7 @@ function AuditionsSection() {
         ) : (
           <p className="hint" role="status">
             ⏸ Signups are closed. Until you check the box, the form is a preview only you and
-            the production team can open — sharing the link with anyone else shows them
+            the other managers can open — sharing the link with anyone else shows them
             nothing.
           </p>
         )}
@@ -1779,7 +1779,7 @@ function ResourcesSection() {
                     )}
                     <button
                       className="link"
-                      aria-label={`${r.title}: ${r.audience === 'team' ? 'production team only — tap to open to everyone' : 'everyone can open it — tap to restrict to the production team'}`}
+                      aria-label={`${r.title}: ${r.audience === 'team' ? 'managers only — tap to open to everyone' : 'everyone can open it — tap to restrict to managers'}`}
                       onClick={async () => {
                         await pb.collection('resources').update(r.id, {
                           audience: r.audience === 'team' ? 'everyone' : 'team',
@@ -1787,7 +1787,7 @@ function ResourcesSection() {
                         await load()
                       }}
                     >
-                      {r.audience === 'team' ? '🔒 team only' : '🌐 everyone'}
+                      {r.audience === 'team' ? '🔒 managers only' : '🌐 everyone'}
                     </button>
                     <button
                       className="link"
@@ -1815,7 +1815,7 @@ function ResourcesSection() {
             onChange={(e) => setAudience(e.target.value as typeof audience)}
           >
             <option value="everyone">Everyone in the show</option>
-            <option value="team">🔒 Production team only</option>
+            <option value="team">🔒 Managers only</option>
           </select>
           <input
             aria-label="Resource title"
@@ -1917,7 +1917,7 @@ function AttendanceHistorySection() {
       <h2>Attendance history</h2>
       <p className="hint">
         Totals from roll call and self-reports across the whole production. Visible only to
-        the production team.
+        managers.
       </p>
       <button className="link" aria-expanded={open} onClick={() => setOpen(!open)}>
         {open ? 'Hide the table' : `Show the table (${tallied.length} people)`}

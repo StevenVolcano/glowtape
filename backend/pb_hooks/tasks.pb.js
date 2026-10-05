@@ -86,7 +86,7 @@ routerAdd(
       throw new BadRequestError("Unknown production.");
     }
     if (!lib.canManage(production, e.auth)) {
-      throw new BadRequestError("Only the production team can request bios.");
+      throw new BadRequestError("Only managers can request bios.");
     }
     lib.assertNotArchived(production);
     if (production.get("noBios")) {

@@ -149,7 +149,7 @@ export default function TrackersTab() {
             Nothing here yet.
             {isManager
               ? ' Add rows below, or import the matching tab of your old Google Sheet as a CSV.'
-              : ' The production team hasn’t filled this in yet.'}
+              : ' The managers haven’t filled this in yet.'}
           </p>
         )}
 

@@ -70,7 +70,7 @@ export default function ShowReport({ event }: { event: EventRecord }) {
       } else {
         const r = await pb.collection('show_reports').create<ShowReportRecord>(data)
         setExisting(r)
-        setSaved('Saved — the production team was emailed a copy.')
+        setSaved('Saved — the managers were emailed a copy.')
       }
     } catch (err) {
       setSaveErr(pbErrorMessage(err, "Couldn't save the report — try again."))
@@ -91,8 +91,8 @@ export default function ShowReport({ event }: { event: EventRecord }) {
     <div className="card stack">
       <strong>📋 Show report — {event.title}</strong>
       <p className="hint" style={{ margin: 0 }}>
-        Two minutes after curtain call. Only the production team sees this; saving it emails
-        everyone on the team.
+        Two minutes after curtain call. Only managers see this; saving it emails
+        all the managers.
       </p>
       <div className="row">
         <label>
@@ -154,7 +154,7 @@ export default function ShowReport({ event }: { event: EventRecord }) {
       </label>
       <div className="row">
         <button type="button" onClick={save} disabled={busy}>
-          {busy ? 'Saving…' : existing ? 'Save changes' : 'Save & email the team'}
+          {busy ? 'Saving…' : existing ? 'Save changes' : 'Save & email the managers'}
         </button>
         <button type="button" className="link" onClick={() => setOpen(false)}>
           Close

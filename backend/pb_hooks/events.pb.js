@@ -46,7 +46,7 @@ routerAdd(
       throw new BadRequestError("Unknown production.");
     }
     if (!lib.canManage(production, e.auth)) {
-      throw new BadRequestError("Only the production team can add to the schedule.");
+      throw new BadRequestError("Only managers can add to the schedule.");
     }
     if (production.get("archived")) {
       throw new BadRequestError("This show is archived (read-only). Unarchive it in Manage to add events.");
@@ -181,7 +181,7 @@ routerAdd(
       if (!production) {
         production = e.app.findRecordById("productions", rec.get("production"));
         if (!lib.canManage(production, e.auth)) {
-          throw new BadRequestError("Only the production team can edit the schedule.");
+          throw new BadRequestError("Only managers can edit the schedule.");
         }
         if (production.get("archived")) {
           throw new BadRequestError("This show is archived (read-only). Unarchive it in Manage to edit events.");

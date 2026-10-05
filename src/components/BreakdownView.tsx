@@ -221,7 +221,7 @@ export default function BreakdownView() {
             </div>
           </>
         ) : (
-          <p className="hint">The production team hasn't set up the breakdown yet.</p>
+          <p className="hint">The managers haven't set up the breakdown yet.</p>
         )}
       </section>
     )

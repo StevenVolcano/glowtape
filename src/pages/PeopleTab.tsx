@@ -50,7 +50,7 @@ export default function PeopleTab() {
       </div>
       {!isManager && (
         <p className="hint">
-          Who's who in the show. Contact details stay with the production team — the Messages
+          Who's who in the show. Contact details stay with the managers — the Messages
           tab (or your 🔒 team channel) is the way to reach people here.
         </p>
       )}

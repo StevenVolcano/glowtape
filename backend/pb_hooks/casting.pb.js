@@ -26,7 +26,7 @@ routerAdd(
       throw new BadRequestError("Unknown production.");
     }
     if (!lib.canManage(production, e.auth)) {
-      throw new BadRequestError("Only the production team can finalize a cast.");
+      throw new BadRequestError("Only managers can finalize a cast.");
     }
     lib.assertNotArchived(production);
 
