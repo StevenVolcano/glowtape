@@ -182,8 +182,10 @@ export default function TonightTab() {
     (e) => pbDate(e.end || e.start) >= now && calledToMe(e) && !acks.some((a) => a.event === e.id),
   ).length
   const myLineNotes = lineNotes.filter((n) => myMemberIds.includes(n.member)).length
-  const myTasks = tasks.filter((t) => t.assignee && myMemberIds.includes(t.assignee)).length
-  const bioMissing = members.some(
+  const myTasks = tasks.filter(
+    (t) => t.assignee && myMemberIds.includes(t.assignee) && !(production.noBios && t.kind === 'bio'),
+  ).length
+  const bioMissing = !production.noBios && members.some(
     (m) => myMemberIds.includes(m.id) && m.role !== 'guardian' && !m.claimedFrom && !m.bio?.trim(),
   )
   const openSheets = [...new Set(slots.filter((s) => pbDate(s.start) >= now).map((s) => s.title))]
@@ -216,7 +218,9 @@ export default function TonightTab() {
     { key: 'push', label: '🔔 Turn on notifications', done: pushOn === true, to: '/' },
     { key: 'conf', label: '🚫 Enter your conflicts — dates and work hours', done: conflicts.length > 0, to: `${base}/schedule#conflicts` },
     { key: 'ack', label: '📅 Look over the schedule and tap "Got it"', done: acks.length > 0, to: `${base}/schedule` },
-    { key: 'bio', label: '✍ Write your program bio', done: !bioMissing, to: `${base}/todo` },
+    ...(production.noBios
+      ? []
+      : [{ key: 'bio', label: '✍ Write your program bio', done: !bioMissing, to: `${base}/todo` }]),
   ]
   const showSettled = !settledHidden && settled.some((s) => !s.done) && !isManager
 

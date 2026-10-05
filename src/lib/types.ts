@@ -80,6 +80,7 @@ export interface ProductionRecord {
   breakdownStyle: '' | 'songs' | 'scenes' | 'pages'
   ticketUrl?: string
   quotes: string[] | null // director-entered lines for the Tonight page
+  noBios?: boolean // this show prints no bios: the whole bio workflow is off
   archived?: boolean // wrapped show: dropped to "Past shows" and read-only
   expand?: { org?: OrgRecord }
 }

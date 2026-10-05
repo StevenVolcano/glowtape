@@ -59,7 +59,7 @@ export default function ProgramPacket() {
         (TEAM_ORDER as readonly string[]).indexOf(b.role),
     )
   const crew = members.filter((m) => m.role === 'crew')
-  const bios = members.filter((m) => m.bio && m.bio.trim())
+  const bios = production.noBios ? [] : members.filter((m) => m.bio && m.bio.trim())
   const missingBios = cast.filter((m) => !m.bio?.trim()).length
 
   const unitsLabel =
@@ -205,8 +205,8 @@ export default function ProgramPacket() {
         </>
       )}
 
-      <h3>Bios ({bios.length})</h3>
-      {missingBios > 0 && (
+      {!production.noBios && <h3>Bios ({bios.length})</h3>}
+      {!production.noBios && missingBios > 0 && (
         <p className="hint no-print">
           {missingBios} cast {missingBios === 1 ? 'member hasn’t' : 'members haven’t'}{' '}
           written a bio yet — nudge them from{' '}

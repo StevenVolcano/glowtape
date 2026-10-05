@@ -159,7 +159,7 @@ why-glowtape.html "Your data is yours" bullet — keep them consistent.
 `orgs` (name, locations JSON) ·
 `productions` (org, title, status, joinCode, managers[denormalized user ids],
 eventKinds, locations, auditionOpen/Notes/Questions, breakdownStyle, ticketUrl,
-quotes, archived[read-only-when-true; enforced by `archive.pb.js`]) ·
+quotes, archived[read-only-when-true; enforced by `archive.pb.js`], noBios[migration `1758100000`: whole bio workflow off — Manage → Program bios checkbox; hides Dashboard/Getting-settled bio nudges, To-Do BioEditor + bio-kind tasks, ProgramPacket bios; `bios/request` route refuses]) ·
 `members` (production, user?, role, position, roleCode, manager, multi,
 claimedFrom, minor, displayName, guardians[], noPhotos, bio) — THE identity
 row; pre-cast roles have empty user; children never have users ·

@@ -89,6 +89,9 @@ routerAdd(
       throw new BadRequestError("Only the production team can request bios.");
     }
     lib.assertNotArchived(production);
+    if (production.get("noBios")) {
+      throw new BadRequestError("This show is set to no bios — turn bios back on in Manage → Program bios first.");
+    }
 
     const members = e.app.findRecordsByFilter("members", "production = {:p}", "", 500, 0, {
       p: production.id,

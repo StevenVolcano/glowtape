@@ -609,7 +609,9 @@ function TicketsSection() {
 // "This production needs bios": one task per cast member, compiled view for
 // the program.
 function BiosSection() {
-  const { production, members } = useProduction()
+  const { production, members, reload } = useProduction()
+  const [savingNoBios, setSavingNoBios] = useState(false)
+  const [noBiosErr, setNoBiosErr] = useState('')
   const [due, setDue] = useState('')
   const [audience, setAudience] = useState<'performers' | 'team' | 'everyone'>('everyone')
   const [busy, setBusy] = useState(false)
@@ -645,9 +647,56 @@ function BiosSection() {
     }
   }
 
+  async function setNoBios(noBios: boolean) {
+    setSavingNoBios(true)
+    setNoBiosErr('')
+    try {
+      await pb.collection('productions').update(production.id, { noBios })
+      await reload()
+    } catch {
+      setNoBiosErr("Couldn't save that — check your connection and try again.")
+    } finally {
+      setSavingNoBios(false)
+    }
+  }
+
+  const noBiosToggle = (
+    <label>
+      <input
+        type="checkbox"
+        checked={!!production.noBios}
+        disabled={savingNoBios}
+        onChange={(e) => setNoBios(e.target.checked)}
+      />
+      This show has no program bios
+    </label>
+  )
+
+  if (production.noBios) {
+    return (
+      <section id="bios">
+        <h2>Program bios</h2>
+        {noBiosToggle}
+        <p className="hint">
+          Bios are off for this show: nobody is asked to write one, and they're left out of the
+          program packet. Uncheck the box to turn them back on.
+        </p>
+        {noBiosErr && <p className="error" role="alert">{noBiosErr}</p>}
+        <p>
+          <Link className="link" to={`/production/${production.id}/packet`}>
+            📦 Program &amp; publicity packet (everything the program folks ask for, ready to
+            email)
+          </Link>
+        </p>
+      </section>
+    )
+  }
+
   return (
     <section id="bios">
       <h2>Program bios</h2>
+      {noBiosToggle}
+      {noBiosErr && <p className="error" role="alert">{noBiosErr}</p>}
       <p className="hint">
         {eligible === 0
           ? `Nobody matches "${

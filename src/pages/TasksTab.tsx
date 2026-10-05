@@ -58,6 +58,7 @@ export default function TasksTab() {
 
   const today = new Date().toISOString().slice(0, 10)
   const visible = tasks.filter((t) => {
+    if (production.noBios && t.kind === 'bio') return false // bios are off for this show
     if (filter === 'open') return !t.done
     if (filter === 'mine') return !!t.assignee && myMemberIds.includes(t.assignee)
     return true
@@ -72,9 +73,8 @@ export default function TasksTab() {
   return (
     <div>
       {isManager && <SetupGuide />}
-      {myEditable.map((m) => (
-        <BioEditor key={m.id} member={m} onSaved={load} />
-      ))}
+      {!production.noBios &&
+        myEditable.map((m) => <BioEditor key={m.id} member={m} onSaved={load} />)}
       <LineNotesSection />
       <section>
         <h2>To-do</h2>
