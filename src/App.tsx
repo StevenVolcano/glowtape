@@ -9,6 +9,7 @@ import AuditionPrint from './pages/AuditionPrint.tsx'
 import Operator from './pages/Operator.tsx'
 import RequestProduction from './pages/RequestProduction.tsx'
 import Community from './pages/Community.tsx'
+import Connect from './pages/Connect.tsx'
 
 export default function App() {
   const { user } = useAuth()
@@ -27,6 +28,7 @@ export default function App() {
       <Route path="/operator" element={<Operator />} />
       <Route path="/request-production" element={<RequestProduction />} />
       <Route path="/community" element={<Community />} />
+      <Route path="/connect" element={<Connect />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
