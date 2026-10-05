@@ -333,6 +333,98 @@ function pacificHour(date) {
   return new Date(t - pacificOffsetHours(t) * 3600e3).getUTCHours();
 }
 
+// --- reminder timing ------------------------------------------------------------
+// Keys people can pick (users.reminderTimes, up to 3). Relative ones are
+// "this long before the call"; eve/morn are clock times in Grays Harbor.
+const REMINDER_KEYS = ["eve", "morn", "10h", "4h", "2h", "1h", "30m"];
+const REMINDER_DEFAULT = ["10h", "2h"];
+const REMINDER_HOURS = { "10h": 10, "4h": 4, "2h": 2, "1h": 1, "30m": 0.5 };
+
+// The user's chosen keys (validated), or the default when never set.
+function reminderKinds(value) {
+  // record.get() on a json field returns raw JSON BYTES in the JSVM — which
+  // goja even reports as an array (of numbers) — so anything that isn't a
+  // plain array of strings is parsed from its text (as calendar.pb.js does).
+  // (A JSON null comes back as EMPTY bytes, whose String() is "null".)
+  let v = value;
+  const plain = Array.isArray(v) && v.length > 0 && v.every((x) => typeof x === "string");
+  if (v !== null && v !== undefined && !plain) {
+    const text = String(v);
+    try {
+      v = text === "" && Array.isArray(v) ? [] : JSON.parse(text);
+    } catch {
+      v = null;
+    }
+  }
+  if (!Array.isArray(v)) v = null;
+  if (v === null || v === undefined || v === "") return REMINDER_DEFAULT.slice();
+  const out = [];
+  for (const k of v) {
+    const key = String(k);
+    if (REMINDER_KEYS.includes(key) && !out.includes(key)) out.push(key);
+  }
+  return out.slice(0, 3);
+}
+
+// UTC ms of hour h (Pacific) on the Pacific calendar day containing t.
+function pacificAt(t, h) {
+  const off = pacificOffsetHours(t) * 3600e3;
+  const dayStart = Math.floor((t - off) / 86400e3) * 86400e3;
+  return dayStart + off + h * 3600e3;
+}
+
+// No texts or pings 9pm-7am Pacific. A reminder that would land in quiet
+// hours moves to 7pm the evening before (early calls get announced the night
+// before, never at dawn) — except for a call later that SAME night, which is
+// reminded just before 9pm.
+function reminderMoment(kind, startMs) {
+  let m;
+  if (kind === "eve") m = pacificAt(startMs, 19) - 86400e3;
+  else if (kind === "morn") {
+    m = pacificAt(startMs, 8);
+    if (startMs - m < 30 * 60e3) m = pacificAt(startMs, 19) - 86400e3; // call before ~8:30
+  } else m = startMs - REMINDER_HOURS[kind] * 3600e3;
+  const h = pacificHour(new Date(m));
+  if (h >= 21) {
+    // a call later tonight: just before quiet hours; tomorrow morning's call:
+    // the 7pm evening heads-up, so the night-before reminders arrive together
+    const sameNight = pacificAt(startMs, 0) === pacificAt(m, 0);
+    m = sameNight ? pacificAt(m, 21) - 10 * 60e3 : pacificAt(m, 19);
+  }
+  else if (h < 7) m = pacificAt(m, 19) - 86400e3;
+  return m;
+}
+
+// Which of the chosen kinds are due right now for a call starting at startMs.
+// The cron sends ONE reminder covering every newly-due kind, so an event
+// added at the last minute never gets a burst of texts.
+function reminderDueKinds(nowMs, startMs, kinds) {
+  if (startMs <= nowMs) return [];
+  const h = pacificHour(new Date(nowMs));
+  if (h >= 21 || h < 7) return [];
+  return kinds.filter((k) => nowMs >= reminderMoment(k, startMs));
+}
+
+// Texts stay within the SMS opt-in promise ("up to 2 per rehearsal day"):
+// only the two chosen kinds closest to the call go out by text; a third
+// choice arrives as an app notification only.
+function reminderTextKinds(startMs, kinds) {
+  return kinds
+    .slice()
+    .sort((a, b) => reminderMoment(b, startMs) - reminderMoment(a, startMs))
+    .slice(0, 2);
+}
+
+// "soon" / "today" / "tomorrow" / weekday, for the reminder text.
+function reminderWord(nowMs, startMs) {
+  if (startMs - nowMs <= 3 * 3600e3) return "soon";
+  const day = (t) => Math.floor((t - pacificOffsetHours(t) * 3600e3) / 86400e3);
+  const d = day(startMs) - day(nowMs);
+  if (d <= 0) return "today";
+  if (d === 1) return "tomorrow";
+  return "coming up";
+}
+
 // Format a UTC datetime for Grays Harbor.
 function formatPacific(value) {
   const utc = new Date(String(value).replace(" ", "T"));
@@ -552,6 +644,11 @@ function syncMemberAutoGroups(app, member) {
 
 module.exports = {
   pbNow,
+  REMINDER_KEYS,
+  reminderKinds,
+  reminderDueKinds,
+  reminderTextKinds,
+  reminderWord,
   canManage,
   assertNotArchived,
   guardArchivedWrite,

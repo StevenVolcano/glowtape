@@ -29,7 +29,22 @@ export interface UserRecord {
   smsOptIn: boolean
   ageBand: '' | 'adult' | 'teen'
   operator: boolean
+  // chosen reminder keys (REMINDER_OPTIONS); null = default 10h + 2h, [] = none
+  reminderTimes?: string[] | null
 }
+
+// Reminder times people can pick (up to 3) — keys match REMINDER_KEYS in
+// backend/pb_hooks/glowtape_lib.js.
+export const REMINDER_OPTIONS: { key: string; label: string }[] = [
+  { key: 'eve', label: 'Night before, 7pm' },
+  { key: 'morn', label: 'Morning of, 8am' },
+  { key: '10h', label: '10 hours' },
+  { key: '4h', label: '4 hours' },
+  { key: '2h', label: '2 hours' },
+  { key: '1h', label: '1 hour' },
+  { key: '30m', label: '30 min' },
+]
+export const REMINDER_DEFAULT = ['10h', '2h']
 
 export interface FeedbackRecord {
   id: string

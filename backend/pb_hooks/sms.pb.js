@@ -117,38 +117,34 @@ onRecordUpdateRequest((e) => {
 }, "users");
 
 // --- reminder cron --------------------------------------------------------------
-// Every 10 minutes: text people called for events ~10h out and ~2h out.
-// reminders_sent dedupes across runs. Windows are 2h+ wide so a 10-minute
-// cron can't skip past one.
+// Every 10 minutes: remind people about their calls at the times THEY chose
+// (users.reminderTimes, up to 3 of eve/morn/10h/4h/2h/1h/30m; default 10h +
+// 2h) — by text if they've verified a phone and opted in, and by app
+// notification if they've turned notifications on. Timing (incl. 9pm-7am
+// quiet hours) lives in lib.reminderDueKinds. reminders_sent (event, user,
+// kind) dedupes across runs; one message covers every newly-due kind, so a
+// last-minute event never gets a burst.
 
 cronAdd("glowtape_sms_reminders", "*/10 * * * *", () => {
   const lib = require(`${__hooks}/glowtape_lib.js`);
-  if (!lib.smsConfigured()) return;
-
-  // Quiet hours for everyone: no texts 9pm-7am Pacific. Events whose
-  // ~10h-before moment would land overnight (early-morning calls) get their
-  // heads-up during the 7-9pm evening sweep instead; the dedupe marker keeps
-  // it to one text either way.
+  const smsOn = lib.smsConfigured();
+  const pushOn = lib.pushConfigured();
   const hour = lib.pacificHour();
-  if (hour >= 21 || hour < 7) return;
+  const quiet = hour >= 21 || hour < 7;
 
-  const windows = [{ kind: "2h", fromMs: 0, toMs: 2.5 * 3600e3, word: "soon" }];
-  if (hour >= 19) {
-    // From 7pm on, anything 8-20h out starts tomorrow — remind now, not at 2am.
-    windows.push({ kind: "10h", fromMs: 8 * 3600e3, toMs: 20 * 3600e3, word: "tomorrow" });
-  } else {
-    windows.push({ kind: "10h", fromMs: 8 * 3600e3, toMs: 10 * 3600e3, word: "today" });
-  }
-
-  for (const w of windows) {
+  if ((smsOn || pushOn) && !quiet) {
+    const nowMs = Date.now();
+    // 40h covers the furthest reminder: 7pm the night before a late call.
     const events = $app.findRecordsByFilter(
       "events",
       "start >= {:from} && start <= {:to} && status != 'cancelled'",
       "start",
-      200,
+      500,
       0,
-      { from: lib.pbNow(w.fromMs), to: lib.pbNow(w.toMs) },
+      { from: lib.pbNow(0), to: lib.pbNow(40 * 3600e3) },
     );
+    const userCache = {};
+    const pushCache = {};
 
     for (const event of events) {
       let production;
@@ -157,15 +153,12 @@ cronAdd("glowtape_sms_reminders", "*/10 * * * *", () => {
       } catch {
         continue;
       }
+      if (production.get("archived")) continue;
+      const startMs = new Date(String(event.get("start")).replace(" ", "T")).getTime();
       const called = lib.toIdArray(event.get("called"));
-      const members = $app.findRecordsByFilter(
-        "members",
-        "production = {:p}",
-        "",
-        500,
-        0,
-        { p: production.id },
-      );
+      const members = $app.findRecordsByFilter("members", "production = {:p}", "", 500, 0, {
+        p: production.id,
+      });
 
       for (const m of members) {
         if (
@@ -182,37 +175,68 @@ cronAdd("glowtape_sms_reminders", "*/10 * * * *", () => {
         for (const g of lib.toIdArray(m.get("guardians"))) uids.push(g);
 
         for (const uid of uids) {
-          let user;
-          try {
-            user = $app.findRecordById("users", uid);
-          } catch {
-            continue;
+          let user = userCache[uid];
+          if (user === undefined) {
+            try {
+              user = $app.findRecordById("users", uid);
+            } catch {
+              user = null;
+            }
+            userCache[uid] = user;
           }
-          if (!user.get("smsOptIn") || !user.get("phoneVerified") || !user.get("phone")) continue;
+          if (!user) continue;
 
-          try {
-            // unique index makes double-sends impossible even if two runs race
-            const col = $app.findCollectionByNameOrId("reminders_sent");
-            const marker = new Record(col);
-            marker.set("event", event.id);
-            marker.set("user", user.id);
-            marker.set("kind", w.kind);
-            $app.save(marker);
-          } catch {
-            continue; // already reminded
+          const kinds = lib.reminderKinds(user.get("reminderTimes"));
+          const due = lib.reminderDueKinds(nowMs, startMs, kinds);
+          if (due.length === 0) continue;
+
+          const textable = smsOn && user.get("smsOptIn") && user.get("phoneVerified") && user.get("phone");
+          if (pushCache[uid] === undefined) {
+            pushCache[uid] =
+              pushOn &&
+              $app.findRecordsByFilter("push_subscriptions", "user = {:u}", "", 1, 0, { u: uid }).length > 0;
           }
+          if (!textable && !pushCache[uid]) continue;
+
+          // unique index makes double-sends impossible even if two runs race
+          const col = $app.findCollectionByNameOrId("reminders_sent");
+          const fresh = [];
+          for (const kind of due) {
+            try {
+              const marker = new Record(col);
+              marker.set("event", event.id);
+              marker.set("user", user.id);
+              marker.set("kind", kind);
+              $app.save(marker);
+              fresh.push(kind);
+            } catch {
+              /* already reminded for this one */
+            }
+          }
+          if (fresh.length === 0) continue;
+          const textKinds = lib.reminderTextKinds(startMs, kinds);
+          const textNow = textable && fresh.some((k) => textKinds.includes(k));
 
           const forChild = !m.get("user") && m.get("displayName") ? "For " + m.get("displayName") + ": " : "";
           const when = lib.formatPacific(event.get("start"));
           const loc = event.get("location") ? " at " + event.get("location") : "";
-          lib.sendSms(
-            $app,
-            user.get("phone"),
-            "Glow Tape: " + forChild +
-              event.get("title") +
-              " (" + production.get("title") + ") is " + w.word + " — " +
-              when + loc + ". Reply STOP to opt out.",
-          );
+          const word = lib.reminderWord(nowMs, startMs);
+          if (textNow) {
+            lib.sendSms(
+              $app,
+              user.get("phone"),
+              "Glow Tape: " + forChild + event.get("title") +
+                " (" + production.get("title") + ") is " + word + " — " +
+                when + loc + ". Reply STOP to opt out.",
+            );
+          }
+          if (pushCache[uid]) {
+            lib.sendPush($app, [uid], {
+              title: `⏰ ${forChild}${event.get("title")} is ${word}`,
+              body: `${production.get("title")} — ${when}${loc}`,
+              url: `/production/${production.id}/schedule`,
+            });
+          }
         }
       }
     }

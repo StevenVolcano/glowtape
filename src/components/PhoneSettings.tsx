@@ -120,8 +120,8 @@ export default function PhoneSettings(_props: { user: UserRecord }) {
       <h2>Text reminders</h2>
       <div className="card stack">
         <p className="hint">
-          Add your cell number and Glow Tape will text you before your calls — 10 hours ahead,
-          and again about 2 hours out. Email reminders happen either way.
+          Add your cell number and Glow Tape will text you before your calls, at the times you
+          pick under <em>When to remind me</em> (10 hours and 2 hours ahead unless you change it).
         </p>
         {step === 'phone' ? (
           <>

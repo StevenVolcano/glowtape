@@ -7,6 +7,7 @@ import PhoneSettings from '../components/PhoneSettings.tsx'
 import EmailSettings from '../components/EmailSettings.tsx'
 import FeedbackSection from '../components/FeedbackSection.tsx'
 import PushSettings from '../components/PushSettings.tsx'
+import ReminderSettings from '../components/ReminderSettings.tsx'
 import { TAGLINE, copyrightLine } from '../lib/types.ts'
 import type { ProductionRecord } from '../lib/types.ts'
 
@@ -233,6 +234,8 @@ export default function Home() {
       )}
 
       <PushSettings />
+
+      {user && <ReminderSettings user={user} />}
 
       {user && <EmailSettings user={user} />}
       {user && <PhoneSettings user={user} />}
