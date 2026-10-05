@@ -58,6 +58,7 @@ export default function Operator() {
           ['#codes', 'Access codes'],
           ['#orgs', 'Organizations'],
           ['#companies', 'Companies'],
+          ['#claude', 'Claude connector'],
         ]}
       />
       <RequestsSection />
@@ -66,6 +67,7 @@ export default function Operator() {
       <AccessCodesSection />
       <OrgsSection onChanged={() => setOrgRev((r) => r + 1)} />
       <CompaniesSection key={orgRev} />
+      <ClaudeConnectorSection />
     </main>
   )
 }
@@ -483,6 +485,127 @@ function AccessCodesSection() {
         </button>
       </form>
       {message && <p className="acked" role="status">{message}</p>}
+    </section>
+  )
+}
+
+type ConnectorLink = { id: string; label: string; created: string; lastUsed: string }
+
+// Private Claude connector links (MCP, see backend/pb_hooks/mcp.pb.js). The
+// link is the password, so it's shown once; delete a row to revoke it.
+function ClaudeConnectorSection() {
+  const [links, setLinks] = useState<ConnectorLink[]>([])
+  const [label, setLabel] = useState('')
+  const [fresh, setFresh] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [message, setMessage] = useState('')
+  const [error, setError] = useState('')
+
+  async function load() {
+    setLinks(await pb.collection('mcp_tokens').getFullList<ConnectorLink>({ sort: '-created' }))
+  }
+
+  useEffect(() => {
+    load().catch(() => {})
+  }, [])
+
+  async function make() {
+    setBusy(true)
+    setError('')
+    setMessage('')
+    try {
+      const r = await pb.send<{ url: string }>('/api/glowtape/mcp-tokens', {
+        method: 'POST',
+        body: { label: label.trim() || 'Claude' },
+      })
+      setFresh(r.url)
+      setLabel('')
+      await load()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't make a link.")
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(fresh)
+      setMessage('Copied. ✓')
+    } catch {
+      setMessage('Select the link and copy it by hand.')
+    }
+  }
+
+  async function revoke(l: ConnectorLink) {
+    if (!window.confirm(`Turn off "${l.label}"? Claude loses access right away.`)) return
+    try {
+      await pb.collection('mcp_tokens').delete(l.id)
+      await load()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't turn it off.")
+    }
+  }
+
+  return (
+    <section id="claude">
+      <h2>Claude connector (just you)</h2>
+      <p className="hint">
+        Lets your own Claude read and change your shows — everything you can see and do here,
+        including contacts and chats — so you can turn a calendar into schedule events without
+        the download-upload dance. Glow Tape itself still has no AI. In Claude: Settings →
+        Connectors → Add custom connector, and paste the link.
+      </p>
+      <p className="warn">
+        The link works like a password: anyone who has it can act as you. Don't share it; turn
+        it off here if it leaks.
+      </p>
+      {fresh && (
+        <div className="golive stack">
+          <label>
+            Your new connector link — shown only this once
+            <input readOnly value={fresh} onFocus={(e) => e.target.select()} />
+          </label>
+          <div className="row">
+            <button type="button" onClick={copy}>
+              📋 Copy link
+            </button>
+            <button type="button" className="link" onClick={() => setFresh('')}>
+              Done — hide it
+            </button>
+          </div>
+        </div>
+      )}
+      <ul className="plain-list">
+        {links.map((l) => (
+          <li key={l.id} className="row" style={{ alignItems: 'center' }}>
+            <strong>{l.label}</strong>
+            <span className="hint">
+              made {formatStamp(l.created)} ·{' '}
+              {l.lastUsed ? `last used ${formatStamp(l.lastUsed)}` : 'not used yet'}
+            </span>
+            <button className="link" onClick={() => revoke(l)}>
+              Turn off
+            </button>
+          </li>
+        ))}
+      </ul>
+      <div className="row">
+        <label>
+          Name it
+          <input
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            maxLength={100}
+            placeholder="Example: My Claude"
+          />
+        </label>
+        <button type="button" disabled={busy} onClick={make}>
+          Make a connector link
+        </button>
+      </div>
+      {message && <p className="acked" role="status">{message}</p>}
+      {error && <p className="error" role="alert">{error}</p>}
     </section>
   )
 }

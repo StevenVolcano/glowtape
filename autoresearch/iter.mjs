@@ -33,7 +33,13 @@ else if (score < best - cfg.min_delta || (visual && score <= best)) {
     status = visual && score >= best ? 'keep_visual' : 'keep';
   } catch { status = 'crash'; }
 } else status = 'discard';
-if (!status.startsWith('keep')) execSync('git checkout -- src/');
+// Revert = restore src/ to HEAD. COMMIT ANY NON-EXPERIMENT WORK FIRST — this
+// wipes every uncommitted src/ change, not just the experiment's.
+if (!status.startsWith('keep')) {
+  const touched = execSync('git diff --name-only HEAD -- src/').toString().trim();
+  execSync('git checkout -- src/');
+  if (touched) console.log('reverted: ' + touched.split('\n').join(', '));
+}
 const delta = score === null ? null : (score - best >= 0 ? '+' : '') + (Math.round((score - best) * 100) / 100);
 const entry = { type: 'result', iteration, commit, score, delta, guard_pass: guard, status, description: desc, timestamp: new Date().toISOString() };
 appendFileSync(L, JSON.stringify(entry) + '\n');

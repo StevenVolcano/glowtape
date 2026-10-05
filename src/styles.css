@@ -13,7 +13,7 @@
   --ctrl: #8a8478; /* control borders: ≥3:1 on white and paper */
   --ok: #205d3b; /* 7:1 on paper and white */
   --error: #962c25; /* 7:1 on paper */
-  --warn: #7a4c00; /* 7:1 on paper */
+  --warn: #744800; /* 7:1 on paper (was #7a4c00, 6.6:1) */
 }
 
 * {
@@ -290,8 +290,16 @@ form.stack,
   padding: 0.15rem 0.7rem;
 }
 
+/* Not-called and cancelled events step back WITHOUT opacity — fading the
+   whole card dropped text and pills below readable contrast. */
 .event.not-called {
-  opacity: 0.65;
+  background: var(--paper);
+  color: var(--muted);
+}
+
+/* rows inside an event card (calendar links, running-late, roll call) */
+.event :is(.row, .chips) + .row {
+  margin-top: 0.5rem;
 }
 
 .event-head {
@@ -703,7 +711,9 @@ body.kiosk .legal-links {
 }
 
 .event.cancelled {
-  opacity: 0.65;
+  background: var(--paper);
+  border-style: dashed;
+  color: var(--muted);
 }
 
 .event.cancelled .event-head strong {

@@ -101,6 +101,7 @@ One idea per iteration. Small, reversible diffs.
 - Push to `main`. Commits go on the current `claude/*` branch only.
 
 ## Loop mechanics
+- **Commit everything else before running `iter.mjs`** — a discard restores all of `src/` to HEAD.
 - Revert a discard: `git checkout -- src/styles.css`
 - Keep: `npm run build && git commit -am "ux: <what> (autoresearch #N, <old>→<new>)"`
 - Log every iteration to `autoresearch/autoresearch.jsonl` and regenerate

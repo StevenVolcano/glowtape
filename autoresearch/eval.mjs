@@ -100,6 +100,9 @@ for (const [name, who, path, action] of SCREENS) {
     localStorage.clear();
     if (auth) localStorage.setItem('pocketbase_auth', JSON.stringify(auth));
   }, [who ? tokens[who] : null]);
+  // Freeze the browser's clock so countdowns, "today" states and the
+  // running-late window don't drift as real days pass the seeded dates.
+  await ctx.clock.setFixedTime(new Date('2026-09-30T19:00:00Z'));
   const page = await ctx.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push(String(e)));
