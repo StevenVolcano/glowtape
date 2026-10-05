@@ -84,11 +84,12 @@ routerAdd(
   "/api/glowtape/members/contact",
   (e) => {
     const lib = require(`${__hooks}/glowtape_lib.js`);
-    const data = new DynamicModel({ member: "", contactEmail: null, contactPhone: null });
-    e.bindBody(data);
+    // Not a DynamicModel: a null default gives the field no type and binding
+    // panics (nil pointer). Reading the body keeps "left out" vs "".
+    const body = e.requestInfo().body || {};
     let member;
     try {
-      member = e.app.findRecordById("members", data.member);
+      member = e.app.findRecordById("members", String(body.member || ""));
     } catch {
       throw new BadRequestError("Unknown member.");
     }
@@ -97,8 +98,8 @@ routerAdd(
       throw new BadRequestError("Only the production team can edit contact info.");
     }
     lib.assertNotArchived(production);
-    if (data.contactEmail !== null) member.set("contactEmail", String(data.contactEmail).trim());
-    if (data.contactPhone !== null) member.set("contactPhone", String(data.contactPhone).trim());
+    if (typeof body.contactEmail === "string") member.set("contactEmail", body.contactEmail.trim());
+    if (typeof body.contactPhone === "string") member.set("contactPhone", body.contactPhone.trim());
     e.app.save(member);
     return e.json(200, { ok: true });
   },
