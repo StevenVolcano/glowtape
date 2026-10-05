@@ -231,6 +231,23 @@ const TOOLS = [
     },
   },
   {
+    name: "set_member_contact",
+    description: "Set the email and/or phone for a member with no Glow Tape account (a cast or crew row nobody has claimed yet). Those fields are hidden from the record tools, so update_record can't write them. Saving sends nothing, but once an email is set that person gets the show's emails (announcements, schedule changes) like everyone else. Pass an empty string to clear a field; leave a field out to keep it.",
+    inputSchema: {
+      type: "object",
+      properties: { member: { type: "string" }, contactEmail: { type: "string" }, contactPhone: { type: "string" } },
+      required: ["member"],
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false },
+    run(app, ctx, args) {
+      const body = { member: needString(args, "member") };
+      if (typeof args.contactEmail === "string") body.contactEmail = args.contactEmail;
+      if (typeof args.contactPhone === "string") body.contactPhone = args.contactPhone;
+      if (!("contactEmail" in body) && !("contactPhone" in body)) throw new Error("Give contactEmail, contactPhone or both.");
+      return api(ctx, "POST", "/api/glowtape/members/contact", body);
+    },
+  },
+  {
     name: "add_events",
     description: "Add events to a show's schedule — e.g. a whole rehearsal calendar at once. Times are ISO 8601 WITH an offset (Pacific is -07:00 in summer, -08:00 from early November). called = member ids (empty = everyone), calledGroups = group ids. Sends ONE summary email to everyone called unless notify is false. Check list_records(events) first to avoid duplicates. Max 100 per call.",
     inputSchema: {
