@@ -25,7 +25,10 @@
 }
 
 html {
-  font-size: 17px;
+  /* 17px on phones, growing to 20px on wide screens: a foldable, a tablet,
+     or a phone left in Chrome's "Desktop site" mode lays the page out
+     ~1000px wide, and fixed 17px type read tiny there. */
+  font-size: clamp(17px, 14px + 0.6vw, 20px);
 }
 
 body {
@@ -62,7 +65,7 @@ h2::before {
 }
 
 .page {
-  max-width: 720px;
+  max-width: 42rem; /* ~720px at phone size; widens with the type */
   margin: 0 auto;
   padding: 0.75rem 1rem 4rem;
 }
