@@ -284,6 +284,9 @@ onRecordAfterCreateSuccess((e) => {
   };
   const castGroup = mkGroup("Cast", "cast", 1);
   const crewGroup = mkGroup("Crew", "crew", 2);
+  // The wider team (music director, choreographer…) who don't need Manage
+  // access. Starts empty; managers add people from Manage → Groups.
+  const teamGroup = mkGroup("Production team", "", 3);
 
   const channels = e.app.findCollectionByNameOrId("channels");
   // name, audience, defaultMuted (Off Topic starts muted; opt in, not out), group
@@ -291,6 +294,7 @@ onRecordAfterCreateSuccess((e) => {
     ["All Call", "all", false, ""],
     ["🔒 Cast", "all", false, castGroup.id],
     ["🔒 Crew", "all", false, crewGroup.id],
+    ["🔒 Production team", "all", false, teamGroup.id],
     ["🔒 Managers", "team", false, ""],
     ["Off Topic", "all", true, ""],
   ];

@@ -272,8 +272,10 @@ verifies deployments from his phone and reports back, often with screenshots.
   the seeded channel is "🔒 Managers" (migration `1758400000` renamed existing
   ones). "Production team" is kept only for the real team list — ProgramPacket,
   the audition handout's team names, the AI caveat in help/privacy. A show's
-  wider team (music director, choreographer…) without Manage access lives in a
-  hand-made "Production team" role group with its own 🔒 group channel.
+  wider team (music director, choreographer…) without Manage access lives in the
+  "Production team" role group + its 🔒 group channel — seeded EMPTY on every new
+  show since 2026-10-05 (glowtape.pb.js production create hook); older shows
+  get one by hand.
 - **One email per human action** — bulk operations send a single digest.
 - Chat identity: "First L. (Role)" via `chatName()` in `lib/types.ts`.
 - **Youth safety invariants**: no DMs ever (team channels always include all
