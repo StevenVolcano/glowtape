@@ -1191,3 +1191,37 @@ section > :is(.row, .chips) + :is(.row, .chips) {
 .day-today {
   color: var(--ink);
 }
+
+/* Event cards collapse to their header; the header is the disclosure. */
+.event-toggle {
+  width: 100%;
+  background: none;
+  color: inherit;
+  font-weight: 400;
+  padding: 0;
+  border-radius: 6px;
+  box-shadow: none;
+  text-align: left;
+  align-items: baseline;
+}
+
+.event-toggle:hover {
+  background: none;
+  color: inherit;
+}
+
+.event-toggle:hover strong {
+  text-decoration: underline;
+}
+
+.event-caret {
+  margin-left: auto;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.event-toggle + * {
+  margin-top: 0.5rem;
+}

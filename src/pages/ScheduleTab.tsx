@@ -45,10 +45,20 @@ export default function ScheduleTab() {
   const [kindFilter, setKindFilter] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [rollFor, setRollFor] = useState<string | null>(null)
+  // Cast land on the month calendar; managers on the list they work from.
+  // An explicit pick (remembered per device) wins either way.
   const [view, setView] = useState<ScheduleView>(() => {
     const v = readPref('gt-schedule-view')
-    return v === 'week' || v === 'month' ? v : 'list'
+    return v === 'list' || v === 'week' || v === 'month' ? v : isManager ? 'list' : 'month'
   })
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set())
+  const toggleOpen = (id: string) =>
+    setExpanded((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
   const [mineOnly, setMineOnly] = useState(() => readPref('gt-schedule-mine') === '1')
   const [anchor, setAnchor] = useState(() => new Date())
   const [selectedDay, setSelectedDay] = useState<string | null>(() => dayKey(new Date()))
@@ -236,14 +246,6 @@ export default function ScheduleTab() {
       !acks.some((a) => a.event === e.id && a.user === user?.id),
   )
 
-  function groupsLabel(e: EventRecord): string {
-    if (!e.calledGroups?.length) return ''
-    return e.calledGroups
-      .map((id) => groups.find((g) => g.id === id)?.name)
-      .filter(Boolean)
-      .join(' · ')
-  }
-
   function unitsLabel(e: EventRecord): string {
     if (!e.units?.length) return ''
     return e.units
@@ -252,19 +254,47 @@ export default function ScheduleTab() {
       .join(' · ')
   }
 
+  // Who's called, in the fewest words: "Full cast" when every performer
+  // role is on the call, then any group that's called whole, then only the
+  // leftover people by name (a long tail becomes "and N more").
   function calledLabel(e: EventRecord): string {
     if (e.called.length === 0) return 'Everyone'
-    const names = e.called
+    const left = new Set(e.called)
+    const parts: string[] = []
+    // Claimed shared-role rows point back to the called placeholder.
+    const cast = members.filter((m) => m.role === 'performer' && !m.claimedFrom)
+    if (cast.length > 0 && cast.every((m) => left.has(m.id))) {
+      parts.push('Full cast')
+      for (const m of cast) left.delete(m.id)
+    }
+    const groupRows = groups
+      .map((g) => ({ g, rows: members.filter((m) => m.groups?.includes(g.id) && !m.claimedFrom) }))
+      .sort((a, b) => b.rows.length - a.rows.length)
+    for (const { g, rows } of groupRows) {
+      if (rows.length > 0 && rows.every((m) => e.called.includes(m.id)) && rows.some((m) => left.has(m.id))) {
+        parts.push(g.name)
+        for (const m of rows) left.delete(m.id)
+      }
+    }
+    const names = [...left]
       .map((mid) => members.find((m) => m.id === mid))
       .filter(Boolean)
       .map((m) => memberName(m!))
-    return names.join(', ')
+    const MAX = 6
+    if (names.length > MAX) {
+      parts.push(...names.slice(0, MAX - 1), `and ${names.length - (MAX - 1)} more`)
+    } else {
+      parts.push(...names)
+    }
+    return parts.join(', ')
   }
 
   const renderEvent = (e: EventRecord) => {
     const iAmCalled = calledToMe(e)
     const myAck = acks.find((a) => a.event === e.id && a.user === user?.id)
     const ackCount = acks.filter((a) => a.event === e.id).length
+    // Collapsed by default; an open editor or roll call keeps the card open.
+    const open = expanded.has(e.id) || editingId === e.id || rollFor === e.id
     return (
       <li
         key={e.id}
@@ -272,38 +302,20 @@ export default function ScheduleTab() {
           e.status === 'cancelled' ? 'cancelled' : ''
         }`}
       >
-        <div className="event-head">
+        <button
+          type="button"
+          className="event-head event-toggle"
+          aria-expanded={open}
+          onClick={() => toggleOpen(e.id)}
+        >
           <strong>{e.title}</strong>
           {e.kind && e.kind !== e.title && <span className="pill">{e.kind}</span>}
           {e.status === 'cancelled' && <span className="pill pill-cancel">Cancelled</span>}
           <span>{formatWhen(e.start, e.end)}</span>
-        </div>
-        {e.location && (
-          <div className="event-line">
-            <a href={mapsUrl(places, e.location)} target="_blank" rel="noreferrer">
-              📍 {e.location}
-            </a>
-          </div>
-        )}
-        {unitsLabel(e) && (
-          <div className="event-line">
-            <strong>Rehearsing:</strong> {unitsLabel(e)}
-          </div>
-        )}
-        {groupsLabel(e) && (
-          <div className="event-line">
-            <strong>Groups:</strong> {groupsLabel(e)}
-          </div>
-        )}
-        <div className="event-line">
-          <strong>Called:</strong> {calledLabel(e)}
-          {e.calledNote && <em> — {e.calledNote}</em>}
-        </div>
-        {e.notes && <div className="event-line">{e.notes}</div>}
-        {e.status !== 'cancelled' && <TimelineView event={e} />}
-        {e.status !== 'cancelled' && (e.bringCategories?.length ?? 0) > 0 && (
-          <BringList event={e} />
-        )}
+          <span className="event-caret" aria-hidden="true">
+            {open ? '▾ Less' : '▸ More'}
+          </span>
+        </button>
         {iAmCalled &&
           e.status !== 'cancelled' &&
           (myAck ? (
@@ -311,24 +323,6 @@ export default function ScheduleTab() {
           ) : (
             <button onClick={() => gotIt(e)}>Got it 👍</button>
           ))}
-        {e.status !== 'cancelled' && (
-        <div className="row cal-links">
-          <a
-            className="link"
-            href={googleCalendarUrl(e, production.title, placeLine(places, e.location))}
-            target="_blank"
-            rel="noreferrer"
-          >
-            + Google Calendar
-          </a>
-          <button
-            className="link"
-            onClick={() => downloadEventIcs(e, production.title, placeLine(places, e.location))}
-          >
-            + Apple / other calendar
-          </button>
-        </div>
-        )}
         {(() => {
           const hoursUntil = (pbDate(e.start).getTime() - Date.now()) / 3600e3
           if (e.status === 'cancelled' || hoursUntil > 24 || hoursUntil < -6) return null
@@ -368,120 +362,163 @@ export default function ScheduleTab() {
             )
           })
         })()}
-        {isManager && e.status !== 'cancelled' && (
-          <div className="hint">
-            {ackCount} {ackCount === 1 ? 'person has' : 'people have'} tapped “Got it”
-            {(() => {
-              const rows = attendance.filter((a) => a.event === e.id)
-              if (rows.length === 0) return null
-              const c = (s: string) => rows.filter((a) => a.status === s).length
-              return ` · roll: ${c('present')} present, ${c('late')} late, ${c('absent')} absent`
-            })()}
-          </div>
-        )}
-        {isManager && e.status !== 'cancelled' && (
-          <button
-            className="link"
-            aria-expanded={rollFor === e.id}
-            onClick={() => {
-              setRollFor(rollFor === e.id ? null : e.id)
-              // pick up any door check-ins since the page loaded
-              if (rollFor !== e.id) load().catch(() => {})
-            }}
-          >
-            {rollFor === e.id ? 'Close roll call' : 'Roll call'}
-          </button>
-        )}
-        {isManager && rollFor === e.id && e.status !== 'cancelled' && (
-          <div className="stack">
-            <div className="row" style={{ alignItems: 'center' }}>
-              <button className="link" onClick={() => toggleSignin(e)}>
-                {e.signinCode ? '📲 Turn off door check-in' : '📲 Turn on door check-in'}
-              </button>
-              {e.signinCode && (
-                <Link className="link" to={`/production/${production.id}/signin/${e.id}/poster`}>
-                  🖨 Door poster
-                </Link>
-              )}
-              <button className="link" onClick={() => load()}>
-                ↻ Refresh roll
-              </button>
+        {open && (
+          <>
+          {e.location && (
+            <div className="event-line">
+              <a href={mapsUrl(places, e.location)} target="_blank" rel="noreferrer">
+                📍 {e.location}
+              </a>
             </div>
-            {e.signinCode && (
-              <>
-                <QrCode
-                  text={`${window.location.origin}/production/${production.id}/signin/${e.id}?c=${e.signinCode}`}
-                  label="Cast scan this to check themselves in — or print the door poster."
-                />
-              </>
-            )}
+          )}
+          {unitsLabel(e) && (
+            <div className="event-line">
+              <strong>Rehearsing:</strong> {unitsLabel(e)}
+            </div>
+          )}
+          <div className="event-line">
+            <strong>Called:</strong> {calledLabel(e)}
+            {e.calledNote && <em> — {e.calledNote}</em>}
           </div>
-        )}
-        {isManager && rollFor === e.id && e.status !== 'cancelled' && (
-          <ul className="plain-list roll-call">
-            {calledMembers(e).map((m) => {
-              const row = attendance.find((a) => a.event === e.id && a.member === m.id)
-              const icon =
-                row?.status === 'present'
-                  ? '✓'
-                  : row?.status === 'late'
-                    ? '🕒'
-                    : row?.status === 'absent'
-                      ? '✗'
-                      : '—'
-              return (
-                <li key={m.id}>
+          {e.notes && <div className="event-line">{e.notes}</div>}
+          {e.status !== 'cancelled' && <TimelineView event={e} />}
+          {e.status !== 'cancelled' && (e.bringCategories?.length ?? 0) > 0 && (
+            <BringList event={e} />
+          )}
+          {e.status !== 'cancelled' && (
+          <div className="row cal-links">
+            <a
+              className="link"
+              href={googleCalendarUrl(e, production.title, placeLine(places, e.location))}
+              target="_blank"
+              rel="noreferrer"
+            >
+              + Google Calendar
+            </a>
+            <button
+              className="link"
+              onClick={() => downloadEventIcs(e, production.title, placeLine(places, e.location))}
+            >
+              + Apple / other calendar
+            </button>
+          </div>
+          )}
+          {isManager && e.status !== 'cancelled' && (
+            <div className="hint">
+              {ackCount} {ackCount === 1 ? 'person has' : 'people have'} tapped “Got it”
+              {(() => {
+                const rows = attendance.filter((a) => a.event === e.id)
+                if (rows.length === 0) return null
+                const c = (s: string) => rows.filter((a) => a.status === s).length
+                return ` · roll: ${c('present')} present, ${c('late')} late, ${c('absent')} absent`
+              })()}
+            </div>
+          )}
+          {isManager && e.status !== 'cancelled' && (
+            <button
+              className="link"
+              aria-expanded={rollFor === e.id}
+              onClick={() => {
+                setRollFor(rollFor === e.id ? null : e.id)
+                // pick up any door check-ins since the page loaded
+                if (rollFor !== e.id) load().catch(() => {})
+              }}
+            >
+              {rollFor === e.id ? 'Close roll call' : 'Roll call'}
+            </button>
+          )}
+          {isManager && rollFor === e.id && e.status !== 'cancelled' && (
+            <div className="stack">
+              <div className="row" style={{ alignItems: 'center' }}>
+                <button className="link" onClick={() => toggleSignin(e)}>
+                  {e.signinCode ? '📲 Turn off door check-in' : '📲 Turn on door check-in'}
+                </button>
+                {e.signinCode && (
+                  <Link className="link" to={`/production/${production.id}/signin/${e.id}/poster`}>
+                    🖨 Door poster
+                  </Link>
+                )}
+                <button className="link" onClick={() => load()}>
+                  ↻ Refresh roll
+                </button>
+              </div>
+              {e.signinCode && (
+                <>
+                  <QrCode
+                    text={`${window.location.origin}/production/${production.id}/signin/${e.id}?c=${e.signinCode}`}
+                    label="Cast scan this to check themselves in — or print the door poster."
+                  />
+                </>
+              )}
+            </div>
+          )}
+          {isManager && rollFor === e.id && e.status !== 'cancelled' && (
+            <ul className="plain-list roll-call">
+              {calledMembers(e).map((m) => {
+                const row = attendance.find((a) => a.event === e.id && a.member === m.id)
+                const icon =
+                  row?.status === 'present'
+                    ? '✓'
+                    : row?.status === 'late'
+                      ? '🕒'
+                      : row?.status === 'absent'
+                        ? '✗'
+                        : '—'
+                return (
+                  <li key={m.id}>
+                    <button
+                      className="chip"
+                      aria-label={`${memberName(m)} — ${
+                        row?.status ?? 'unmarked'
+                      }. Tap to change.`}
+                      onClick={() => cycleRoll(e, m)}
+                    >
+                      {icon} {memberName(m)}
+                    </button>
+                    {row?.note && <span className="hint"> {row.note}</span>}
+                  </li>
+                )
+              })}
+              <li className="hint">Tap a name to cycle: — → ✓ present → 🕒 late → ✗ absent</li>
+            </ul>
+          )}
+          {isManager && e.status !== 'cancelled' && (
+            <TimelinePlanner event={e} onSaved={load} />
+          )}
+          {isManager && e.status !== 'cancelled' && /performance/i.test(e.kind) && (
+            <ShowReport event={e} />
+          )}
+          {isManager && (
+            <div className="row">
+              {e.status !== 'cancelled' ? (
+                <>
                   <button
-                    className="chip"
-                    aria-label={`${memberName(m)} — ${
-                      row?.status ?? 'unmarked'
-                    }. Tap to change.`}
-                    onClick={() => cycleRoll(e, m)}
+                    className="link"
+                    onClick={() => setEditingId(editingId === e.id ? null : e.id)}
                   >
-                    {icon} {memberName(m)}
+                    {editingId === e.id ? 'Close editor' : 'Edit'}
                   </button>
-                  {row?.note && <span className="hint"> {row.note}</span>}
-                </li>
-              )
-            })}
-            <li className="hint">Tap a name to cycle: — → ✓ present → 🕒 late → ✗ absent</li>
-          </ul>
-        )}
-        {isManager && e.status !== 'cancelled' && (
-          <TimelinePlanner event={e} onSaved={load} />
-        )}
-        {isManager && e.status !== 'cancelled' && /performance/i.test(e.kind) && (
-          <ShowReport event={e} />
-        )}
-        {isManager && (
-          <div className="row">
-            {e.status !== 'cancelled' ? (
-              <>
-                <button
-                  className="link"
-                  onClick={() => setEditingId(editingId === e.id ? null : e.id)}
-                >
-                  {editingId === e.id ? 'Close editor' : 'Edit'}
+                  <button className="link" onClick={() => cancelEvent(e)}>
+                    Cancel event
+                  </button>
+                </>
+              ) : (
+                <button className="link" onClick={() => restoreEvent(e)}>
+                  Restore
                 </button>
-                <button className="link" onClick={() => cancelEvent(e)}>
-                  Cancel event
-                </button>
-              </>
-            ) : (
-              <button className="link" onClick={() => restoreEvent(e)}>
-                Restore
-              </button>
-            )}
-          </div>
-        )}
-        {isManager && editingId === e.id && e.status !== 'cancelled' && (
-          <EventForm
-            event={e}
-            onDone={async () => {
-              setEditingId(null)
-              await load()
-            }}
-          />
+              )}
+            </div>
+          )}
+          {isManager && editingId === e.id && e.status !== 'cancelled' && (
+            <EventForm
+              event={e}
+              onDone={async () => {
+                setEditingId(null)
+                await load()
+              }}
+            />
+          )}
+          </>
         )}
       </li>
     )
