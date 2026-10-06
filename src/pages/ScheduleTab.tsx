@@ -15,6 +15,20 @@ import TimelinePlanner, { TimelineView } from '../components/Timeline.tsx'
 import SlotsSection from '../components/Slots.tsx'
 import { JumpNav } from '../components/ManageJumpNav.tsx'
 import { DAY_SHORT, isWeekly, weeklyLabel } from '../lib/conflicts.ts'
+import {
+  MonthGrid,
+  PeriodNav,
+  ViewChips,
+  addDays,
+  dayKey,
+  eventsByDay,
+  readPref,
+  startOfMonth,
+  startOfWeek,
+  weekLabel,
+  writePref,
+  type ScheduleView,
+} from '../components/ScheduleViews.tsx'
 import type { AckRecord, AttendanceRecord, ConflictRecord, EventRecord, GroupRecord, MemberRecord, UnitRecord } from '../lib/types.ts'
 
 export default function ScheduleTab() {
@@ -31,6 +45,13 @@ export default function ScheduleTab() {
   const [kindFilter, setKindFilter] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [rollFor, setRollFor] = useState<string | null>(null)
+  const [view, setView] = useState<ScheduleView>(() => {
+    const v = readPref('gt-schedule-view')
+    return v === 'week' || v === 'month' ? v : 'list'
+  })
+  const [mineOnly, setMineOnly] = useState(() => readPref('gt-schedule-mine') === '1')
+  const [anchor, setAnchor] = useState(() => new Date())
+  const [selectedDay, setSelectedDay] = useState<string | null>(() => dayKey(new Date()))
 
   async function load() {
     const [ev, ak, cf, at, un, gr] = await Promise.all([
@@ -162,12 +183,42 @@ export default function ScheduleTab() {
   // Children this user guards — their calls are your calls.
   const myChildIds = members.filter((m) => m.guardians?.includes(user?.id ?? '')).map((m) => m.id)
   const now = new Date()
-  const visible = events.filter(
+  // Your calls (and your children's). Everyone-called events count.
+  const calledToMe = (e: EventRecord) =>
+    e.called.length === 0 ||
+    (myMember != null &&
+      (e.called.includes(myMember.id) ||
+        (!!myMember.claimedFrom && e.called.includes(myMember.claimedFrom)))) ||
+    myChildIds.some((id) => e.called.includes(id))
+  const canFilterMine = !viewAsMember && (myMember != null || myChildIds.length > 0)
+  const onlyMine = mineOnly && canFilterMine
+  // Same filters in every layout; only the list also hides past events
+  // (week and month navigate by date instead).
+  const filtered = events.filter(
     (e) =>
-      (showPast || pbDate(e.end || e.start) >= now) &&
       (!viewAsMember || calledForMember(e, viewAsMember)) &&
+      (!onlyMine || calledToMe(e)) &&
       (!kindFilter || e.kind.toLowerCase().includes(kindFilter.toLowerCase())),
   )
+  const visible = filtered.filter((e) => showPast || pbDate(e.end || e.start) >= now)
+  const byDay = eventsByDay(filtered)
+  const weekStart = startOfWeek(anchor)
+  const monthStart = startOfMonth(anchor)
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)).filter(
+    (d) => (byDay.get(dayKey(d)) ?? []).length > 0,
+  )
+  const selectedInMonth =
+    selectedDay && selectedDay.startsWith(`${monthStart.getFullYear()}-${monthStart.getMonth()}-`)
+      ? selectedDay
+      : null
+  const shiftAnchor = (dir: 1 | -1) => {
+    setSelectedDay(null)
+    setAnchor(
+      view === 'week'
+        ? addDays(weekStart, 7 * dir)
+        : new Date(monthStart.getFullYear(), monthStart.getMonth() + dir, 1),
+    )
+  }
 
   // Types that actually appear on this schedule (multi-type events like
   // "Dance + Vocals" count toward each of their parts).
@@ -181,11 +232,7 @@ export default function ScheduleTab() {
     (e) =>
       e.status !== 'cancelled' &&
       pbDate(e.end || e.start) >= now &&
-      (e.called.length === 0 ||
-        (myMember != null &&
-          (e.called.includes(myMember.id) ||
-            (!!myMember.claimedFrom && e.called.includes(myMember.claimedFrom)))) ||
-        myChildIds.some((id) => e.called.includes(id))) &&
+      calledToMe(e) &&
       !acks.some((a) => a.event === e.id && a.user === user?.id),
   )
 
@@ -214,6 +261,231 @@ export default function ScheduleTab() {
     return names.join(', ')
   }
 
+  const renderEvent = (e: EventRecord) => {
+    const iAmCalled = calledToMe(e)
+    const myAck = acks.find((a) => a.event === e.id && a.user === user?.id)
+    const ackCount = acks.filter((a) => a.event === e.id).length
+    return (
+      <li
+        key={e.id}
+        className={`card event ${iAmCalled ? 'called' : 'not-called'} ${
+          e.status === 'cancelled' ? 'cancelled' : ''
+        }`}
+      >
+        <div className="event-head">
+          <strong>{e.title}</strong>
+          {e.kind && e.kind !== e.title && <span className="pill">{e.kind}</span>}
+          {e.status === 'cancelled' && <span className="pill pill-cancel">Cancelled</span>}
+          <span>{formatWhen(e.start, e.end)}</span>
+        </div>
+        {e.location && (
+          <div className="event-line">
+            <a href={mapsUrl(places, e.location)} target="_blank" rel="noreferrer">
+              📍 {e.location}
+            </a>
+          </div>
+        )}
+        {unitsLabel(e) && (
+          <div className="event-line">
+            <strong>Rehearsing:</strong> {unitsLabel(e)}
+          </div>
+        )}
+        {groupsLabel(e) && (
+          <div className="event-line">
+            <strong>Groups:</strong> {groupsLabel(e)}
+          </div>
+        )}
+        <div className="event-line">
+          <strong>Called:</strong> {calledLabel(e)}
+          {e.calledNote && <em> — {e.calledNote}</em>}
+        </div>
+        {e.notes && <div className="event-line">{e.notes}</div>}
+        {e.status !== 'cancelled' && <TimelineView event={e} />}
+        {e.status !== 'cancelled' && (e.bringCategories?.length ?? 0) > 0 && (
+          <BringList event={e} />
+        )}
+        {iAmCalled &&
+          e.status !== 'cancelled' &&
+          (myAck ? (
+            <div className="acked">✓ You got it</div>
+          ) : (
+            <button onClick={() => gotIt(e)}>Got it 👍</button>
+          ))}
+        {e.status !== 'cancelled' && (
+        <div className="row cal-links">
+          <a
+            className="link"
+            href={googleCalendarUrl(e, production.title, placeLine(places, e.location))}
+            target="_blank"
+            rel="noreferrer"
+          >
+            + Google Calendar
+          </a>
+          <button
+            className="link"
+            onClick={() => downloadEventIcs(e, production.title, placeLine(places, e.location))}
+          >
+            + Apple / other calendar
+          </button>
+        </div>
+        )}
+        {(() => {
+          const hoursUntil = (pbDate(e.start).getTime() - Date.now()) / 3600e3
+          if (e.status === 'cancelled' || hoursUntil > 24 || hoursUntil < -6) return null
+          // Everyone I can report for: me, plus my called children.
+          const calledIds = new Set(e.called)
+          const isCalled = (m: MemberRecord) =>
+            e.called.length === 0 ||
+            calledIds.has(m.id) ||
+            (!!m.claimedFrom && calledIds.has(m.claimedFrom))
+          const reportable: MemberRecord[] = []
+          if (myMember && isCalled(myMember)) reportable.push(myMember)
+          for (const m of members) {
+            if (myChildIds.includes(m.id) && isCalled(m)) reportable.push(m)
+          }
+          if (reportable.length === 0) return null
+          return reportable.map((m) => {
+            const isMe = m.id === myMember?.id
+            const name = isMe ? 'You' : m.displayName || memberName(m)
+            const att = attendance.find((a) => a.event === e.id && a.member === m.id)
+            if (att && att.status !== 'present')
+              return (
+                <div key={m.id} className="hint">
+                  {name} reported: {att.status === 'late' ? 'running late' : "can't make it"}
+                  {att.note ? ` — ${att.note}` : ''} (your team was alerted)
+                </div>
+              )
+            return (
+              <div key={m.id} className="row">
+                {!isMe && <span className="hint">{name}:</span>}
+                <button className="link" onClick={() => reportAttendance(e, 'late', m)}>
+                  🕒 Running late
+                </button>
+                <button className="link" onClick={() => reportAttendance(e, 'absent', m)}>
+                  😷 Can't make it
+                </button>
+              </div>
+            )
+          })
+        })()}
+        {isManager && e.status !== 'cancelled' && (
+          <div className="hint">
+            {ackCount} {ackCount === 1 ? 'person has' : 'people have'} tapped “Got it”
+            {(() => {
+              const rows = attendance.filter((a) => a.event === e.id)
+              if (rows.length === 0) return null
+              const c = (s: string) => rows.filter((a) => a.status === s).length
+              return ` · roll: ${c('present')} present, ${c('late')} late, ${c('absent')} absent`
+            })()}
+          </div>
+        )}
+        {isManager && e.status !== 'cancelled' && (
+          <button
+            className="link"
+            aria-expanded={rollFor === e.id}
+            onClick={() => {
+              setRollFor(rollFor === e.id ? null : e.id)
+              // pick up any door check-ins since the page loaded
+              if (rollFor !== e.id) load().catch(() => {})
+            }}
+          >
+            {rollFor === e.id ? 'Close roll call' : 'Roll call'}
+          </button>
+        )}
+        {isManager && rollFor === e.id && e.status !== 'cancelled' && (
+          <div className="stack">
+            <div className="row" style={{ alignItems: 'center' }}>
+              <button className="link" onClick={() => toggleSignin(e)}>
+                {e.signinCode ? '📲 Turn off door check-in' : '📲 Turn on door check-in'}
+              </button>
+              {e.signinCode && (
+                <Link className="link" to={`/production/${production.id}/signin/${e.id}/poster`}>
+                  🖨 Door poster
+                </Link>
+              )}
+              <button className="link" onClick={() => load()}>
+                ↻ Refresh roll
+              </button>
+            </div>
+            {e.signinCode && (
+              <>
+                <QrCode
+                  text={`${window.location.origin}/production/${production.id}/signin/${e.id}?c=${e.signinCode}`}
+                  label="Cast scan this to check themselves in — or print the door poster."
+                />
+              </>
+            )}
+          </div>
+        )}
+        {isManager && rollFor === e.id && e.status !== 'cancelled' && (
+          <ul className="plain-list roll-call">
+            {calledMembers(e).map((m) => {
+              const row = attendance.find((a) => a.event === e.id && a.member === m.id)
+              const icon =
+                row?.status === 'present'
+                  ? '✓'
+                  : row?.status === 'late'
+                    ? '🕒'
+                    : row?.status === 'absent'
+                      ? '✗'
+                      : '—'
+              return (
+                <li key={m.id}>
+                  <button
+                    className="chip"
+                    aria-label={`${memberName(m)} — ${
+                      row?.status ?? 'unmarked'
+                    }. Tap to change.`}
+                    onClick={() => cycleRoll(e, m)}
+                  >
+                    {icon} {memberName(m)}
+                  </button>
+                  {row?.note && <span className="hint"> {row.note}</span>}
+                </li>
+              )
+            })}
+            <li className="hint">Tap a name to cycle: — → ✓ present → 🕒 late → ✗ absent</li>
+          </ul>
+        )}
+        {isManager && e.status !== 'cancelled' && (
+          <TimelinePlanner event={e} onSaved={load} />
+        )}
+        {isManager && e.status !== 'cancelled' && /performance/i.test(e.kind) && (
+          <ShowReport event={e} />
+        )}
+        {isManager && (
+          <div className="row">
+            {e.status !== 'cancelled' ? (
+              <>
+                <button
+                  className="link"
+                  onClick={() => setEditingId(editingId === e.id ? null : e.id)}
+                >
+                  {editingId === e.id ? 'Close editor' : 'Edit'}
+                </button>
+                <button className="link" onClick={() => cancelEvent(e)}>
+                  Cancel event
+                </button>
+              </>
+            ) : (
+              <button className="link" onClick={() => restoreEvent(e)}>
+                Restore
+              </button>
+            )}
+          </div>
+        )}
+        {isManager && editingId === e.id && e.status !== 'cancelled' && (
+          <EventForm
+            event={e}
+            onDone={async () => {
+              setEditingId(null)
+              await load()
+            }}
+          />
+        )}
+      </li>
+    )
+  }
   const scheduleJumps = [
     ['#events', 'Events'],
     ['#signups', 'Sign-ups'],
@@ -226,7 +498,29 @@ export default function ScheduleTab() {
     <div>
       <JumpNav jumps={scheduleJumps} ariaLabel="Schedule sections" />
       <section id="events">
-        <h2>Coming up</h2>
+        <h2>{view === 'list' ? 'Coming up' : 'Schedule'}</h2>
+        <div className="row no-print" style={{ alignItems: 'center' }}>
+          <ViewChips
+            view={view}
+            onPick={(v) => {
+              setView(v)
+              writePref('gt-schedule-view', v)
+            }}
+          />
+          {canFilterMine && (
+            <button
+              type="button"
+              aria-pressed={mineOnly}
+              className={`chip ${mineOnly ? 'chip-active' : ''}`}
+              onClick={() => {
+                setMineOnly(!mineOnly)
+                writePref('gt-schedule-mine', mineOnly ? '0' : '1')
+              }}
+            >
+              🙋 Just my calls
+            </button>
+          )}
+        </div>
         <div className="row no-print" style={{ alignItems: 'center' }}>
           {isManager && members.filter((m) => m.user || m.minor).length > 0 && (
             <select
@@ -299,242 +593,78 @@ export default function ScheduleTab() {
             </button>
           </p>
         )}
-        {visible.length === 0 && <p className="hint">Nothing on the schedule yet.</p>}
-        <ul className="cards">
-          {visible.map((e) => {
-            const iAmCalled =
-              e.called.length === 0 ||
-              (myMember != null &&
-                (e.called.includes(myMember.id) ||
-                  (!!myMember.claimedFrom && e.called.includes(myMember.claimedFrom)))) ||
-              myChildIds.some((id) => e.called.includes(id))
-            const myAck = acks.find((a) => a.event === e.id && a.user === user?.id)
-            const ackCount = acks.filter((a) => a.event === e.id).length
-            return (
-              <li
-                key={e.id}
-                className={`card event ${iAmCalled ? 'called' : 'not-called'} ${
-                  e.status === 'cancelled' ? 'cancelled' : ''
-                }`}
-              >
-                <div className="event-head">
-                  <strong>{e.title}</strong>
-                  {e.kind && e.kind !== e.title && <span className="pill">{e.kind}</span>}
-                  {e.status === 'cancelled' && <span className="pill pill-cancel">Cancelled</span>}
-                  <span>{formatWhen(e.start, e.end)}</span>
-                </div>
-                {e.location && (
-                  <div className="event-line">
-                    <a href={mapsUrl(places, e.location)} target="_blank" rel="noreferrer">
-                      📍 {e.location}
-                    </a>
-                  </div>
-                )}
-                {unitsLabel(e) && (
-                  <div className="event-line">
-                    <strong>Rehearsing:</strong> {unitsLabel(e)}
-                  </div>
-                )}
-                {groupsLabel(e) && (
-                  <div className="event-line">
-                    <strong>Groups:</strong> {groupsLabel(e)}
-                  </div>
-                )}
-                <div className="event-line">
-                  <strong>Called:</strong> {calledLabel(e)}
-                  {e.calledNote && <em> — {e.calledNote}</em>}
-                </div>
-                {e.notes && <div className="event-line">{e.notes}</div>}
-                {e.status !== 'cancelled' && <TimelineView event={e} />}
-                {e.status !== 'cancelled' && (e.bringCategories?.length ?? 0) > 0 && (
-                  <BringList event={e} />
-                )}
-                {iAmCalled &&
-                  e.status !== 'cancelled' &&
-                  (myAck ? (
-                    <div className="acked">✓ You got it</div>
-                  ) : (
-                    <button onClick={() => gotIt(e)}>Got it 👍</button>
-                  ))}
-                {e.status !== 'cancelled' && (
-                <div className="row cal-links">
-                  <a
-                    className="link"
-                    href={googleCalendarUrl(e, production.title, placeLine(places, e.location))}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    + Google Calendar
-                  </a>
-                  <button
-                    className="link"
-                    onClick={() => downloadEventIcs(e, production.title, placeLine(places, e.location))}
-                  >
-                    + Apple / other calendar
-                  </button>
-                </div>
-                )}
-                {(() => {
-                  const hoursUntil = (pbDate(e.start).getTime() - Date.now()) / 3600e3
-                  if (e.status === 'cancelled' || hoursUntil > 24 || hoursUntil < -6) return null
-                  // Everyone I can report for: me, plus my called children.
-                  const calledIds = new Set(e.called)
-                  const isCalled = (m: MemberRecord) =>
-                    e.called.length === 0 ||
-                    calledIds.has(m.id) ||
-                    (!!m.claimedFrom && calledIds.has(m.claimedFrom))
-                  const reportable: MemberRecord[] = []
-                  if (myMember && isCalled(myMember)) reportable.push(myMember)
-                  for (const m of members) {
-                    if (myChildIds.includes(m.id) && isCalled(m)) reportable.push(m)
-                  }
-                  if (reportable.length === 0) return null
-                  return reportable.map((m) => {
-                    const isMe = m.id === myMember?.id
-                    const name = isMe ? 'You' : m.displayName || memberName(m)
-                    const att = attendance.find((a) => a.event === e.id && a.member === m.id)
-                    if (att && att.status !== 'present')
-                      return (
-                        <div key={m.id} className="hint">
-                          {name} reported: {att.status === 'late' ? 'running late' : "can't make it"}
-                          {att.note ? ` — ${att.note}` : ''} (your team was alerted)
-                        </div>
-                      )
-                    return (
-                      <div key={m.id} className="row">
-                        {!isMe && <span className="hint">{name}:</span>}
-                        <button className="link" onClick={() => reportAttendance(e, 'late', m)}>
-                          🕒 Running late
-                        </button>
-                        <button className="link" onClick={() => reportAttendance(e, 'absent', m)}>
-                          😷 Can't make it
-                        </button>
-                      </div>
-                    )
-                  })
-                })()}
-                {isManager && e.status !== 'cancelled' && (
-                  <div className="hint">
-                    {ackCount} {ackCount === 1 ? 'person has' : 'people have'} tapped “Got it”
-                    {(() => {
-                      const rows = attendance.filter((a) => a.event === e.id)
-                      if (rows.length === 0) return null
-                      const c = (s: string) => rows.filter((a) => a.status === s).length
-                      return ` · roll: ${c('present')} present, ${c('late')} late, ${c('absent')} absent`
-                    })()}
-                  </div>
-                )}
-                {isManager && e.status !== 'cancelled' && (
-                  <button
-                    className="link"
-                    aria-expanded={rollFor === e.id}
-                    onClick={() => {
-                      setRollFor(rollFor === e.id ? null : e.id)
-                      // pick up any door check-ins since the page loaded
-                      if (rollFor !== e.id) load().catch(() => {})
-                    }}
-                  >
-                    {rollFor === e.id ? 'Close roll call' : 'Roll call'}
-                  </button>
-                )}
-                {isManager && rollFor === e.id && e.status !== 'cancelled' && (
-                  <div className="stack">
-                    <div className="row" style={{ alignItems: 'center' }}>
-                      <button className="link" onClick={() => toggleSignin(e)}>
-                        {e.signinCode ? '📲 Turn off door check-in' : '📲 Turn on door check-in'}
-                      </button>
-                      {e.signinCode && (
-                        <Link className="link" to={`/production/${production.id}/signin/${e.id}/poster`}>
-                          🖨 Door poster
-                        </Link>
-                      )}
-                      <button className="link" onClick={() => load()}>
-                        ↻ Refresh roll
-                      </button>
-                    </div>
-                    {e.signinCode && (
-                      <>
-                        <QrCode
-                          text={`${window.location.origin}/production/${production.id}/signin/${e.id}?c=${e.signinCode}`}
-                          label="Cast scan this to check themselves in — or print the door poster."
-                        />
-                      </>
-                    )}
-                  </div>
-                )}
-                {isManager && rollFor === e.id && e.status !== 'cancelled' && (
-                  <ul className="plain-list roll-call">
-                    {calledMembers(e).map((m) => {
-                      const row = attendance.find((a) => a.event === e.id && a.member === m.id)
-                      const icon =
-                        row?.status === 'present'
-                          ? '✓'
-                          : row?.status === 'late'
-                            ? '🕒'
-                            : row?.status === 'absent'
-                              ? '✗'
-                              : '—'
-                      return (
-                        <li key={m.id}>
-                          <button
-                            className="chip"
-                            aria-label={`${memberName(m)} — ${
-                              row?.status ?? 'unmarked'
-                            }. Tap to change.`}
-                            onClick={() => cycleRoll(e, m)}
-                          >
-                            {icon} {memberName(m)}
-                          </button>
-                          {row?.note && <span className="hint"> {row.note}</span>}
-                        </li>
-                      )
-                    })}
-                    <li className="hint">Tap a name to cycle: — → ✓ present → 🕒 late → ✗ absent</li>
-                  </ul>
-                )}
-                {isManager && e.status !== 'cancelled' && (
-                  <TimelinePlanner event={e} onSaved={load} />
-                )}
-                {isManager && e.status !== 'cancelled' && /performance/i.test(e.kind) && (
-                  <ShowReport event={e} />
-                )}
-                {isManager && (
-                  <div className="row">
-                    {e.status !== 'cancelled' ? (
-                      <>
-                        <button
-                          className="link"
-                          onClick={() => setEditingId(editingId === e.id ? null : e.id)}
-                        >
-                          {editingId === e.id ? 'Close editor' : 'Edit'}
-                        </button>
-                        <button className="link" onClick={() => cancelEvent(e)}>
-                          Cancel event
-                        </button>
-                      </>
-                    ) : (
-                      <button className="link" onClick={() => restoreEvent(e)}>
-                        Restore
-                      </button>
-                    )}
-                  </div>
-                )}
-                {isManager && editingId === e.id && e.status !== 'cancelled' && (
-                  <EventForm
-                    event={e}
-                    onDone={async () => {
-                      setEditingId(null)
-                      await load()
-                    }}
-                  />
-                )}
-              </li>
-            )
-          })}
-        </ul>
-        <button className="link" aria-expanded={showPast} onClick={() => setShowPast(!showPast)}>
-          {showPast ? 'Hide past events' : 'Show past events'}
-        </button>
+        {view === 'list' && (
+          <>
+            {visible.length === 0 && (
+              <p className="hint">
+                {events.length === 0
+                  ? 'Nothing on the schedule yet.'
+                  : onlyMine
+                    ? "Nothing coming up that you're called to."
+                    : 'Nothing coming up.'}
+              </p>
+            )}
+            <ul className="cards">{visible.map(renderEvent)}</ul>
+            <button className="link" aria-expanded={showPast} onClick={() => setShowPast(!showPast)}>
+              {showPast ? 'Hide past events' : 'Show past events'}
+            </button>
+          </>
+        )}
+        {view === 'week' && (
+          <>
+            <PeriodNav
+              label={weekLabel(weekStart)}
+              unit="week"
+              onPrev={() => shiftAnchor(-1)}
+              onNext={() => shiftAnchor(1)}
+              onToday={() => setAnchor(new Date())}
+              atToday={dayKey(weekStart) === dayKey(startOfWeek(new Date()))}
+            />
+            {weekDays.length === 0 && (
+              <p className="hint">
+                Nothing {onlyMine ? "you're called to " : ''}this week — tap ▸ to look ahead.
+              </p>
+            )}
+            {weekDays.map((d) => (
+              <div key={dayKey(d)}>
+                <h4 className={`dept-heading ${dayKey(d) === dayKey(now) ? 'day-today' : ''}`}>
+                  {d.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
+                  {dayKey(d) === dayKey(now) && ' · Today'}
+                </h4>
+                <ul className="cards">{(byDay.get(dayKey(d)) ?? []).map(renderEvent)}</ul>
+              </div>
+            ))}
+          </>
+        )}
+        {view === 'month' && (
+          <>
+            <PeriodNav
+              label={monthStart.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
+              unit="month"
+              onPrev={() => shiftAnchor(-1)}
+              onNext={() => shiftAnchor(1)}
+              onToday={() => {
+                setAnchor(new Date())
+                setSelectedDay(dayKey(new Date()))
+              }}
+              atToday={dayKey(monthStart) === dayKey(startOfMonth(new Date()))}
+            />
+            <MonthGrid
+              month={monthStart}
+              byDay={byDay}
+              selected={selectedInMonth}
+              onSelect={setSelectedDay}
+              isMine={calledToMe}
+            />
+            {selectedInMonth && (byDay.get(selectedInMonth) ?? []).length > 0 ? (
+              <ul className="cards" aria-label="Events on the chosen day">
+                {(byDay.get(selectedInMonth) ?? []).map(renderEvent)}
+              </ul>
+            ) : (
+              <p className="hint">Tap a day with events to see the details here.</p>
+            )}
+          </>
+        )}
       </section>
 
       <SlotsSection />

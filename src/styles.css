@@ -1091,3 +1091,103 @@ p > a.link:only-child {
 section > :is(.row, .chips) + :is(.row, .chips) {
   margin-top: 0.5rem;
 }
+
+/* --- Schedule tab: week / month layouts (ScheduleViews.tsx) --- */
+.period-nav {
+  margin: 0.5rem 0;
+}
+
+.period-label {
+  margin: 0;
+  min-width: 9rem;
+  text-align: center;
+}
+
+.month-grid-app td {
+  padding: 0;
+}
+
+.month-grid-app td > .month-day {
+  padding: 0.15rem 0.25rem;
+}
+
+.month-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.1rem;
+  width: 100%;
+  height: 100%;
+  min-height: 3.6rem;
+  padding: 0.15rem 0.25rem;
+  background: var(--card);
+  color: var(--ink);
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  text-align: left;
+  font: inherit;
+  font-size: 0.85rem;
+}
+
+.month-cell .month-event {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.month-mine {
+  font-weight: 700;
+}
+
+.month-grid-app th {
+  overflow-wrap: normal;
+}
+
+.wd-narrow {
+  display: none;
+}
+
+/* phones: times only (the day's cards below carry the details) */
+@media (max-width: 600px) {
+  .month-kind {
+    display: none;
+  }
+
+  .month-cell .month-event {
+    text-overflow: clip;
+  }
+}
+
+@media (max-width: 360px) {
+  .wd-wide {
+    display: none;
+  }
+
+  .wd-narrow {
+    display: inline;
+  }
+}
+
+.month-cancelled {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+
+.month-today .month-day {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-thickness: 3px;
+  text-decoration-color: var(--accent);
+}
+
+.month-selected,
+.month-selected .month-cell {
+  background: #f4fadd;
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.day-today {
+  color: var(--ink);
+}
