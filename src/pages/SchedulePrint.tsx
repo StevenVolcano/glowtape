@@ -68,8 +68,23 @@ export default function SchedulePrint() {
     })
   }
 
-  const time = (e: EventRecord) =>
-    pbDate(e.start).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
+  // Short paper times: "6pm", "6:30pm"; ranges share the am/pm: "6–9pm".
+  const short = (d: Date) => {
+    const h = d.getHours() % 12 || 12
+    const m = d.getMinutes()
+    return `${h}${m ? ':' + String(m).padStart(2, '0') : ''}${d.getHours() < 12 ? 'am' : 'pm'}`
+  }
+  const time = (e: EventRecord) => short(pbDate(e.start))
+  const timeRange = (e: EventRecord) => {
+    const a = pbDate(e.start)
+    if (!e.end) return short(a)
+    const b = pbDate(e.end)
+    const sameHalf = a.getHours() < 12 === b.getHours() < 12
+    return `${sameHalf ? short(a).replace(/[ap]m$/, '') : short(a)}–${short(b)}`
+  }
+  // One venue for the whole run? Say it once instead of on every row.
+  const places = [...new Set(mine.map((e) => e.location).filter(Boolean))]
+  const onePlace = places.length === 1 ? places[0] : ''
 
   return (
     <div className="print-schedule">
@@ -81,7 +96,7 @@ export default function SchedulePrint() {
       </div>
 
       <h2>
-        {production.title} — {kindFilter ? `${kindFilter} ` : ''}schedule{member ? ` for ${memberName(member)}` : ''}
+        {kindFilter ? `${kindFilter} s` : 'S'}chedule{member ? ` for ${memberName(member)}` : ''}
       </h2>
       {pastCount > 0 && (
         <p className="hint no-print">
@@ -100,40 +115,7 @@ export default function SchedulePrint() {
       {!loaded && <p>Loading…</p>}
       {loaded && mine.length === 0 && <p className="hint">Nothing on the schedule.</p>}
 
-      <table className="contact-sheet">
-        <thead>
-          <tr>
-            <th scope="col">Date</th>
-            <th scope="col">Time</th>
-            <th scope="col">What</th>
-            <th scope="col">Where</th>
-          </tr>
-        </thead>
-        <tbody>
-          {mine.map((e) => {
-            const d = pbDate(e.start)
-            const end = e.end ? pbDate(e.end) : null
-            return (
-              <tr key={e.id} className={!showPastOnScreen && isPast(e) ? 'print-only' : ''}>
-                <td>{d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</td>
-                <td>
-                  {time(e)}
-                  {end ? `–${end.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}` : ''}
-                </td>
-                <td>
-                  {e.kind && e.kind !== e.title ? `${e.kind}: ` : ''}
-                  {e.title}
-                  {timelineLine(e) && (
-                    <div className="hint" style={{ fontSize: '0.85em' }}>⏱ {timelineLine(e)}</div>
-                  )}
-                </td>
-                <td>{e.location}</td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
-
+      {onePlace && <p className="print-place">📍 Everything is at {onePlace}.</p>}
       {months.map(({ label, year, month }) => {
         const first = new Date(year, month, 1)
         const daysInMonth = new Date(year, month + 1, 0).getDate()
@@ -190,6 +172,38 @@ export default function SchedulePrint() {
           </div>
         )
       })}
+
+      <table className={`contact-sheet print-list ${months.length >= 2 ? 'print-new-page' : ''}`}>
+        <thead>
+          <tr>
+            <th scope="col">Date</th>
+            <th scope="col">Time</th>
+            <th scope="col">What</th>
+            {!onePlace && <th scope="col">Where</th>}
+          </tr>
+        </thead>
+        <tbody>
+          {mine.map((e) => {
+            const d = pbDate(e.start)
+            return (
+              <tr key={e.id} className={!showPastOnScreen && isPast(e) ? 'print-only' : ''}>
+                <td className="nowrap">
+                  {d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+                </td>
+                <td className="nowrap">{timeRange(e)}</td>
+                <td>
+                  {e.kind && e.kind !== e.title ? `${e.kind}: ` : ''}
+                  {e.title}
+                  {timelineLine(e) && (
+                    <div className="hint" style={{ fontSize: '0.85em' }}>⏱ {timelineLine(e)}</div>
+                  )}
+                </td>
+                {!onePlace && <td>{e.location}</td>}
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
 
       <p className="hint">
         Printed from glowtape.net — the app and email always have the latest changes. ·{' '}

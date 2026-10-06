@@ -1225,3 +1225,85 @@ section > :is(.row, .chips) + :is(.row, .chips) {
 .event-toggle + * {
   margin-top: 0.5rem;
 }
+
+/* --- Printed schedule (SchedulePrint.tsx): calendars first, then a
+   one-line-per-event list. Paper wants density: two months per page. --- */
+.nowrap {
+  white-space: nowrap;
+}
+
+.print-list td,
+.print-list th {
+  padding: 0.3rem 0.5rem;
+}
+
+@media print {
+  @page {
+    margin: 0.5in;
+  }
+
+  .print-schedule {
+    font-size: 10pt;
+  }
+
+  .print-schedule h2 {
+    margin: 0 0 0.25rem;
+    font-size: 14pt;
+  }
+
+  .print-schedule h3 {
+    margin: 0 0 0.2rem;
+    font-size: 12pt;
+  }
+
+  .print-schedule .print-place {
+    margin: 0 0 0.4rem;
+  }
+
+  .print-schedule .month-block {
+    margin-top: 0.4rem;
+  }
+
+  .print-schedule .month-grid {
+    margin-bottom: 0.3rem;
+  }
+
+  .print-schedule .month-grid th {
+    height: auto;
+    padding: 0.1rem;
+    font-size: 8.5pt;
+  }
+
+  .print-schedule .month-grid td {
+    height: 0.64in;
+    font-size: 8pt;
+    hyphens: manual;
+    overflow-wrap: normal;
+  }
+
+  .print-list th,
+  .print-list td {
+    padding: 0.1rem 0.4rem;
+    font-size: 9.5pt;
+    line-height: 1.25;
+    hyphens: manual;
+    word-break: normal;
+  }
+
+  .print-list tr {
+    break-inside: avoid;
+  }
+
+  .print-list {
+    margin-top: 0.5rem;
+  }
+
+  .print-schedule > .hint {
+    font-size: 8pt;
+  }
+
+  /* calendars fill page 1; the list starts clean on page 2 */
+  .print-list.print-new-page {
+    break-before: page;
+  }
+}
