@@ -51,7 +51,27 @@ const WRITABLE = [
   "attendance",
 ];
 
+const TIMELINE_SCHEMA = {
+  type: "array",
+  description: "Run of show: ordered rows {title, minutes} (max 40; minutes 0–600 whole numbers; title ≤200 chars). Clock times are NOT stored — they count forward from the event start, so a 0-minute row is a marker like 'Curtain up'. Send [] or null to clear.",
+  items: {
+    type: "object",
+    properties: { title: { type: "string" }, minutes: { type: "integer", minimum: 0, maximum: 600 } },
+    required: ["title", "minutes"],
+  },
+  maxItems: 40,
+};
+
 const COLLECTIONS = Object.keys(SCOPE);
+
+// lib.cleanTimeline with the event named in the message.
+function timelineFor(value, label, lib) {
+  try {
+    return lib.cleanTimeline(value);
+  } catch (err) {
+    throw new Error(`${label}: ${err && err.message ? err.message : err}`);
+  }
+}
 
 function selfUrl() {
   return $os.getenv("GLOWTAPE_SELF_URL") || "http://127.0.0.1:8090";
@@ -249,7 +269,7 @@ const TOOLS = [
   },
   {
     name: "add_events",
-    description: "Add events to a show's schedule — e.g. a whole rehearsal calendar at once. Times are ISO 8601 WITH an offset (Pacific is -07:00 in summer, -08:00 from early November). called = member ids (empty = everyone), calledGroups = group ids. Sends ONE summary email to everyone called unless notify is false. Check list_records(events) first to avoid duplicates. Max 100 per call.",
+    description: "Add events to a show's schedule — e.g. a whole rehearsal calendar at once. Times are ISO 8601 WITH an offset (Pacific is -07:00 in summer, -08:00 from early November). called = member ids (empty = everyone), calledGroups = group ids. Sends ONE summary email to everyone called unless notify is false. Check list_records(events) first to avoid duplicates. Optional timeline = the event's run of show (see its schema). Max 100 per call.",
     inputSchema: {
       type: "object",
       properties: {
@@ -269,6 +289,7 @@ const TOOLS = [
               calledNote: { type: "string", description: "Plain-English who's called, e.g. 'Act 1 cast'." },
               called: { type: "array", items: { type: "string" } },
               calledGroups: { type: "array", items: { type: "string" } },
+              timeline: TIMELINE_SCHEMA,
             },
             required: ["title", "start"],
           },
@@ -297,6 +318,7 @@ const TOOLS = [
           calledNote: String(ev.calledNote || ""),
           called: Array.isArray(ev.called) ? ev.called.map(String) : [],
           calledGroups: Array.isArray(ev.calledGroups) ? ev.calledGroups.map(String) : [],
+          timeline: timelineFor(ev.timeline, `Event ${i + 1}`, lib),
         };
       });
       const col = app.findCollectionByNameOrId("events");
@@ -308,6 +330,7 @@ const TOOLS = [
           for (const f of ["title", "kind", "start", "end", "location", "notes", "calledNote"]) rec.set(f, ev[f]);
           rec.set("called", ev.called);
           rec.set("calledGroups", ev.calledGroups);
+          if (ev.timeline.length > 0) rec.set("timeline", ev.timeline);
           rec.set("status", "scheduled");
           tx.save(rec);
           created.push(rec);
@@ -347,16 +370,38 @@ const TOOLS = [
   },
   {
     name: "update_events",
-    description: "Edit existing events (all in one show). Each item: {id, and any of title, kind, start, end, location, notes, calledNote, called, calledGroups}. Date/time/place changes reset 'Got it' acks and send ONE change digest to the people called — same as editing in the app.",
+    description: "Edit existing events (all in one show). Each item: {id, and any of title, kind, start, end, location, notes, calledNote, called, calledGroups, timeline}. Only fields you send change. Date/time/place changes reset 'Got it' acks and send ONE change digest to the people called — same as editing in the app. A timeline-only edit (the run of show) is silent: no email, no push, acks kept. timeline [] or null clears it.",
     inputSchema: {
       type: "object",
-      properties: { events: { type: "array", items: { type: "object", properties: { id: { type: "string" } }, required: ["id"] } } },
+      properties: {
+        events: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              id: { type: "string" },
+              title: { type: "string" },
+              kind: { type: "string" },
+              start: { type: "string", description: "ISO 8601 with an offset." },
+              end: { type: "string", description: "ISO 8601 with an offset, or '' for no end." },
+              location: { type: "string" },
+              notes: { type: "string" },
+              calledNote: { type: "string" },
+              called: { type: "array", items: { type: "string" }, description: "Member ids; [] = everyone." },
+              calledGroups: { type: "array", items: { type: "string" } },
+              timeline: TIMELINE_SCHEMA,
+            },
+            required: ["id"],
+          },
+        },
+      },
       required: ["events"],
     },
     annotations: { readOnlyHint: false, destructiveHint: false },
-    run(app, ctx, args) {
-      const items = (Array.isArray(args.events) ? args.events : []).map((ev) => {
+    run(app, ctx, args, lib) {
+      const items = (Array.isArray(args.events) ? args.events : []).map((ev, i) => {
         const out = Object.assign({}, ev);
+        if (out.timeline !== undefined) out.timeline = timelineFor(out.timeline, `Event ${i + 1}`, lib);
         if (out.start !== undefined) out.start = pbTime(out.start, "start");
         if (out.end !== undefined && out.end !== "") out.end = pbTime(out.end, "end");
         return out;

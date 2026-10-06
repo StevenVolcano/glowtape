@@ -642,7 +642,49 @@ function syncMemberAutoGroups(app, member) {
   }
 }
 
+// Validate a run-of-show timeline ({title, minutes} rows; clock times are
+// never stored — they compute forward from the event start). Used by the
+// events/update route and the Claude connector. null / undefined / [] clear
+// it (returns []). Throws an Error naming the bad row.
+const TIMELINE_MAX_ROWS = 40;
+const TIMELINE_MAX_BYTES = 10000; // events.timeline maxSize (migration 1757000000)
+function cleanTimeline(value) {
+  if (value === null || value === undefined || value === "") return [];
+  // Round-trip so a VM-wrapped Go slice from the request body becomes a plain array.
+  let list;
+  try {
+    list = JSON.parse(JSON.stringify(value));
+  } catch (err) {
+    throw new Error("The timeline must be a list of {title, minutes} rows.");
+  }
+  if (!Array.isArray(list)) throw new Error("The timeline must be a list of {title, minutes} rows.");
+  if (list.length > TIMELINE_MAX_ROWS) {
+    throw new Error(`The timeline has ${list.length} rows — the most is ${TIMELINE_MAX_ROWS}.`);
+  }
+  const out = list.map((row, i) => {
+    const n = i + 1;
+    if (!row || typeof row !== "object" || Array.isArray(row)) {
+      throw new Error(`Timeline row ${n} must be {title, minutes}.`);
+    }
+    const title = typeof row.title === "string" ? row.title.trim() : "";
+    if (!title) throw new Error(`Timeline row ${n} needs a title.`);
+    if (title.length > 200) throw new Error(`Timeline row ${n} title is longer than 200 characters.`);
+    const minutes = row.minutes;
+    if (typeof minutes !== "number" || !Number.isInteger(minutes) || minutes < 0 || minutes > 600) {
+      throw new Error(`Timeline row ${n} ("${title}") minutes must be a whole number from 0 to 600.`);
+    }
+    return { title, minutes };
+  });
+  // Bytes, not characters: the JSON field limit counts the encoded size.
+  const size = unescape(encodeURIComponent(JSON.stringify(out))).length;
+  if (size > TIMELINE_MAX_BYTES) {
+    throw new Error(`The timeline is too long to save (${size} bytes; the most is ${TIMELINE_MAX_BYTES}). Shorten some titles.`);
+  }
+  return out;
+}
+
 module.exports = {
+  cleanTimeline,
   pbNow,
   REMINDER_KEYS,
   reminderKinds,

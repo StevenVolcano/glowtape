@@ -171,12 +171,25 @@ routerAdd(
     if (items.length === 0) throw new BadRequestError("Nothing to save.");
     if (items.length > 100) throw new BadRequestError("Too many events in one save.");
 
+    // Check every timeline before saving anything, so one bad row can't
+    // leave half the batch saved.
+    const timelines = items.map((item, i) => {
+      if (item.timeline === undefined) return undefined;
+      try {
+        return lib.cleanTimeline(item.timeline);
+      } catch (err) {
+        const msg = String(err && err.message ? err.message : err);
+        throw new BadRequestError(items.length > 1 ? `Event ${i + 1}: ${msg}` : msg);
+      }
+    });
+
     const changed = [];
     let production = null;
     let everyoneNotified = false;
     const notifyMemberIds = [];
 
-    for (const item of items) {
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
       const rec = e.app.findRecordById("events", String(item.id));
       if (!production) {
         production = e.app.findRecordById("productions", rec.get("production"));
@@ -203,6 +216,9 @@ routerAdd(
       if (item.units !== undefined) rec.set("units", lib.toIdArray(item.units));
       if (item.calledGroups !== undefined) rec.set("calledGroups", lib.toIdArray(item.calledGroups));
       if (item.bringCategories !== undefined) rec.set("bringCategories", lib.toIdArray(item.bringCategories));
+      // Not part of the "significant" check below: a run-of-show edit doesn't
+      // reset Got-it acks or send the schedule-change email/push.
+      if (item.timeline !== undefined) rec.set("timeline", timelines[i]);
       e.app.save(rec);
 
       const significant =
