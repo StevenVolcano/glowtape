@@ -77,6 +77,20 @@ That's it — the app's home screen now shows a "Turn on notifications" switch
 on capable devices (on iPhone, only after Add to Home Screen). Until the keys
 exist, the switch stays hidden and every push call is silently skipped.
 
+## 4¾. GIFs in chat (once)
+
+The chat's GIF button searches GIPHY through the server (G-rated only). Create
+a free app at https://developers.giphy.com/dashboard/ (choose "API", not SDK)
+and paste its key on the droplet — it's typed hidden and never shown:
+
+```bash
+read -rsp 'GIPHY API key: ' K && echo && echo "GLOWTAPE_GIPHY_API_KEY=$K" >> /etc/glowtape/env && unset K && systemctl restart glowtape
+```
+
+Until the key exists the GIF button just says GIFs aren't turned on yet. A new
+key is a "beta" key limited to 100 searches an hour; ask GIPHY to upgrade it to
+a production key once people are using it.
+
 ## 5. Updating the app
 
 SSH in (or use the Console button in the DigitalOcean dashboard) and run:

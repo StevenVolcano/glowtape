@@ -1307,3 +1307,134 @@ section > :is(.row, .chips) + :is(.row, .chips) {
     break-before: page;
   }
 }
+
+/* --- Chat extras: day dividers, replies, GIFs --- */
+.msg-wrap {
+  display: flex;
+  flex-direction: column;
+}
+
+.load-earlier {
+  align-self: center;
+}
+
+.msg-day {
+  align-self: center;
+  margin: 0.5rem 0 0.25rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.msg-edited {
+  font-style: italic;
+}
+
+.msg-quote {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  text-align: left;
+  background: var(--card);
+  border: none;
+  border-left: 4px solid var(--accent);
+  border-radius: 6px;
+  padding: 0.3rem 0.5rem;
+  margin-bottom: 0.3rem;
+  font-size: 0.9rem;
+  font-weight: 400;
+  color: var(--ink, inherit);
+  white-space: normal;
+}
+
+.msg-flash .msg-text {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.msg-gif {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  margin-bottom: 0.25rem;
+}
+
+.msg-gif img {
+  width: 200px;
+  max-width: 100%;
+  border-radius: 10px;
+  display: block;
+}
+
+.gif-btn {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: inherit;
+}
+
+.gif-pending {
+  width: 44px;
+  height: 44px;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+.gif-picker {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0.5rem 0.75rem;
+}
+
+.gif-picker-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.gif-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 0.5rem;
+  max-height: 40vh;
+  overflow-y: auto;
+}
+
+.gif-choice {
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background: var(--paper);
+  min-height: 44px;
+  overflow: hidden;
+}
+
+.gif-choice img {
+  width: 100%;
+  height: 96px;
+  object-fit: cover;
+  display: block;
+}
+
+.gif-credit {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin: 0.5rem 0 0;
+}
+
+/* The chat composer stays on one line: attach buttons, the text box takes
+   the rest, then Send. */
+.row.composer {
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 0.5rem;
+}
+
+.row.composer > label {
+  flex: 0 0 auto;
+}
+
+.row.composer > input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
