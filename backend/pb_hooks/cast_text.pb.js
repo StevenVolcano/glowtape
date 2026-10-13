@@ -1,9 +1,9 @@
 /// <reference path="../pb_data/types.d.ts" />
 //
 // Text the whole cast. A manager writes one short message; each person gets
-// it as a text if they've verified a phone AND said yes to cast texts
-// (users.smsCastTexts — separate from the reminder opt-in, migration
-// 1758500000). Everyone else gets it as a private Glow Tape message in their
+// it as a text if they've verified a phone and said yes to texts
+// (users.smsOptIn — the same yes as call reminders; the consent wording
+// covers both, per Steven 2026-10-13). Everyone else gets it as a private Glow Tape message in their
 // member's 🔒 "& managers" channel (the youth-safe stand-in for a DM: the
 // member, their guardians and all managers can read it), which pushes like any
 // message, plus one email so nobody misses it.
@@ -117,7 +117,7 @@ routerAdd(
           const u = loadUser(uid);
           if (!u) continue;
           const textable =
-            smsOn && u.get("smsCastTexts") && u.get("phoneVerified") && u.get("phone");
+            smsOn && u.get("smsOptIn") && u.get("phoneVerified") && u.get("phone");
           if (textable && lib.sendSms(e.app, u.get("phone"), smsBody)) {
             result[uid] = "texted";
             texted.push(u.get("name") || "Someone");
@@ -170,7 +170,7 @@ routerAdd(
           emailTo,
           `[${title}] A message from the managers`,
           `<p>${esc(text)}</p><p>— ${esc(e.auth.get("name") || "Your managers")}, ${esc(title)} on Glow Tape</p>` +
-            `<p style="color:#544e63">You're getting this by email because you haven't said yes to cast texts. ` +
+            `<p style="color:#544e63">You're getting this by email because you haven't said yes to texts from Glow Tape. ` +
             `To get these by text, open Glow Tape → Home → Text reminders.</p>`,
         );
       } catch (err) {

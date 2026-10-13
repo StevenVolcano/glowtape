@@ -7,7 +7,6 @@ interface PhoneStatus {
   phone: string
   phoneVerified: boolean
   smsOptIn: boolean
-  smsCastTexts: boolean
 }
 
 // Attach a cell number and opt into text reminders. The phone fields are
@@ -27,7 +26,7 @@ export default function PhoneSettings(_props: { user: UserRecord }) {
       const s = await pb.send<PhoneStatus>('/api/glowtape/phone/status', { method: 'GET' })
       setStatus(s)
     } catch {
-      setStatus({ phone: '', phoneVerified: false, smsOptIn: false, smsCastTexts: false })
+      setStatus({ phone: '', phoneVerified: false, smsOptIn: false })
     }
   }
 
@@ -91,16 +90,6 @@ export default function PhoneSettings(_props: { user: UserRecord }) {
     }
   }
 
-  async function toggleCastTexts(on: boolean) {
-    setError('')
-    try {
-      await pb.send('/api/glowtape/phone/cast-texts', { method: 'POST', body: { on } })
-      await loadStatus()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't update that — try again.")
-    }
-  }
-
   if (status?.phoneVerified && !editing) {
     return (
       <section>
@@ -115,20 +104,9 @@ export default function PhoneSettings(_props: { user: UserRecord }) {
               checked={status.smsOptIn}
               onChange={(e) => toggleOptIn(e.target.checked)}
             />
-            Text me reminders about my calls (message &amp; data rates may apply; reply STOP anytime)
+            Text me reminders about my calls and urgent messages from my show's managers
+            (message &amp; data rates may apply; reply STOP anytime)
           </label>
-          <label className="row">
-            <input
-              type="checkbox"
-              checked={status.smsCastTexts}
-              onChange={(e) => toggleCastTexts(e.target.checked)}
-            />
-            Also text me messages my show's managers send to the whole cast (no more than 3 a day,
-            never 9pm–7am; message &amp; data rates may apply; reply STOP anytime)
-          </label>
-          <p className="hint" style={{ margin: 0 }}>
-            Without this, those messages reach you inside Glow Tape and by email instead.
-          </p>
           <button className="link" onClick={() => setEditing(true)}>
             Change number
           </button>
@@ -165,7 +143,8 @@ export default function PhoneSettings(_props: { user: UserRecord }) {
             <p className="hint" style={{ fontSize: '0.85rem' }}>
               By tapping <em>Text me a code</em> you agree to receive a one-time verification
               code and, once you confirm, recurring rehearsal-reminder texts from Glow Tape
-              (up to 2 per rehearsal day; frequency varies with your schedule). Consent is not
+              (up to 2 per rehearsal day; frequency varies with your schedule) and occasional
+              urgent messages from your show's managers (no more than 3 a day). Consent is not
               a condition of any purchase. Message &amp; data rates may apply. Reply STOP to
               cancel, HELP for help. See our <a href="/privacy.html">privacy policy</a> and{' '}
               <a href="/terms.html">terms</a>.

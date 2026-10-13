@@ -346,7 +346,7 @@ function CastTextSection() {
       <h2>Text the cast</h2>
       <p className="hint">
         For things people need to see right away (a room change, a cancellation). Everyone who
-        said yes to cast texts gets a text. Everyone else gets it as a private Glow Tape message
+        said yes to text reminders gets a text. Everyone else gets it as a private Glow Tape message
         and an email. Up to 3 a day, never 9pm–7am.
       </p>
       <form onSubmit={send} className="stack">
