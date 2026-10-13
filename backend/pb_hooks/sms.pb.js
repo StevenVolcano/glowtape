@@ -261,6 +261,7 @@ routerAdd(
       phone: user.get("phone") || "",
       phoneVerified: !!user.get("phoneVerified"),
       smsOptIn: !!user.get("smsOptIn"),
+      smsCastTexts: !!user.get("smsCastTexts"),
     });
   },
   $apis.requireAuth(),
@@ -281,6 +282,26 @@ routerAdd(
     user.set("smsOptIn", !!data.on);
     e.app.save(user);
     return e.json(200, { ok: true, smsOptIn: !!data.on });
+  },
+  $apis.requireAuth(),
+);
+
+// Opt in or out of texts the show's managers send to the whole cast
+// (cast_text.pb.js). Its own yes, separate from reminders — see migration
+// 1758500000.
+routerAdd(
+  "POST",
+  "/api/glowtape/phone/cast-texts",
+  (e) => {
+    const data = new DynamicModel({ on: false });
+    e.bindBody(data);
+    const user = e.app.findRecordById("users", e.auth.id);
+    if (!user.get("phoneVerified")) {
+      throw new BadRequestError("Verify a phone number first.");
+    }
+    user.set("smsCastTexts", !!data.on);
+    e.app.save(user);
+    return e.json(200, { ok: true, smsCastTexts: !!data.on });
   },
   $apis.requireAuth(),
 );
