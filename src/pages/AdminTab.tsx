@@ -10,7 +10,7 @@ import QrCode from '../components/QrCode.tsx'
 import { MANAGER_ROLES, ROLE_LABELS } from '../lib/types.ts'
 import { conflictAppliesTo, conflictHitsEvent, isWeekly, weeklyLabel } from '../lib/conflicts.ts'
 import type { AttendanceRecord, AuditionRecord, ChannelRecord, ConflictRecord, EventRecord, GroupRecord, MemberRecord, MemberRole, ProfileRecord, ResourceRecord } from '../lib/types.ts'
-import { DEFAULT_EVENT_KINDS, memberName, normalizePlaces, pbDate, productionPlaces, shareInvite } from '../lib/types.ts'
+import { DEFAULT_EVENT_KINDS, formatStamp, memberName, normalizePlaces, pbDate, productionPlaces, shareInvite } from '../lib/types.ts'
 import type { Place } from '../lib/types.ts'
 
 export default function AdminTab() {
@@ -39,6 +39,7 @@ export default function AdminTab() {
       <PresetsSection />
       <TonightQuotesSection />
       <NewAnnouncementSection />
+      <CastTextSection />
       <ResourcesSection />
       <ChannelsSection />
       <GroupsSection />
@@ -264,6 +265,160 @@ function NewAnnouncementSection() {
         {done && <p className="acked" role="status">{done}</p>}
         {err && <p className="error" role="alert">{err}</p>}
       </form>
+    </section>
+  )
+}
+
+interface TextBlastRecord {
+  id: string
+  text: string
+  audience: 'cast' | 'everyone'
+  texted: number
+  inApp: number
+  created: string
+}
+
+interface CastTextResult {
+  smsOn: boolean
+  texted: string[]
+  inApp: string[]
+  unreachable: string[]
+}
+
+const CAST_TEXT_MAX = 300
+
+// One message to the whole cast: a text for everyone who said yes to cast
+// texts, a private Glow Tape message (+ email) for everyone else. The route
+// (cast_text.pb.js) decides who gets what and enforces quiet hours + the
+// 3-a-day cap.
+function CastTextSection() {
+  const { production } = useProduction()
+  const [text, setText] = useState('')
+  const [audience, setAudience] = useState<'cast' | 'everyone'>('cast')
+  const [busy, setBusy] = useState(false)
+  const [result, setResult] = useState<CastTextResult | null>(null)
+  const [err, setErr] = useState('')
+  const [history, setHistory] = useState<TextBlastRecord[]>([])
+
+  async function loadHistory() {
+    try {
+      const page = await pb.collection('text_blasts').getList<TextBlastRecord>(1, 5, {
+        filter: pb.filter('production = {:p}', { p: production.id }),
+        sort: '-created',
+      })
+      setHistory(page.items)
+    } catch {
+      /* history is a nicety */
+    }
+  }
+
+  useEffect(() => {
+    loadHistory()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [production.id])
+
+  async function send(e: FormEvent) {
+    e.preventDefault()
+    const who = audience === 'everyone' ? 'everyone in the show' : 'the whole cast'
+    if (!window.confirm(`Send this to ${who} now? Texts can't be taken back.`)) return
+    setBusy(true)
+    setErr('')
+    setResult(null)
+    try {
+      const res = await pb.send<CastTextResult>('/api/glowtape/cast-text', {
+        method: 'POST',
+        body: { production: production.id, text: text.trim(), audience },
+      })
+      setResult(res)
+      setText('')
+      loadHistory()
+    } catch (err) {
+      setErr(pbErrorMessage(err, "Couldn't send it — try again."))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const left = CAST_TEXT_MAX - text.trim().length
+
+  return (
+    <section id="cast-text">
+      <h2>Text the cast</h2>
+      <p className="hint">
+        For things people need to see right away (a room change, a cancellation). Everyone who
+        said yes to text reminders gets a text. Everyone else gets it as a private Glow Tape message
+        and an email. Up to 3 a day, never 9pm–7am.
+      </p>
+      <form onSubmit={send} className="stack">
+        <fieldset className="chips" style={{ border: 0, padding: 0, margin: 0 }}>
+          <legend className="sr-only">Who gets it</legend>
+          <button
+            type="button"
+            className={`chip ${audience === 'cast' ? 'chip-active' : ''}`}
+            aria-pressed={audience === 'cast'}
+            onClick={() => setAudience('cast')}
+          >
+            🎭 The cast
+          </button>
+          <button
+            type="button"
+            className={`chip ${audience === 'everyone' ? 'chip-active' : ''}`}
+            aria-pressed={audience === 'everyone'}
+            onClick={() => setAudience('everyone')}
+          >
+            Everyone in the show
+          </button>
+        </fieldset>
+        <textarea
+          aria-label="Message to text"
+          aria-describedby="cast-text-left"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Example: Tonight's rehearsal moves to the Bishop Center lobby, same time."
+          rows={3}
+          maxLength={CAST_TEXT_MAX + 50}
+        />
+        <p id="cast-text-left" className={left < 0 ? 'error' : 'hint'} style={{ margin: 0 }}>
+          {left >= 0 ? `${left} characters left` : `${-left} characters too long for a text`}
+        </p>
+        <button type="submit" disabled={busy || !text.trim() || left < 0}>
+          {busy ? 'Sending…' : '📱 Send it'}
+        </button>
+        {err && <p className="error" role="alert">{err}</p>}
+        {result && (
+          <div className="acked" role="status">
+            {!result.smsOn && <p>Texting isn't switched on for Glow Tape right now, so everyone got it inside the app.</p>}
+            {result.texted.length > 0 && (
+              <p>📱 Texted {result.texted.length}: {result.texted.join(', ')}</p>
+            )}
+            {result.inApp.length > 0 && (
+              <p>💬 In Glow Tape + email for {result.inApp.length}: {result.inApp.join(', ')}</p>
+            )}
+            {result.texted.length === 0 && result.inApp.length === 0 && <p>Nobody to send it to yet.</p>}
+          </div>
+        )}
+        {result && result.unreachable.length > 0 && (
+          <p className="hint">
+            Not on Glow Tape yet, so they didn't get it: {result.unreachable.join(', ')}
+          </p>
+        )}
+      </form>
+      {history.length > 0 && (
+        <>
+          <h3>Recently sent</h3>
+          <ul className="stack" style={{ listStyle: 'none', padding: 0 }}>
+            {history.map((h) => (
+              <li key={h.id} className="card">
+                <div>{h.text}</div>
+                <div className="hint">
+                  {formatStamp(h.created)} · {h.audience === 'everyone' ? 'everyone' : 'cast'} ·{' '}
+                  {h.texted} texted, {h.inApp} in the app
+                </div>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
     </section>
   )
 }
