@@ -5,6 +5,7 @@ import { useAuth } from '../lib/auth.tsx'
 import { useTitle } from '../lib/useTitle.ts'
 import PhoneSettings from '../components/PhoneSettings.tsx'
 import EmailSettings from '../components/EmailSettings.tsx'
+import PasskeySettings from '../components/PasskeySettings.tsx'
 import FeedbackSection from '../components/FeedbackSection.tsx'
 import PushSettings from '../components/PushSettings.tsx'
 import ReminderSettings from '../components/ReminderSettings.tsx'
@@ -238,6 +239,7 @@ export default function Home() {
       {user && <ReminderSettings user={user} />}
 
       {user && <EmailSettings user={user} />}
+      {user && <PasskeySettings />}
       {user && <PhoneSettings user={user} />}
 
       <p className="hint legal-links">

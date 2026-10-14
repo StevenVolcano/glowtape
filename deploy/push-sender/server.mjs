@@ -1,7 +1,8 @@
 // Glow Tape push sender: a localhost-only HTTP shim around the web-push
 // library. PocketBase hooks POST batches here; this signs the VAPID JWT and
 // encrypts payloads (ES256 + aes128gcm — not possible inside PocketBase's
-// JSVM). Never exposed beyond 127.0.0.1.
+// JSVM). Also verifies passkey signatures for fingerprint sign-in
+// (webauthn.mjs). Never exposed beyond 127.0.0.1.
 //
 // Env (shared /etc/glowtape/env):
 //   GLOWTAPE_VAPID_PUBLIC / GLOWTAPE_VAPID_PRIVATE  — see DEPLOY.md to generate
@@ -9,6 +10,7 @@
 
 import http from 'node:http'
 import webpush from 'web-push'
+import { checkAssertion, checkRegistration } from './webauthn.mjs'
 
 const PUB = process.env.GLOWTAPE_VAPID_PUBLIC || ''
 const PRIV = process.env.GLOWTAPE_VAPID_PRIVATE || ''
@@ -21,7 +23,32 @@ if (configured) {
   console.warn('glowtape-push: VAPID keys not set — replying 503 until they are (see DEPLOY.md)')
 }
 
+// Passkey checks (fingerprint sign-in) — independent of the VAPID keys.
+const WEBAUTHN = { '/webauthn/register': checkRegistration, '/webauthn/assert': checkAssertion }
+
+function handleWebauthn(req, res, check) {
+  let body = ''
+  req.on('data', (chunk) => {
+    body += chunk
+    if (body.length > 100_000) req.destroy()
+  })
+  req.on('end', () => {
+    let result
+    try {
+      result = check(JSON.parse(body))
+    } catch (err) {
+      result = { ok: false, reason: err.message }
+    }
+    res.writeHead(200, { 'content-type': 'application/json' })
+    res.end(JSON.stringify(result))
+  })
+}
+
 const server = http.createServer((req, res) => {
+  if (req.method === 'POST' && WEBAUTHN[req.url]) {
+    handleWebauthn(req, res, WEBAUTHN[req.url])
+    return
+  }
   if (req.method !== 'POST' || req.url !== '/send') {
     res.writeHead(404)
     res.end()
