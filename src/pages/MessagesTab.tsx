@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { pb } from '../lib/pb.ts'
 import { useAuth } from '../lib/auth.tsx'
 import ChannelView from '../components/ChannelView.tsx'
@@ -16,6 +17,9 @@ export default function MessagesTab() {
   const [channels, setChannels] = useState<ChannelRecord[]>([])
   const [prefs, setPrefs] = useState<ChannelPrefRecord[]>([])
   const [active, setActive] = useState<string | null>(null)
+  // ?channel=<id> (from a private-message notification) opens that channel.
+  const [params] = useSearchParams()
+  const wanted = params.get('channel')
 
   useEffect(() => {
     pb.collection('channels')
@@ -27,7 +31,8 @@ export default function MessagesTab() {
         // The server enforces who sees what (team = managers, 🔒 = group
         // members + guardians + managers) — whatever comes back is visible.
         setChannels(list)
-        setActive((prev) => prev ?? list[0]?.id ?? null)
+        const pick = wanted && list.some((c) => c.id === wanted) ? wanted : null
+        setActive((prev) => pick ?? prev ?? list[0]?.id ?? null)
       })
       .catch(() => {})
 
@@ -35,7 +40,7 @@ export default function MessagesTab() {
       .getFullList<ChannelPrefRecord>({ filter: pb.filter('user = {:u}', { u: user!.id }) })
       .then(setPrefs)
       .catch(() => {})
-  }, [production.id, user])
+  }, [production.id, user, wanted])
 
   const prefFor = (channelId: string) => prefs.find((p) => p.channel === channelId)
   const isMuted = (c: ChannelRecord) => {

@@ -54,9 +54,14 @@ onRecordAfterCreateSuccess((e) => {
       } else if (memberId) {
         // Semi-private team channel: the member + guardians + managers.
         const member = e.app.findRecordById("members", memberId);
-        targets = [String(member.get("user") || "")]
-          .concat(lib.toIdArray(member.get("guardians")))
-          .concat(lib.toIdArray(production.get("managers")));
+        targets = [String(member.get("user") || "")].concat(lib.toIdArray(member.get("guardians")));
+        // A cast text's in-app copy lands in every fallback member's channel
+        // at once; the other managers don't need a ping for each one
+        // (cast_text.pb.js flags the channel in the app store for the save).
+        if (!e.app.store().has("castText:" + channel.id)) {
+          targets = targets.concat(lib.toIdArray(production.get("managers")));
+        }
+        url = `/production/${productionId}/messages?channel=${channel.id}`;
       } else if (groupId) {
         // Group channel: the group's members (+ their guardians) + managers.
         targets = lib.toIdArray(production.get("managers"));

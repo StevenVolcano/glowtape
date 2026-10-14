@@ -279,6 +279,7 @@ routerAdd(
       channel = new Record(col);
       channel.set("production", data.production);
       channel.set("member", member.id);
+      channel.set("audience", "all"); // required since 1757500000; the member gate does the hiding
       channel.set("name", `🔒 ${e.auth.get("name")} & managers`);
       e.app.save(channel);
     }

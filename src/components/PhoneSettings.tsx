@@ -104,7 +104,8 @@ export default function PhoneSettings(_props: { user: UserRecord }) {
               checked={status.smsOptIn}
               onChange={(e) => toggleOptIn(e.target.checked)}
             />
-            Text me reminders about my calls (message &amp; data rates may apply; reply STOP anytime)
+            Text me reminders about my calls and urgent messages from my show's managers
+            (message &amp; data rates may apply; reply STOP anytime)
           </label>
           <button className="link" onClick={() => setEditing(true)}>
             Change number
@@ -142,7 +143,8 @@ export default function PhoneSettings(_props: { user: UserRecord }) {
             <p className="hint" style={{ fontSize: '0.85rem' }}>
               By tapping <em>Text me a code</em> you agree to receive a one-time verification
               code and, once you confirm, recurring rehearsal-reminder texts from Glow Tape
-              (up to 2 per rehearsal day; frequency varies with your schedule). Consent is not
+              (up to 2 per rehearsal day; frequency varies with your schedule) and occasional
+              urgent messages from your show's managers (no more than 3 a day). Consent is not
               a condition of any purchase. Message &amp; data rates may apply. Reply STOP to
               cancel, HELP for help. See our <a href="/privacy.html">privacy policy</a> and{' '}
               <a href="/terms.html">terms</a>.
