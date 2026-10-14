@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { pb } from '../lib/pb.ts'
 import { SMS_READY, copyrightLine } from '../lib/types.ts'
 import { useTitle } from '../lib/useTitle.ts'
+import { isCancel, passkeysSupported, signInWithPasskey } from '../lib/passkeys.ts'
 
 type Method = 'email' | 'phone'
 type Step = 'enter' | 'code'
@@ -59,6 +60,24 @@ export default function SignIn() {
     }
   }
 
+  async function fingerprint() {
+    setBusy(true)
+    setError('')
+    try {
+      await signInWithPasskey()
+    } catch (err) {
+      if (!isCancel(err)) {
+        setError(
+          err instanceof Error && err.message.length < 160
+            ? err.message
+            : "That didn't work. Use the email code instead.",
+        )
+      }
+    } finally {
+      setBusy(false)
+    }
+  }
+
   async function confirmCode(e: FormEvent) {
     e.preventDefault()
     setBusy(true)
@@ -88,6 +107,18 @@ export default function SignIn() {
           <h1>Glow Tape</h1>
         </div>
         <p className="tagline">Grays Harbor's theater community</p>
+
+        {step === 'enter' && passkeysSupported() && (
+          <div className="stack">
+            <button type="button" onClick={fingerprint} disabled={busy}>
+              👆 Sign in with fingerprint or face
+            </button>
+            <p className="hint" style={{ margin: 0 }}>
+              Works once you've set it up on this device (from your Home page). Otherwise use a
+              code below.
+            </p>
+          </div>
+        )}
 
         {SMS_READY && (
           <div className="chips">
