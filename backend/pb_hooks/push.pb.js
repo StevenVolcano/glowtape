@@ -119,7 +119,7 @@ onRecordAfterCreateSuccess((e) => {
     const text = String(e.record.get("text") || "");
     lib.sendPush(e.app, finalTargets, {
       title: `#${channel.get("name")} — ${where}`,
-      body: `${authorName}: ${text ? text.slice(0, 120) : "📷 photo"}`,
+      body: `${authorName}: ${text ? text.slice(0, 120) : e.record.get("gif") ? "GIF" : "📷 photo"}`,
       url,
       tag: `channel-${channel.id}`,
     });

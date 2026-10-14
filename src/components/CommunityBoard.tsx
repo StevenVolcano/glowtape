@@ -92,7 +92,7 @@ export default function CommunityBoard() {
                 : '🔔 Notifications on — tap to mute this channel'}
             </button>
           )}
-          {active && <ChannelView channelId={active} />}
+          {active && <ChannelView channelId={active} canModerate={!!user?.operator} />}
         </>
       )}
     </section>

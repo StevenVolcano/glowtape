@@ -562,8 +562,12 @@ export interface MessageRecord {
   author: string
   text: string
   image: string
+  gif: string // GIPHY id; shown from GIPHY's media server
+  gifTitle: string
+  replyTo: string
+  edited: boolean
   created: string
-  expand?: { author?: UserRecord }
+  expand?: { author?: UserRecord; replyTo?: MessageRecord & { expand?: { author?: UserRecord } } }
 }
 
 export interface ReactionRecord {

@@ -52,9 +52,9 @@ routerAdd(
         `<h2>A message was reported</h2>`,
         `<p><strong>Where:</strong> ${where} — #${channel.get("name")}</p>`,
         `<p><strong>Written by:</strong> ${authorLine}</p>`,
-        `<p><strong>Message:</strong> ${message.get("text") || "(photo only)"}${
+        `<p><strong>Message:</strong> ${message.get("text") || "(no text)"}${
           message.get("image") ? " [has photo]" : ""
-        }</p>`,
+        }${message.get("gif") ? ` [GIF: ${message.get("gifTitle") || message.get("gif")}]` : ""}</p>`,
         reason ? `<p><strong>Reporter says:</strong> ${reason}</p>` : "",
         `<p><strong>Reported by:</strong> ${e.auth.get("name")} &lt;${e.auth.email()}&gt;</p>`,
         `<p>Message id: ${message.id} (find it in the PocketBase dashboard to remove it).</p>`,

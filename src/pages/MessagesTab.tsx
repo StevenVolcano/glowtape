@@ -109,7 +109,7 @@ export default function MessagesTab() {
               : '🔔 Notifications on — tap to mute this channel'}
           </button>
         )}
-        {active && <ChannelView channelId={active} members={members} />}
+        {active && <ChannelView channelId={active} members={members} canModerate={isManager} />}
       </section>
     </div>
   )
