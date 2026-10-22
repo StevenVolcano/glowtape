@@ -17,7 +17,7 @@ export default function MessagesTab() {
   const [channels, setChannels] = useState<ChannelRecord[]>([])
   const [prefs, setPrefs] = useState<ChannelPrefRecord[]>([])
   const [active, setActive] = useState<string | null>(null)
-  // ?channel=<id> (from a private-message notification) opens that channel.
+  // ?channel=<id> (from a message notification) opens that channel.
   const [params] = useSearchParams()
   const wanted = params.get('channel')
 

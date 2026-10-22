@@ -9,8 +9,26 @@ import PasskeySettings from '../components/PasskeySettings.tsx'
 import FeedbackSection from '../components/FeedbackSection.tsx'
 import PushSettings from '../components/PushSettings.tsx'
 import ReminderSettings from '../components/ReminderSettings.tsx'
-import { TAGLINE, copyrightLine } from '../lib/types.ts'
+import { TAGLINE, copyrightLine, pbDate } from '../lib/types.ts'
 import type { ProductionRecord } from '../lib/types.ts'
+
+type PhaseEvent = { production: string; kind: string; start: string; end: string }
+
+// Where a show is, read off its schedule so nobody has to keep a status up to
+// date: before the first rehearsal → planning, before opening → rehearsals,
+// through the last performance → performances, after it → closed.
+function showPhase(events: PhaseEvent[], now = new Date()): string {
+  const rehearsals = events.filter((e) => !/performance|audition|strike|party/i.test(e.kind))
+  const performances = events.filter((e) => /performance/i.test(e.kind))
+  const firstRehearsal = rehearsals.length ? pbDate(rehearsals[0].start) : null
+  const opening = performances.length ? pbDate(performances[0].start) : null
+  const last = performances[performances.length - 1]
+  const closing = last ? pbDate(last.end || last.start) : null
+  if (closing && now > closing) return 'closed'
+  if (opening && now >= opening) return 'performances'
+  if (firstRehearsal && now >= firstRehearsal) return 'rehearsals'
+  return 'planning'
+}
 
 export default function Home() {
   useTitle('Home')
@@ -21,6 +39,7 @@ export default function Home() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [loaded, setLoaded] = useState(false)
+  const [phaseEvents, setPhaseEvents] = useState<PhaseEvent[]>([])
 
   async function load() {
     // Audition-open shows are visible to everyone signed in, so membership
@@ -35,7 +54,17 @@ export default function Home() {
     setProductions(list)
     setMemberProdIds(new Set(mems.map((m) => m.production)))
     setLoaded(true)
+    pb.collection('events')
+      .getFullList<PhaseEvent>({
+        filter: "status != 'cancelled'",
+        sort: 'start',
+        fields: 'production,kind,start,end',
+      })
+      .then(setPhaseEvents)
+      .catch(() => {})
   }
+  const phaseOf = (productionId: string) =>
+    showPhase(phaseEvents.filter((e) => e.production === productionId))
 
   useEffect(() => {
     async function boot() {
@@ -105,7 +134,7 @@ export default function Home() {
               <li key={p.id}>
                 <Link className="card card-link" to={`/production/${p.id}/schedule`}>
                   <strong>{p.title}</strong>
-                  <span className="pill">{p.status}</span>
+                  <span className="pill">{phaseOf(p.id)}</span>
                 </Link>
               </li>
             ))}
@@ -221,7 +250,7 @@ export default function Home() {
                   <li key={p.id}>
                     <Link className="card card-link" to={`/production/${p.id}/dashboard`}>
                       <strong>{p.title}</strong>
-                      <span className="pill">{p.status}</span>
+                      <span className="pill">{phaseOf(p.id)}</span>
                     </Link>
                   </li>
                 ))}

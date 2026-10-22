@@ -39,12 +39,15 @@ onRecordAfterCreateSuccess((e) => {
     // Who could see it?
     let targets = null; // null = every subscribed user (community channels)
     let where = "Community";
-    let url = "/";
+    // Every message push opens its own channel; without ?channel= the tap
+    // lands on the first channel (or Home, for the community board) and the
+    // message looks missing.
+    let url = `/community?channel=${channel.id}`;
     const productionId = String(channel.get("production") || "");
     if (productionId) {
       const production = e.app.findRecordById("productions", productionId);
       where = production.get("title");
-      url = `/production/${productionId}/messages`;
+      url = `/production/${productionId}/messages?channel=${channel.id}`;
       const memberId = String(channel.get("member") || "");
       const groupId = String(channel.get("group") || "");
       if (String(channel.get("audience")) === "team") {
@@ -61,7 +64,6 @@ onRecordAfterCreateSuccess((e) => {
         if (!e.app.store().has("castText:" + channel.id)) {
           targets = targets.concat(lib.toIdArray(production.get("managers")));
         }
-        url = `/production/${productionId}/messages?channel=${channel.id}`;
       } else if (groupId) {
         // Group channel: the group's members (+ their guardians) + managers.
         targets = lib.toIdArray(production.get("managers"));

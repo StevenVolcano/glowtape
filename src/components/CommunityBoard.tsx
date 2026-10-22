@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { pb } from '../lib/pb.ts'
 import { useAuth } from '../lib/auth.tsx'
 import ChannelView from './ChannelView.tsx'
@@ -12,6 +13,9 @@ export default function CommunityBoard() {
   const [prefs, setPrefs] = useState<ChannelPrefRecord[]>([])
   const [active, setActive] = useState<string | null>(null)
   const [open, setOpen] = useState(true)
+  // ?channel=<id> (from a message notification) opens that channel.
+  const [params] = useSearchParams()
+  const wanted = params.get('channel')
 
   useEffect(() => {
     pb.collection('channels')
@@ -21,14 +25,16 @@ export default function CommunityBoard() {
       })
       .then((list) => {
         setChannels(list)
-        setActive((prev) => prev ?? list[0]?.id ?? null)
+        const pick = wanted && list.some((c) => c.id === wanted) ? wanted : null
+        setActive((prev) => pick ?? prev ?? list[0]?.id ?? null)
+        if (pick) setOpen(true)
       })
       .catch(() => {})
     pb.collection('channel_prefs')
       .getFullList<ChannelPrefRecord>({ filter: pb.filter('user = {:u}', { u: user!.id }) })
       .then(setPrefs)
       .catch(() => {})
-  }, [user])
+  }, [user, wanted])
 
   const prefFor = (channelId: string) => prefs.find((p) => p.channel === channelId)
   const isMuted = (c: ChannelRecord) => {
@@ -72,6 +78,10 @@ export default function CommunityBoard() {
       )}
       {open && (
         <>
+          <p className="hint">
+            Everyone in Grays Harbor theater can read this board. For messages just for your
+            show, use its Messages tab.
+          </p>
           <div className="chips">
             {channels.map((c) => (
               <button
