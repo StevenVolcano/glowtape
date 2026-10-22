@@ -196,9 +196,11 @@ export default function Community() {
                       </a>
                     )}
                     {isMine(first.production) && (
-                      <Link className="link" to={`/production/${first.production}`}>
-                        🎭 You're in this show — open it for rehearsals &amp; messages
-                      </Link>
+                      <div>
+                        <Link className="link" to={`/production/${first.production}`}>
+                          🎭 You're in this show — open it for rehearsals &amp; messages
+                        </Link>
+                      </div>
                     )}
                   </li>
                 )
