@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { pb } from '../lib/pb.ts'
+import { useAuth } from '../lib/auth.tsx'
 import { useTitle } from '../lib/useTitle.ts'
 import CommunityBoard from '../components/CommunityBoard.tsx'
 import { TAGLINE } from '../lib/types.ts'
@@ -24,6 +25,11 @@ export default function Community() {
     () => (localStorage.getItem('gt-community-view') as CalendarView) || 'default',
   )
   const [loaded, setLoaded] = useState(false)
+  const { user } = useAuth()
+  // The user's own shows: cast members land here from a community-board
+  // notification and go looking for their rehearsal info, which lives inside
+  // the show, not on this page.
+  const [myShows, setMyShows] = useState<{ id: string; title: string }[]>([])
 
   function pickView(v: CalendarView) {
     setView(v)
@@ -35,7 +41,23 @@ export default function Community() {
       .then((res) => setEvents(res.events ?? []))
       .catch(() => {})
       .finally(() => setLoaded(true))
-  }, [])
+    pb.collection('members')
+      .getFullList<{ production: string; expand?: { production?: { title: string; archived: boolean } } }>({
+        filter: pb.filter('user = {:u} || guardians ?= {:u}', { u: user?.id }),
+        expand: 'production',
+        fields: 'production,expand.production.title,expand.production.archived',
+      })
+      .then((rows) => {
+        const seen = new Map<string, string>()
+        for (const r of rows) {
+          const p = r.expand?.production
+          if (p && !p.archived) seen.set(r.production, p.title)
+        }
+        setMyShows([...seen].map(([id, title]) => ({ id, title })))
+      })
+      .catch(() => {})
+  }, [user?.id])
+  const isMine = (productionId: string) => myShows.some((s) => s.id === productionId)
 
   const isAudition = (k: string) => k.toLowerCase().includes('audition')
 
@@ -77,6 +99,26 @@ export default function Community() {
         All of Grays Harbor theater in one place — what's on, who's holding auditions, and the
         community board.
       </p>
+
+      {myShows.length > 0 && (
+        <section className="card">
+          <h2>Looking for your show?</h2>
+          <p className="hint">
+            This page is shared by every theater in town. Your rehearsal schedule, calls and cast
+            messages are inside your show:
+          </p>
+          <ul className="plain-list">
+            {myShows.map((s) => (
+              <li key={s.id}>
+                🎭{' '}
+                <Link className="link" to={`/production/${s.id}`}>
+                  {s.title} — schedule &amp; messages
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section>
         <h2>Community calendar</h2>
@@ -152,6 +194,11 @@ export default function Community() {
                       >
                         🎟 Buy tickets
                       </a>
+                    )}
+                    {isMine(first.production) && (
+                      <Link className="link" to={`/production/${first.production}`}>
+                        🎭 You're in this show — open it for rehearsals &amp; messages
+                      </Link>
                     )}
                   </li>
                 )

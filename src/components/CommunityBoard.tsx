@@ -78,6 +78,10 @@ export default function CommunityBoard() {
       )}
       {open && (
         <>
+          <p className="hint">
+            Everyone in Grays Harbor theater can read this board. For messages just for your
+            show, use its Messages tab.
+          </p>
           <div className="chips">
             {channels.map((c) => (
               <button
