@@ -470,8 +470,13 @@ export default function ScheduleTab() {
                 return (
                   <>
                     {calledIn.length > 0 && (
-                      <>
-                        <h4 className="roll-heading">📞 Called in ({calledIn.length})</h4>
+                      // Folds like the rest of the app, but the names ride in
+                      // the summary so the SM sees who gave notice unopened.
+                      <FoldGroup
+                        as="h4"
+                        title={<span className="roll-heading">📞 Called in ({calledIn.length})</span>}
+                        summary={calledIn.map((m) => memberName(m)).join(', ')}
+                      >
                         <ul className="plain-list">
                           {calledIn.map((m) => {
                             const row = rowFor(m)!
@@ -490,7 +495,7 @@ export default function ScheduleTab() {
                             )
                           })}
                         </ul>
-                      </>
+                      </FoldGroup>
                     )}
                     <ul className="plain-list">
                       {rest.map((m) => {

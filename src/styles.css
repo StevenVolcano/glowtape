@@ -673,8 +673,6 @@ button.menu-link {
 /* Roll call: "told us ahead" vs "no word" must never look alike — color,
    icon, label and border style all differ (the last survives forced colors). */
 .roll-heading {
-  margin: 0.25rem 0 0;
-  font-size: 1rem;
   color: var(--accent);
 }
 
