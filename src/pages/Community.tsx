@@ -88,16 +88,22 @@ export default function Community() {
   return (
     <main className="page">
       <header className="topbar">
-        <Link to="/" className="link">
-          ← Home
-        </Link>
+        {myShows.length === 1 ? (
+          <Link to={`/production/${myShows[0].id}/dashboard`} className="link">
+            ← Back to {myShows[0].title}
+          </Link>
+        ) : (
+          <Link to="/" className="link">
+            ← Home
+          </Link>
+        )}
         <span className="brand-small">Glow Tape</span>
       </header>
 
       <h1>Theater Community</h1>
       <p className="hint">
-        All of Grays Harbor theater in one place — what's on, who's holding auditions, and the
-        community board.
+        Every theater in Grays Harbor shares this page — what's on, who's holding auditions, and
+        a town-wide message board. It's not your show's cast chat.
       </p>
 
       {myShows.length > 0 && (
@@ -111,7 +117,7 @@ export default function Community() {
             {myShows.map((s) => (
               <li key={s.id}>
                 🎭{' '}
-                <Link className="link" to={`/production/${s.id}`}>
+                <Link className="link" to={`/production/${s.id}/dashboard`}>
                   {s.title} — schedule &amp; messages
                 </Link>
               </li>

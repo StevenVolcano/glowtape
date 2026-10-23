@@ -227,7 +227,7 @@ export default function TonightTab() {
 
   // --- Get settled (new members) ---
   const settled: { key: string; label: string; done: boolean; to: string }[] = [
-    { key: 'push', label: '🔔 Turn on notifications', done: pushOn === true, to: '/' },
+    { key: 'push', label: '🔔 Turn on notifications', done: pushOn === true, to: '/settings' },
     { key: 'conf', label: '🚫 Enter your conflicts — dates and work hours', done: conflicts.length > 0, to: `${base}/schedule#conflicts` },
     { key: 'ack', label: '📅 Look over the schedule and tap "Got it"', done: acks.length > 0, to: `${base}/schedule` },
     ...(production.noBios

@@ -4,6 +4,7 @@ import SignIn from './pages/SignIn.tsx'
 import Home from './pages/Home.tsx'
 import Production from './pages/Production.tsx'
 import Profile from './pages/Profile.tsx'
+import Settings from './pages/Settings.tsx'
 import AuditionForm from './pages/AuditionForm.tsx'
 import AuditionPrint from './pages/AuditionPrint.tsx'
 import Operator from './pages/Operator.tsx'
@@ -23,6 +24,7 @@ export default function App() {
       <Route path="/" element={<Home />} />
       <Route path="/production/:id/*" element={<Production />} />
       <Route path="/profile" element={<Profile />} />
+      <Route path="/settings" element={<Settings />} />
       <Route path="/audition/:id" element={<AuditionForm />} />
       <Route path="/audition/:id/print" element={<AuditionPrint />} />
       <Route path="/operator" element={<Operator />} />

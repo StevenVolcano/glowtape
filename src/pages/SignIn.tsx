@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { pb } from '../lib/pb.ts'
 import { SMS_READY, copyrightLine } from '../lib/types.ts'
 import { useTitle } from '../lib/useTitle.ts'
-import { isCancel, passkeysSupported, signInWithPasskey } from '../lib/passkeys.ts'
+import { deviceHasPasskey, isCancel, passkeysSupported, signInWithPasskey } from '../lib/passkeys.ts'
 
 type Method = 'email' | 'phone'
 type Step = 'enter' | 'code'
@@ -24,6 +24,10 @@ export default function SignIn() {
   const [otpId, setOtpId] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  // Fingerprint leads only on a device that has used it before; everyone else
+  // (most of all first-timers) starts with the email code.
+  const canPasskey = passkeysSupported()
+  const passkeyFirst = canPasskey && deviceHasPasskey()
 
   function switchMethod(m: Method) {
     setMethod(m)
@@ -108,14 +112,13 @@ export default function SignIn() {
         </div>
         <p className="tagline">Grays Harbor's theater community</p>
 
-        {step === 'enter' && passkeysSupported() && (
+        {step === 'enter' && passkeyFirst && (
           <div className="stack">
             <button type="button" onClick={fingerprint} disabled={busy}>
               👆 Sign in with fingerprint or face
             </button>
             <p className="hint" style={{ margin: 0 }}>
-              Works once you've set it up on this device (from your Home page). Otherwise use a
-              code below.
+              Or get a code instead, below.
             </p>
           </div>
         )}
@@ -266,6 +269,14 @@ export default function SignIn() {
             </button>
             {method === 'email' && (
               <p className="hint">No password to remember. We email you a 6-digit code instead.</p>
+            )}
+            {canPasskey && !passkeyFirst && (
+              <p className="hint">
+                Set up fingerprint sign-in before?{' '}
+                <button type="button" className="link" onClick={fingerprint} disabled={busy}>
+                  👆 Use fingerprint or face
+                </button>
+              </p>
             )}
           </form>
         ) : (

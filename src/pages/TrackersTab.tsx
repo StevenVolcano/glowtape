@@ -13,6 +13,7 @@ import {
 } from '../lib/trackers.ts'
 import type { TrackerItemRecord } from '../lib/types.ts'
 import BreakdownView from '../components/BreakdownView.tsx'
+import ColumnResizer, { useColumnWidths } from '../components/ColumnResizer.tsx'
 
 // The multi-tab Google Sheet, replaced: props, costumes, set, and cue
 // paperwork live here. Managers edit right in the table; everyone else reads.
@@ -25,6 +26,8 @@ export default function TrackersTab() {
   const [items, setItems] = useState<TrackerItemRecord[]>([])
   const [status, setStatus] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
+  const tableRef = useRef<HTMLTableElement>(null)
+  const colWidths = useColumnWidths(`gt-colwidths-${production.id}-${tracker}`)
 
   async function load(t: TrackerKey = tracker) {
     const list = await pb.collection('tracker_items').getFullList<TrackerItemRecord>({
@@ -42,6 +45,12 @@ export default function TrackersTab() {
 
   const cols = visibleCols(tracker)
   const labels = TRACKERS[tracker].cols
+  // Once any column has been sized, every column gets a fixed width so the
+  // table stops auto-fitting; the ✕ column keeps a fixed slot.
+  const ACTIONS_W = 56
+  const sizedWidth = colWidths.sized
+    ? cols.reduce((sum, c) => sum + (colWidths.widths[c] ?? 120), 0) + (isManager ? ACTIONS_W : 0)
+    : undefined
 
   async function saveCell(item: TrackerItemRecord, col: TrackerCol, value: string) {
     if (value === (item[col] ?? '')) return
@@ -155,12 +164,32 @@ export default function TrackersTab() {
 
         {items.length > 0 && (
           <div className="edit-table">
-            <table>
+            <table
+              ref={tableRef}
+              className={colWidths.sized ? 'cols-sized' : undefined}
+              style={sizedWidth ? { width: sizedWidth } : undefined}
+            >
+              {colWidths.sized && (
+                <colgroup>
+                  {cols.map((c) => (
+                    <col key={c} style={{ width: colWidths.widths[c] ?? 120 }} />
+                  ))}
+                  {isManager && <col style={{ width: ACTIONS_W }} />}
+                </colgroup>
+              )}
               <thead>
                 <tr>
                   {cols.map((c) => (
-                    <th key={c} scope="col">
+                    <th key={c} scope="col" data-col={c} className="resizable-th">
                       {labels[c]}
+                      <ColumnResizer
+                        col={c}
+                        label={labels[c]}
+                        cols={cols}
+                        tableRef={tableRef}
+                        widths={colWidths.widths}
+                        onChange={colWidths.save}
+                      />
                     </th>
                   ))}
                   {isManager && (
@@ -228,6 +257,9 @@ export default function TrackersTab() {
               <button onClick={() => window.print()}>
                 🖨 Print
               </button>
+              {colWidths.sized && (
+                <button onClick={colWidths.reset}>↔ Reset column widths</button>
+              )}
             </>
           )}
         </div>
@@ -235,7 +267,8 @@ export default function TrackersTab() {
 
         {isManager && (
           <p className="hint no-print">
-            Tap a cell to edit — changes save on their own. Coming from Google Sheets? In your
+            Drag the edge of a column heading to make it wider or narrower (it remembers on this
+            device). Tap a cell to edit — changes save on their own. Coming from Google Sheets? In your
             sheet: File → Download → Comma Separated Values, one tab at a time, then import it
             here. Starting from nothing? An AI chat can draft every sheet from your script —{' '}
             <a href="/breakdown-ai.html" target="_blank" rel="noreferrer">
