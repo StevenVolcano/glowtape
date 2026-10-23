@@ -169,6 +169,13 @@ export default function ScheduleTab() {
     await load()
   }
 
+  // A manager heard from them (a text, a call) — file them under 📞 Called
+  // in instead of missing. Their late/missing status stays as marked.
+  async function markCalledIn(row: AttendanceRecord) {
+    await pb.collection('attendance').update(row.id, { calledIn: true })
+    await load()
+  }
+
   // "See the show through one person's eyes" — filters to their calls.
   const viewAsMember = viewAs ? members.find((m) => m.id === viewAs) ?? null : null
   const calledForMember = (e: EventRecord, m: MemberRecord) =>
@@ -533,13 +540,23 @@ export default function ScheduleTab() {
                               {icon} {memberName(m)}
                               {missing && ' · missing'}
                             </button>
+                            {row && (row.status === 'late' || missing) && (
+                              <button
+                                className="link"
+                                aria-label={`${memberName(m)} called in ahead of time`}
+                                onClick={() => markCalledIn(row)}
+                              >
+                                📞 Called in
+                              </button>
+                            )}
                             {row?.note && <span className="hint"> {row.note}</span>}
                           </li>
                         )
                       })}
                       <li className="hint">
-                        Tap a name to cycle: — → ✓ present → 🕒 late → ✗ missing. 📞 Called in = they
-                        told you ahead of time; tap one if they show up anyway.
+                        Tap a name to cycle: — → ✓ present → 🕒 late → ✗ missing. If someone late or
+                        missing let you know ahead of time, tap 📞 Called in next to their name. Tap a
+                        called-in name if they show up anyway.
                       </li>
                     </ul>
                   </>

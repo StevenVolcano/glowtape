@@ -10,7 +10,7 @@ import QrCode from '../components/QrCode.tsx'
 import { MANAGER_ROLES, ROLE_LABELS } from '../lib/types.ts'
 import { conflictAppliesTo, conflictHitsEvent, isWeekly, weeklyLabel } from '../lib/conflicts.ts'
 import type { AttendanceRecord, AuditionRecord, ChannelRecord, ConflictRecord, EventRecord, GroupRecord, MemberRecord, MemberRole, ProfileRecord, ResourceRecord } from '../lib/types.ts'
-import { DEFAULT_EVENT_KINDS, formatStamp, memberName, normalizePlaces, pbDate, productionPlaces, shareInvite } from '../lib/types.ts'
+import { DEFAULT_EVENT_KINDS, formatStamp, formatWhen, memberName, normalizePlaces, pbDate, productionPlaces, shareInvite } from '../lib/types.ts'
 import type { Place } from '../lib/types.ts'
 import Section, { FoldGroup } from '../components/Section.tsx'
 import { startOfWeek, weekLabel } from '../components/ScheduleViews.tsx'
@@ -2073,19 +2073,30 @@ function ResourcesSection() {
   )
 }
 
-// Per-member attendance across the production, from roll call and self-
-// reports. Manager-only on purpose — this is an SM's tool, not a leaderboard.
+// The attendance report: each rehearsal's roll call (newest first), then
+// per-member totals. This replaced the roll-call part of the nightly email
+// (Steven 2026-10-23: attendance is a report in the app, not an email).
+// Manager-only on purpose — this is an SM's tool, not a leaderboard.
 function AttendanceHistorySection() {
   const { production, members } = useProduction()
   const [rows, setRows] = useState<AttendanceRecord[]>([])
+  const [events, setEvents] = useState<EventRecord[]>([])
   const [open, setOpen] = useState(false)
 
   useEffect(() => {
-    pb.collection('attendance')
-      .getFullList<AttendanceRecord>({
+    Promise.all([
+      pb.collection('attendance').getFullList<AttendanceRecord>({
         filter: pb.filter('event.production = {:p}', { p: production.id }),
+      }),
+      pb.collection('events').getFullList<EventRecord>({
+        filter: pb.filter('production = {:p}', { p: production.id }),
+        sort: '-start',
+      }),
+    ])
+      .then(([at, ev]) => {
+        setRows(at)
+        setEvents(ev)
       })
-      .then(setRows)
       .catch(() => {})
   }, [production.id])
 
@@ -2102,12 +2113,42 @@ function AttendanceHistorySection() {
     .map((m) => ({ m, t: byMember.get(m.id)! }))
     .sort((a, b) => memberName(a.m).localeCompare(memberName(b.m)))
 
+  const nameOf = (id: string) => {
+    const m = members.find((x) => x.id === id)
+    return m ? memberName(m) : 'someone'
+  }
+  const withRoll = events.filter((e) => rows.some((r) => r.event === e.id))
+  const who = (list: AttendanceRecord[]) =>
+    list.map((r) => nameOf(r.member) + (r.note ? ` (“${r.note}”)` : '')).join(', ')
+
   return (
-    <Section id="attendance" title="Attendance history">
+    <Section id="attendance" title="Attendance report">
       <p className="hint">
-        Totals from roll call and self-reports across the whole production. Visible only to
-        managers.
+        Roll call for each rehearsal, newest first, plus season totals. Visible only to managers.
       </p>
+      {withRoll.map((e) => {
+        const here = rows.filter((r) => r.event === e.id)
+        const calledIn = here.filter((r) => r.calledIn)
+        const late = here.filter((r) => r.status === 'late' && !r.calledIn)
+        const missing = here.filter((r) => r.status === 'absent' && !r.calledIn)
+        const present = here.filter((r) => r.status === 'present').length
+        return (
+          <FoldGroup
+            key={e.id}
+            as="h4"
+            title={`${e.title} — ${formatWhen(e.start)}`}
+            summary={`${present} present · ${late.length} late · ${missing.length} missing${
+              calledIn.length ? ` · ${calledIn.length} called in` : ''
+            }`}
+          >
+            {late.length > 0 && <p>🕒 Late: {who(late)}</p>}
+            {missing.length > 0 && <p>✗ Missing: {who(missing)}</p>}
+            {calledIn.length > 0 && <p>📞 Called in: {who(calledIn)}</p>}
+            {late.length + missing.length + calledIn.length === 0 && <p>Everyone was here.</p>}
+          </FoldGroup>
+        )
+      })}
+      <h3>Season totals</h3>
       <button className="link" aria-expanded={open} onClick={() => setOpen(!open)}>
         {open ? 'Hide the table' : `Show the table (${tallied.length} people)`}
       </button>

@@ -1,9 +1,9 @@
 /// <reference path="../pb_data/types.d.ts" />
 //
 // Nightly rehearsal report: at 10pm Pacific, every production that had events
-// today gets one email to its managers — roll call per event, late/absent
-// names, overdue tasks, and any notes written today. No events today = no
-// email.
+// today gets one email to its managers — overdue tasks, notes and line notes
+// written today. Attendance is NOT emailed; it lives in the app (Manage →
+// Attendance report). No events today, or nothing to say = no email.
 //
 // NOTE: handlers run in isolated VMs — shared helpers are require()d INSIDE
 // each handler from glowtape_lib.js.
@@ -61,31 +61,9 @@ cronAdd("glowtape_rehearsal_reports", "0 * * * *", () => {
         return m.get("position") || "someone";
       };
 
+      // Roll call is NOT in this email — attendance is a report in the app
+      // (Manage → Attendance report), per Steven 2026-10-23.
       const sections = [];
-      for (const ev of byProduction[pid]) {
-        const rows = $app.findRecordsByFilter("attendance", "event = {:ev}", "", 500, 0, {
-          ev: ev.id,
-        });
-        const count = (s) => rows.filter((r) => r.get("status") === s).length;
-        const names = (s) =>
-          rows
-            .filter((r) => r.get("status") === s)
-            .map((r) => {
-              const note = r.get("note");
-              return nameOf(String(r.get("member"))) + (note ? ` (${note})` : "");
-            })
-            .join(", ");
-        sections.push(
-          [
-            `<h3>${ev.get("title")} — ${lib.formatPacific(ev.get("start"))}</h3>`,
-            rows.length === 0
-              ? `<p>No roll call taken.</p>`
-              : `<p>${count("present")} present · ${count("late")} late · ${count("absent")} absent</p>` +
-                (count("late") ? `<p>Late: ${names("late")}</p>` : "") +
-                (count("absent") ? `<p>Absent: ${names("absent")}</p>` : ""),
-          ].join("\n"),
-        );
-      }
 
       const overdue = $app.findRecordsByFilter(
         "tasks",
@@ -163,6 +141,7 @@ cronAdd("glowtape_rehearsal_reports", "0 * * * *", () => {
         sections.push(`<h3>Line notes given today</h3><ul>${rows.join("")}</ul>`);
       }
 
+      if (sections.length === 0) continue;
       lib.sendMail(
         $app,
         contacts.emails,
@@ -172,7 +151,7 @@ cronAdd("glowtape_rehearsal_reports", "0 * * * *", () => {
         [
           `<h2>${production.get("title")} — today's report</h2>`,
           ...sections,
-          `<p>Sent automatically each night there's something on the schedule. Full details are on the Manage tab.</p>`,
+          `<p>Sent automatically each night there's something on the schedule. Tonight's roll call is in the app: Manage → Attendance report.</p>`,
         ].join("\n"),
       );
     } catch (err) {
