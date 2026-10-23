@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { pb } from '../lib/pb.ts'
 import { useAuth } from '../lib/auth.tsx'
+import Section from './Section.tsx'
 
 function urlBase64ToUint8Array(base64: string): Uint8Array {
   const padding = '='.repeat((4 - (base64.length % 4)) % 4)
@@ -118,8 +119,7 @@ export default function PushSettings() {
   if (state === 'checking' || state === 'unavailable' || state === 'unsupported') return null
 
   return (
-    <section>
-      <h2>Notifications</h2>
+    <Section id="notifications" title="Notifications" defaultOpen>
       {state === 'ios-install' && (
         <p className="hint">
           To get notifications on an iPhone, first add Glow Tape to your Home Screen (Safari →
@@ -152,6 +152,6 @@ export default function PushSettings() {
         </>
       )}
       {error && <p className="error" role="alert">{error}</p>}
-    </section>
+    </Section>
   )
 }

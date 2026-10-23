@@ -3,9 +3,11 @@ import { Link } from 'react-router-dom'
 import { pb } from '../lib/pb.ts'
 import { useAuth } from '../lib/auth.tsx'
 import { useTitle } from '../lib/useTitle.ts'
+import SiteMenu from '../components/SiteMenu.tsx'
 import FeedbackSection from '../components/FeedbackSection.tsx'
 import { TAGLINE, copyrightLine, pbDate } from '../lib/types.ts'
 import type { ProductionRecord } from '../lib/types.ts'
+import Section from '../components/Section.tsx'
 
 type PhaseEvent = { production: string; kind: string; start: string; end: string }
 
@@ -30,7 +32,7 @@ function showPhase(events: PhaseEvent[], now = new Date()): string {
 
 export default function Home() {
   useTitle('Home')
-  const { user, signOut } = useAuth()
+  const { user } = useAuth()
   const [productions, setProductions] = useState<ProductionRecord[]>([])
   const [memberProdIds, setMemberProdIds] = useState<Set<string>>(new Set())
   const [joinCode, setJoinCode] = useState('')
@@ -108,21 +110,13 @@ export default function Home() {
   return (
     <main className="page">
       <header className="topbar">
+        <SiteMenu />
         <span className="brand-small">Glow Tape</span>
-        <span className="row-inline">
-          <Link className="link" to="/settings">
-            ⚙ Settings
-          </Link>
-          <button className="link" onClick={signOut}>
-            Sign out
-          </button>
-        </span>
       </header>
 
       <h1>Hi, {user?.name || 'there'}</h1>
 
-      <section>
-        <h2>Your productions</h2>
+      <Section id="my-shows" title="Your productions" defaultOpen>
         {!loaded ? (
           <p>Loading…</p>
         ) : active.length === 0 ? (
@@ -143,11 +137,10 @@ export default function Home() {
             ))}
           </ul>
         )}
-      </section>
+      </Section>
 
       {past.length > 0 && (
-        <section>
-          <h2>Past shows</h2>
+        <Section id="past-shows" title="Past shows">
           <p className="hint">Archived productions — open to look back, read-only.</p>
           <ul className="cards">
             {past.map((p) => (
@@ -159,12 +152,11 @@ export default function Home() {
               </li>
             ))}
           </ul>
-        </section>
+        </Section>
       )}
 
       {openAuditions.length > 0 && (
-        <section>
-          <h2>Auditions</h2>
+        <Section id="open-auditions" title="Auditions" defaultOpen>
           <ul className="cards">
             {openAuditions.map((p) => (
               <li key={p.id}>
@@ -179,11 +171,10 @@ export default function Home() {
             Tap a show to sign up. Filling out <Link to="/profile">your profile</Link> first helps
             the directors.
           </p>
-        </section>
+        </Section>
       )}
 
-      <section>
-        <h2>Join a production</h2>
+      <Section id="join" title="Join a production" defaultOpen>
         <form onSubmit={join} className="row">
           <input
             aria-label="Join code"
@@ -196,10 +187,9 @@ export default function Home() {
           </button>
         </form>
         {error && <p className="error" role="alert">{error}</p>}
-      </section>
+      </Section>
 
-      <section>
-        <h2>Around Grays Harbor</h2>
+      <Section id="harbor" title="Around Grays Harbor" defaultOpen>
         <ul className="cards">
           <li>
             <Link className="card card-link community-card" to="/community">
@@ -212,10 +202,9 @@ export default function Home() {
           Auditions and performances across all Grays Harbor theaters, plus a town-wide message
           board. Your own show's schedule and cast chat live inside your show above.
         </p>
-      </section>
+      </Section>
 
-      <section>
-        <h2>More</h2>
+      <Section id="more" title="More">
         <ul className="plain-list">
           <li>
             ⚙ <Link to="/settings">My settings</Link>{' '}
@@ -240,13 +229,12 @@ export default function Home() {
             <span className="hint">— directing a show? Free for Grays Harbor theaters</span>
           </li>
         </ul>
-      </section>
+      </Section>
 
       <FeedbackSection />
 
       {user?.operator && (
-        <section>
-          <h2>Operator</h2>
+        <Section id="operator" title="Operator">
           <p className="hint">
             <Link to="/operator">⚙ Open the operator console</Link> — production requests
             and direct show setup, feedback triage, access codes, organizations, and the
@@ -270,7 +258,7 @@ export default function Home() {
               </p>
             </>
           )}
-        </section>
+        </Section>
       )}
 
       <p className="hint legal-links">

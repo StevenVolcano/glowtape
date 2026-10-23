@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { pb } from '../lib/pb.ts'
 import { useAuth } from '../lib/auth.tsx'
 import type { FeedbackRecord } from '../lib/types.ts'
+import Section from './Section.tsx'
 
 const KIND_LABELS = {
   idea: '💡 An idea',
@@ -63,8 +64,7 @@ export default function FeedbackSection() {
   }
 
   return (
-    <section>
-      <h2>Ideas &amp; feedback</h2>
+    <Section id="ideas" title={<>Ideas &amp; feedback</>}>
       {!open && (
         <p className="hint">
           <button className="link" aria-expanded={false} onClick={() => setOpen(true)}>
@@ -115,6 +115,6 @@ export default function FeedbackSection() {
           ))}
         </ul>
       )}
-    </section>
+    </Section>
   )
 }

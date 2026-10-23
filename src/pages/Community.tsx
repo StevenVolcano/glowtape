@@ -7,6 +7,7 @@ import CommunityBoard from '../components/CommunityBoard.tsx'
 import { TAGLINE } from '../lib/types.ts'
 import { copyrightLine, externalHref, formatWhen, pbDate } from '../lib/types.ts'
 import type { CommunityEvent } from '../lib/types.ts'
+import SiteMenu from '../components/SiteMenu.tsx'
 
 // The Grays Harbor theater commons: the message board plus a public calendar
 // of every audition and performance across all productions.
@@ -88,15 +89,7 @@ export default function Community() {
   return (
     <main className="page">
       <header className="topbar">
-        {myShows.length === 1 ? (
-          <Link to={`/production/${myShows[0].id}/dashboard`} className="link">
-            ← Back to {myShows[0].title}
-          </Link>
-        ) : (
-          <Link to="/" className="link">
-            ← Home
-          </Link>
-        )}
+        <SiteMenu />
         <span className="brand-small">Glow Tape</span>
       </header>
 

@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { pb } from '../lib/pb.ts'
 import { SMS_READY } from '../lib/types.ts'
 import type { UserRecord } from '../lib/types.ts'
+import Section from './Section.tsx'
 
 interface PhoneStatus {
   phone: string
@@ -36,8 +37,7 @@ export default function PhoneSettings(_props: { user: UserRecord }) {
 
   if (!SMS_READY) {
     return (
-      <section>
-        <h2>Text reminders</h2>
+      <Section id="texts" title="Text reminders">
         <div className="card">
           <p className="hint" style={{ margin: 0 }}>
             📱 <strong>Coming soon!</strong> Text-message reminders are working their way
@@ -45,7 +45,7 @@ export default function PhoneSettings(_props: { user: UserRecord }) {
             call reminders.
           </p>
         </div>
-      </section>
+      </Section>
     )
   }
 
@@ -92,8 +92,7 @@ export default function PhoneSettings(_props: { user: UserRecord }) {
 
   if (status?.phoneVerified && !editing) {
     return (
-      <section>
-        <h2>Text reminders</h2>
+      <Section id="texts" title="Text reminders">
         <div className="card stack">
           <div>
             📱 <strong>{status.phone}</strong> is verified.
@@ -112,13 +111,12 @@ export default function PhoneSettings(_props: { user: UserRecord }) {
           </button>
           {error && <p className="error" role="alert">{error}</p>}
         </div>
-      </section>
+      </Section>
     )
   }
 
   return (
-    <section>
-      <h2>Text reminders</h2>
+    <Section id="texts" title="Text reminders">
       <div className="card stack">
         <p className="hint">
           Add your cell number and Glow Tape will text you before your calls, at the times you
@@ -175,6 +173,6 @@ export default function PhoneSettings(_props: { user: UserRecord }) {
         )}
         {error && <p className="error" role="alert">{error}</p>}
       </div>
-    </section>
+    </Section>
   )
 }

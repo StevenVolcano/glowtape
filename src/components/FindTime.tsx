@@ -4,6 +4,7 @@ import { conflictAppliesTo, conflictHitsEvent, formatTime12, isWeekly, weeklyLab
 import { groupMemberIds } from '../lib/breakdown.ts'
 import { memberName, pbDate } from '../lib/types.ts'
 import type { ConflictRecord, EventRecord, GroupRecord } from '../lib/types.ts'
+import Section from './Section.tsx'
 
 // "When can Group A rehearse?" — pick who, a time slot, and a window; every
 // day in the window gets a verdict from the conflicts people entered (date
@@ -95,8 +96,7 @@ export default function FindTime({
   const clearDays = rows.filter((r) => r.busy.length === 0 && r.scheduled.length === 0).length
 
   return (
-    <section id="findtime">
-      <h2>🗓 When can we rehearse?</h2>
+    <Section id="findtime" title="🗓 When can we rehearse?">
       {!open && (
         <>
           <p className="hint">
@@ -216,6 +216,6 @@ export default function FindTime({
           </button>
         </div>
       )}
-    </section>
+    </Section>
   )
 }

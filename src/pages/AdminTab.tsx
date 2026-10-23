@@ -12,6 +12,7 @@ import { conflictAppliesTo, conflictHitsEvent, isWeekly, weeklyLabel } from '../
 import type { AttendanceRecord, AuditionRecord, ChannelRecord, ConflictRecord, EventRecord, GroupRecord, MemberRecord, MemberRole, ProfileRecord, ResourceRecord } from '../lib/types.ts'
 import { DEFAULT_EVENT_KINDS, formatStamp, memberName, normalizePlaces, pbDate, productionPlaces, shareInvite } from '../lib/types.ts'
 import type { Place } from '../lib/types.ts'
+import Section from '../components/Section.tsx'
 
 export default function AdminTab() {
   const { archived } = useProduction()
@@ -74,8 +75,7 @@ function ArchiveSection() {
   }
 
   return (
-    <section id="archive" className="golive">
-      <h2>{archived ? 'This show is archived' : 'Archive this show'}</h2>
+    <Section id="archive" title={archived ? 'This show is archived' : 'Archive this show'} defaultOpen className="golive">
       {archived ? (
         <>
           <p className="hint">
@@ -97,7 +97,7 @@ function ArchiveSection() {
           </button>
         </>
       )}
-    </section>
+    </Section>
   )
 }
 
@@ -127,8 +127,7 @@ function TonightQuotesSection() {
   }
 
   return (
-    <section id="quotes">
-      <h2>Dashboard quotes</h2>
+    <Section id="quotes" title="Dashboard quotes">
       <p className="hint">
         The Dashboard shows everyone the same quote each day — the classics, plus anything
         you add here. Favorite lines from the show, things you keep saying in the room, one
@@ -146,7 +145,7 @@ function TonightQuotesSection() {
         {saved && <span className="acked" role="status">{saved}</span>}
         {err && <span className="error" role="alert">{err}</span>}
       </div>
-    </section>
+    </Section>
   )
 }
 
@@ -163,8 +162,7 @@ function JoinCodeSection() {
   }
 
   return (
-    <section id="invite">
-      <h2>Invite people</h2>
+    <Section id="invite" title="Invite people" defaultOpen>
       <p className="hint">
         Share this code at the read-through, or send the invite link — opening it fills
         everything in automatically.
@@ -190,16 +188,15 @@ function JoinCodeSection() {
         </a>{' '}
         and write this code in the blank.
       </p>
-    </section>
+    </Section>
   )
 }
 
 function NewEventSection() {
   return (
-    <section id="add-events">
-      <h2>Add to the schedule</h2>
+    <Section id="add-events" title="Add to the schedule">
       <EventForm onDone={async () => {}} />
-    </section>
+    </Section>
   )
 }
 
@@ -238,8 +235,7 @@ function NewAnnouncementSection() {
   }
 
   return (
-    <section id="announce">
-      <h2>Post an announcement</h2>
+    <Section id="announce" title="Post an announcement">
       <form onSubmit={post} className="stack">
         <input
           aria-label="Announcement title"
@@ -265,7 +261,7 @@ function NewAnnouncementSection() {
         {done && <p className="acked" role="status">{done}</p>}
         {err && <p className="error" role="alert">{err}</p>}
       </form>
-    </section>
+    </Section>
   )
 }
 
@@ -342,8 +338,7 @@ function CastTextSection() {
   const left = CAST_TEXT_MAX - text.trim().length
 
   return (
-    <section id="cast-text">
-      <h2>Text the cast</h2>
+    <Section id="cast-text" title="Text the cast">
       <p className="hint">
         For things people need to see right away (a room change, a cancellation). Everyone who
         said yes to text reminders gets a text. Everyone else gets it as a private Glow Tape message
@@ -419,7 +414,7 @@ function CastTextSection() {
           </ul>
         </>
       )}
-    </section>
+    </Section>
   )
 }
 
@@ -522,8 +517,7 @@ function ScheduleTableSection() {
   if (rows.length === 0) return null
 
   return (
-    <section>
-      <h2>Fix up the schedule</h2>
+    <Section id="fix-schedule" title="Fix up the schedule">
       <p className="hint">
         Adjust several events at once — type, title, day, times, place. Save all sends a single
         email covering everything that moved.
@@ -610,7 +604,7 @@ function ScheduleTableSection() {
         {busy ? 'Saving…' : dirty.length > 0 ? `Save all (${dirty.length} changed)` : 'Save all'}
       </button>
       {message && <p className="acked" role="status">{message}</p>}
-    </section>
+    </Section>
   )
 }
 
@@ -650,8 +644,7 @@ function PresetsSection() {
   }
 
   return (
-    <section id="presets">
-      <h2>Event types &amp; places</h2>
+    <Section id="presets" title={<>Event types &amp; places</>}>
       <div className="stack">
         <label>
           Event types (comma-separated; leave empty for the standard list)
@@ -708,7 +701,7 @@ function PresetsSection() {
           {saveErr && <span className="error" role="alert">{saveErr}</span>}
         </div>
       </div>
-    </section>
+    </Section>
   )
 }
 
@@ -737,8 +730,7 @@ function TicketsSection() {
   }
 
   return (
-    <section id="tickets">
-      <h2>Tickets</h2>
+    <Section id="tickets" title="Tickets">
       <p className="hint">
         A link to buy tickets for this show. It shows up as a <em>🎟 Buy tickets</em> button on
         your performances in the community calendar. Leave it blank and there's no button — unless
@@ -757,7 +749,7 @@ function TicketsSection() {
         {saved && <span className="acked" role="status">{saved}</span>}
         {ticketErr && <span className="error" role="alert">{ticketErr}</span>}
       </div>
-    </section>
+    </Section>
   )
 }
 
@@ -829,8 +821,7 @@ function BiosSection() {
 
   if (production.noBios) {
     return (
-      <section id="bios">
-        <h2>Program bios</h2>
+      <Section id="bios" title="Program bios">
         {noBiosToggle}
         <p className="hint">
           Bios are off for this show: nobody is asked to write one, and they're left out of the
@@ -843,13 +834,12 @@ function BiosSection() {
             email)
           </Link>
         </p>
-      </section>
+      </Section>
     )
   }
 
   return (
-    <section id="bios">
-      <h2>Program bios</h2>
+    <Section id="bios" title="Program bios">
       {noBiosToggle}
       {noBiosErr && <p className="error" role="alert">{noBiosErr}</p>}
       <p className="hint">
@@ -896,7 +886,7 @@ function BiosSection() {
           email)
         </Link>
       </p>
-    </section>
+    </Section>
   )
 }
 
@@ -978,8 +968,7 @@ function ChannelsSection() {
   }
 
   return (
-    <section>
-      <h2>Channels</h2>
+    <Section id="manage-channels" title="Channels">
       <ul className="plain-list">
         {channels.map((c) => (
           <li key={c.id} className="member-row">
@@ -1037,7 +1026,7 @@ function ChannelsSection() {
         themselves in from people's roles. Archiving hides a channel without deleting its
         messages; restore it any time. Set up more groups under <em>Groups</em> above.
       </p>
-    </section>
+    </Section>
   )
 }
 
@@ -1107,8 +1096,7 @@ function GroupsSection() {
   }
 
   return (
-    <section id="groups">
-      <h2>Groups</h2>
+    <Section id="groups" title="Groups">
       <p className="hint">
         Named sets of roles — <em>Group A</em>, <em>Leads</em>, <em>Dancers</em>, whatever fits
         your show. Put roles into groups in <em>People &amp; roles</em> below, then pick a
@@ -1148,7 +1136,7 @@ function GroupsSection() {
         </button>
       </form>
       {message && <p className="error" role="alert">{message}</p>}
-    </section>
+    </Section>
   )
 }
 
@@ -1245,8 +1233,7 @@ function MembersSection() {
   }
 
   return (
-    <section id="people">
-      <h2>People &amp; roles</h2>
+    <Section id="people" title={<>People &amp; roles</>}>
       <ul className="plain-list">
         {members.map((m) => (
           <li key={m.id} className="member-row">
@@ -1369,7 +1356,7 @@ function MembersSection() {
         cast, they join with it, and their whole schedule (and Manage access, if it's a staff
         role) is waiting.
       </p>
-    </section>
+    </Section>
   )
 }
 
@@ -1528,8 +1515,7 @@ function ConflictAlertsSection() {
   if (alerts.length === 0) return null
 
   return (
-    <section>
-      <h2>⚠️ To sort out</h2>
+    <Section id="sort-out" title="⚠️ To sort out" defaultOpen>
       <p className="hint">
         People who are called to an event that lands on one of their conflicts. Move the event in
         “Fix up the schedule,” adjust who's called, or talk it through with them.
@@ -1541,7 +1527,7 @@ function ConflictAlertsSection() {
           </li>
         ))}
       </ul>
-    </section>
+    </Section>
   )
 }
 
@@ -1635,8 +1621,7 @@ function AuditionsSection() {
   }
 
   return (
-    <section id="auditions">
-      <h2>Auditions</h2>
+    <Section id="auditions" title="Auditions">
       <p className="hint">
         Get everything ready first — details, questions, a look at the form — then open
         signups when it's all set.
@@ -1842,7 +1827,7 @@ function AuditionsSection() {
       {production.auditionOpen && signups.length === 0 && (
         <p className="hint">No signups yet — they'll collect here as people fill out the form.</p>
       )}
-    </section>
+    </Section>
   )
 }
 
@@ -1907,8 +1892,7 @@ function ResourcesSection() {
   const byArea = (a: 'show' | 'audition') => resources.filter((r) => r.area === a)
 
   return (
-    <section id="resources">
-      <h2>Documents &amp; links</h2>
+    <Section id="resources" title={<>Documents &amp; links</>}>
       <p className="hint">
         Scripts info, rehearsal tracks, forms, sides — anything the cast (or auditioners) should
         be able to open. Show resources appear at the bottom of the Schedule tab; audition
@@ -2034,7 +2018,7 @@ function ResourcesSection() {
           </p>
         )}
       </form>
-    </section>
+    </Section>
   )
 }
 
@@ -2068,8 +2052,7 @@ function AttendanceHistorySection() {
     .sort((a, b) => memberName(a.m).localeCompare(memberName(b.m)))
 
   return (
-    <section id="attendance">
-      <h2>Attendance history</h2>
+    <Section id="attendance" title="Attendance history">
       <p className="hint">
         Totals from roll call and self-reports across the whole production. Visible only to
         managers.
@@ -2101,7 +2084,7 @@ function AttendanceHistorySection() {
           </table>
         </div>
       )}
-    </section>
+    </Section>
   )
 }
 

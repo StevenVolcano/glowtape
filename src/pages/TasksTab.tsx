@@ -8,6 +8,7 @@ import { matchMember } from '../lib/breakdown.ts'
 import { csvField, parseCsv } from '../lib/trackers.ts'
 import { formatDay, memberName, LINE_NOTE_LABELS } from '../lib/types.ts'
 import type { LineNoteRecord, MemberRecord, TaskRecord } from '../lib/types.ts'
+import Section from '../components/Section.tsx'
 
 const DEFAULT_DEPARTMENTS = [
   'Set',
@@ -76,8 +77,7 @@ export default function TasksTab() {
       {!production.noBios &&
         myEditable.map((m) => <BioEditor key={m.id} member={m} onSaved={load} />)}
       <LineNotesSection />
-      <section>
-        <h2>To-do</h2>
+      <Section id="tasks" title="To-do" defaultOpen>
         <div className="chips">
           {(['open', 'mine', 'all'] as const).map((f) => (
             <button
@@ -140,7 +140,7 @@ export default function TasksTab() {
             </ul>
           </div>
         ))}
-      </section>
+      </Section>
 
       {isManager && <NewTaskForm members={members} onAdded={load} />}
       {isManager && <TaskCsv tasks={tasks} members={members} onImported={load} />}
@@ -354,8 +354,7 @@ function LineNotesSection() {
   const base = `/production/${production.id}`
 
   return (
-    <section>
-      <h2>🎯 Line notes ({mine.length})</h2>
+    <Section id="line-notes" title={<>🎯 Line notes ({mine.length})</>} defaultOpen>
       <p className="hint">
         Notes from the managers about lines to look at before next time. Check one off once
         you've got it down.
@@ -390,7 +389,7 @@ function LineNotesSection() {
           )
         })}
       </ul>
-    </section>
+    </Section>
   )
 }
 
@@ -435,8 +434,7 @@ function NewTaskForm({
   }
 
   return (
-    <section>
-      <h2>Add a task</h2>
+    <Section id="add-task" title="Add a task">
       <form onSubmit={add} className="stack">
         <input
           aria-label="Task"
@@ -482,7 +480,7 @@ function NewTaskForm({
         {done && <p className="acked" role="status">{done}</p>}
         {addErr && <p className="error" role="alert">{addErr}</p>}
       </form>
-    </section>
+    </Section>
   )
 }
 

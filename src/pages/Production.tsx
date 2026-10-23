@@ -1,5 +1,6 @@
-import { Suspense, createContext, lazy, useContext, useEffect, useRef, useState } from 'react'
-import { Link, NavLink, Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom'
+import { Suspense, createContext, lazy, useContext, useEffect, useState } from 'react'
+import { Link, Navigate, Route, Routes, useParams } from 'react-router-dom'
+import SiteMenu from '../components/SiteMenu.tsx'
 import { pb } from '../lib/pb.ts'
 import { useAuth } from '../lib/auth.tsx'
 import { TAGLINE } from '../lib/types.ts'
@@ -69,21 +70,6 @@ export default function Production() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
-  // On a phone the tab strip scrolls sideways; keep the current tab in view so
-  // "where am I?" is always answered. Scrolls the strip only, never the page.
-  const tabsRef = useRef<HTMLElement>(null)
-  const { pathname } = useLocation()
-  useEffect(() => {
-    const nav = tabsRef.current
-    const active = nav?.querySelector<HTMLElement>('a.active')
-    if (!nav || !active) return
-    const n = nav.getBoundingClientRect()
-    const a = active.getBoundingClientRect()
-    if (a.left < n.left || a.right > n.right) {
-      nav.scrollLeft += a.left - n.left - (n.width - a.width) / 2
-    }
-  }, [pathname, production])
-
   if (failed) {
     return (
       <main className="page">
@@ -112,17 +98,15 @@ export default function Production() {
   const isManager = !!user && (production.managers.includes(user.id) || user.operator)
   const asStagehand = !!user?.operator && !myMember && !production.managers.includes(user.id)
   const archived = !!production.archived
-  // Absolute tab paths: relative links inside a splat route resolve against
-  // the full current URL in react-router v7 and stack segments endlessly.
+  // Absolute paths: relative links inside a splat route resolve against the
+  // full current URL in react-router v7 and stack segments endlessly.
   const base = `/production/${production.id}`
 
   return (
     <ProductionContext.Provider value={{ production, members, myMember, isManager, archived, reload }}>
       <main className="page production">
         <header className="topbar">
-          <Link to="/" className="link">
-            ← All productions
-          </Link>
+          <SiteMenu current={{ production, isManager }} />
           <span className="brand-small">Glow Tape</span>
         </header>
         <h1>{production.title}</h1>
@@ -140,19 +124,6 @@ export default function Production() {
               : 'Ask a manager to unarchive it to make changes.'}
           </p>
         )}
-
-        <nav className="tabs" aria-label="Production sections" ref={tabsRef}>
-          <NavLink to={`${base}/dashboard`}>Dashboard</NavLink>
-          <NavLink to={`${base}/schedule`}>Schedule</NavLink>
-          <NavLink to={`${base}/messages`}>Messages</NavLink>
-          <NavLink to={`${base}/todo`}>To-Do</NavLink>
-          <NavLink to={`${base}/sheets`}>Sheets</NavLink>
-          <NavLink to={`${base}/docs`}>Docs</NavLink>
-          <NavLink to={`${base}/notes`}>Notes</NavLink>
-          <NavLink to={`${base}/people`}>People</NavLink>
-          {isManager && !archived && <NavLink to={`${base}/casting`}>Casting</NavLink>}
-          {isManager && <NavLink to={`${base}/admin`}>Manage</NavLink>}
-        </nav>
 
         <Routes>
           <Route path="dashboard" element={<TonightTab />} />

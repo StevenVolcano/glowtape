@@ -464,33 +464,164 @@ form.stack,
   font-size: 1.05rem;
 }
 
-/* --- Tabs --- */
-.tabs {
-  display: flex;
-  gap: 0.5rem;
-  border-bottom: 2px solid var(--line);
-  margin: 0.75rem 0 1rem;
-  overflow-x: auto;
+/* --- The ☰ menu (replaces the old tab strip) --- */
+.site-menu {
+  position: relative;
 }
 
-.tabs a {
-  padding: 0.6rem 0.9rem;
+.menu-button {
+  background: var(--card);
+  color: var(--ink);
+  border: 2px solid var(--ctrl);
   min-height: 44px;
+  padding: 0.45rem 0.9rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.menu-button[aria-expanded='true'] {
+  background: var(--lamp);
+  border-color: var(--lamp-dark);
+}
+
+.menu-panel {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  left: 0;
+  z-index: 50;
+  width: min(22rem, calc(100vw - 2rem));
+  max-height: calc(100vh - 6rem);
+  overflow-y: auto;
+  background: var(--card);
+  border: 2px solid var(--ctrl);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(28, 36, 5, 0.18);
+  padding: 0.4rem;
+}
+
+.menu-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.menu-list > li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.menu-group + .menu-group,
+.menu-list + .menu-group {
+  border-top: 1px solid var(--line);
+  margin-top: 0.25rem;
+  padding-top: 0.25rem;
+}
+
+.menu-group > .menu-list {
+  padding-left: 0.75rem;
+}
+
+.menu-sub {
+  flex-basis: 100%;
+  padding-left: 1rem;
+  border-left: 3px solid var(--lamp);
+  margin-left: 0.6rem;
+}
+
+.menu-heading,
+.menu-link {
   display: flex;
   align-items: center;
-  color: var(--muted);
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex: 1;
+  min-height: 44px;
+  padding: 0.4rem 0.6rem;
+  border-radius: 8px;
+  background: none;
+  box-shadow: none;
+  color: var(--ink);
+  text-align: left;
   text-decoration: none;
   font-weight: 600;
-  border-bottom: 3px solid transparent;
-  border-radius: 8px 8px 0 0;
-  white-space: nowrap;
-  transition: color 0.15s ease, background 0.15s ease;
 }
 
-.tabs a.active {
+.menu-heading {
+  width: 100%;
+  font-weight: 700;
+}
+
+button.menu-link {
+  font-weight: 600;
+}
+
+.menu-heading:hover,
+.menu-link:hover,
+.menu-sub-toggle:hover {
+  background: rgba(205, 239, 85, 0.3);
+}
+
+.menu-link[aria-current='page'] {
+  background: linear-gradient(90deg, rgba(205, 239, 85, 0.75), rgba(205, 239, 85, 0.2));
+  box-shadow: inset 4px 0 0 var(--lamp-dark);
+}
+
+.menu-sub-toggle {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  background: none;
+  box-shadow: none;
   color: var(--ink);
-  border-bottom-color: var(--lamp);
-  background: linear-gradient(180deg, rgba(205, 239, 85, 0.6), rgba(205, 239, 85, 0.15));
+}
+
+/* --- Folding sections: the heading is the switch --- */
+.fold > h2 {
+  margin-bottom: 0.25rem;
+}
+
+.fold-toggle {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: 44px;
+  padding: 0.2rem 0.4rem;
+  margin-left: -0.4rem;
+  background: none;
+  box-shadow: none;
+  color: var(--ink);
+  font: inherit;
+  font-weight: inherit;
+  text-align: left;
+}
+
+.fold-toggle:hover {
+  background: rgba(205, 239, 85, 0.25);
+}
+
+.fold-caret {
+  flex: none;
+  display: inline-block;
+  font-size: 0.9em;
+  color: var(--accent);
+  transition: transform 0.15s ease;
+}
+
+[aria-expanded='true'] > .fold-caret {
+  transform: rotate(90deg);
+}
+
+.fold:not(.open) {
+  border-bottom: 1px solid var(--line);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fold-caret {
+    transition: none;
+  }
 }
 
 /* --- Chips --- */
@@ -742,7 +873,6 @@ form.stack,
 
 /* --- Kiosk: a door phone showing the check-in poster — nothing but the poster --- */
 body.kiosk .topbar,
-body.kiosk .tabs,
 body.kiosk .production > h1,
 body.kiosk .legal-links {
   display: none !important;
@@ -751,14 +881,19 @@ body.kiosk .legal-links {
 /* --- Print: the contact sheet should look like paper was always the plan --- */
 @media print {
   .topbar,
-  .tabs,
   .no-print,
   button {
     display: none !important;
   }
 
-  h2::before {
+  h2::before,
+  .fold-caret {
     display: none;
+  }
+
+  /* folded sections still print — paper has no buttons to unfold them */
+  .fold-body[hidden] {
+    display: block !important;
   }
 
   body {
