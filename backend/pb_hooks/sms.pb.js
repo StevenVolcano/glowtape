@@ -124,6 +124,34 @@ routerAdd("POST", "/api/glowtape/signin-sms/confirm", (e) => {
 
   // --- invite sign-in: no account yet ---
   const rows = lib.inviteRowsForPhone(e.app, phone);
+
+  // The managers put this phone AND an email on the same role, and that email
+  // already has an account (e.g. signed up but the email code never arrived):
+  // that's the same person, so the texted code signs them into it. Not if the
+  // account already proved a different phone — that one wins.
+  let linked = null;
+  for (const m of rows) {
+    const onFile = String(m.get("contactEmail") || "").trim().toLowerCase();
+    if (!onFile) continue;
+    try {
+      const u = e.app.findAuthRecordByEmail("users", onFile);
+      if (!u.get("phoneVerified") || u.get("phone") === phone) {
+        linked = u;
+        break;
+      }
+    } catch {
+      /* no account for that email */
+    }
+  }
+  if (linked) {
+    lib.consumeCode(e.app, phone, "signin", code);
+    linked.set("phone", phone);
+    linked.set("phoneVerified", true);
+    e.app.save(linked);
+    lib.claimInvites(e.app, linked, rows, linked.get("ageBand") !== "teen");
+    return $apis.recordAuthResponse(e, linked, "phone");
+  }
+
   const band = String(data.band || "");
   if (!band) {
     // Check the code without using it up (wrong guesses still count).
