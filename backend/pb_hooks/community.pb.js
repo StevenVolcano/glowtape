@@ -73,7 +73,7 @@ routerAdd(
         kind: ev.get("kind"),
         start: ev.get("start"),
         end: ev.get("end"),
-        location: ev.get("location"),
+        location: ev.get("location") || (ev.get("videoUrl") ? "Online" : ""),
         production: pid,
         productionTitle: prod.title,
         org: prod.org,
@@ -149,7 +149,7 @@ routerAdd(
     const eventFields = (ev) => ({
       start: ev.get("start"),
       end: ev.get("end"),
-      location: ev.get("location"),
+      location: ev.get("location") || (ev.get("videoUrl") ? "Online" : ""),
       title: ev.get("title"),
       kind: ev.get("kind"),
     });

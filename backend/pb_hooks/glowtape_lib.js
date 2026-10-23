@@ -719,6 +719,54 @@ function syncMemberAutoGroups(app, member) {
   }
 }
 
+// Video-call links (migration 1758900000): an event can meet in a room, on
+// Zoom/Meet/Teams, or both. events.videoUrl holds the link; location stays
+// the physical place. Anything web-link-shaped is accepted (any meeting
+// service works); a bare "zoom.us/j/123" gets https:// added. Quotes, angle
+// brackets and spaces are refused so the link drops safely into emails.
+const VIDEO_URL_MAX = 500;
+function looksLikeLink(text) {
+  const t = String(text || "").trim();
+  return /^https?:\/\//i.test(t) || /^[a-z0-9-]+(\.[a-z0-9-]+)+\/\S*$/i.test(t);
+}
+function cleanVideoUrl(value) {
+  let t = String(value === null || value === undefined ? "" : value).trim();
+  if (!t) return "";
+  if (!/^https?:\/\//i.test(t)) t = "https://" + t;
+  if (t.length > VIDEO_URL_MAX) throw new Error("That video link is too long.");
+  if (!/^https?:\/\/[a-z0-9-]+(\.[a-z0-9-]+)+(:\d+)?(\/[^\s"'<>]*)?$/i.test(t)) {
+    throw new Error("The video link should look like https://zoom.us/j/123456789.");
+  }
+  return t;
+}
+// A link typed into the Location box (the easy mistake) moves to videoUrl.
+// Returns { location, videoUrl }; throws on a bad link.
+function splitPlace(location, videoUrl) {
+  let loc = String(location || "").trim();
+  let url = String(videoUrl || "").trim();
+  if (!url && looksLikeLink(loc)) {
+    url = loc;
+    loc = "";
+  }
+  return { location: loc, videoUrl: cleanVideoUrl(url) };
+}
+// " at Grange Hall", " — video call", " at Grange Hall + video call".
+function whereShort(rec) {
+  const loc = String(rec.get("location") || "");
+  const url = String(rec.get("videoUrl") || "");
+  if (loc && url) return " at " + loc + " + video call";
+  if (loc) return " at " + loc;
+  if (url) return " — video call";
+  return "";
+}
+// Email lines for one event: Where + a Join link.
+function whereHtml(location, videoUrl) {
+  return [
+    location ? `<p>Where: ${location}</p>` : "",
+    videoUrl ? `<p>Join the video call: <a href="${videoUrl}">${videoUrl}</a></p>` : "",
+  ].join("\n");
+}
+
 // Validate a run-of-show timeline ({title, minutes} rows; clock times are
 // never stored — they compute forward from the event start). Used by the
 // events/update route and the Claude connector. null / undefined / [] clear
@@ -826,6 +874,11 @@ module.exports = {
   inviteDefaults,
   claimInvites,
   cleanTimeline,
+  cleanVideoUrl,
+  looksLikeLink,
+  splitPlace,
+  whereShort,
+  whereHtml,
   cleanPoll,
   readJson,
   pbNow,

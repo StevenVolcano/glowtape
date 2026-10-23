@@ -119,6 +119,26 @@ button:hover {
   color: #16181f;
 }
 
+/* 💻 Join the video call: a link dressed as the main button (it opens Zoom). */
+a.join-call {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  font-weight: 600;
+  background: var(--lamp);
+  color: #1c2405;
+  border-radius: 10px;
+  padding: 0.65rem 1.1rem;
+  min-height: 44px;
+  text-decoration: none;
+  box-shadow: 0 1px 2px rgba(28, 36, 5, 0.18);
+}
+
+a.join-call:hover {
+  background: var(--lamp-dark);
+  color: #16181f;
+}
+
 button:disabled {
   opacity: 0.5;
   cursor: default;
