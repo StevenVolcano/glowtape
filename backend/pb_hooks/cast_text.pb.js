@@ -86,6 +86,7 @@ routerAdd(
     const texted = [];
     const inApp = [];
     const unreachable = [];
+    const emailed = [];
     const emailTo = [];
     const channels = e.app.findCollectionByNameOrId("channels");
     const messages = e.app.findCollectionByNameOrId("messages");
@@ -104,9 +105,15 @@ routerAdd(
       if (own) uids.push(own);
       for (const g of lib.toIdArray(m.get("guardians"))) if (!uids.includes(g)) uids.push(g);
       if (uids.length === 0) {
-        // An unclaimed role or someone not on Glow Tape. Shared-role
-        // placeholders aren't people, so they're not worth reporting.
-        if (!m.get("multi")) unreachable.push(name);
+        // An unclaimed role or someone not on Glow Tape. A manager-entered
+        // contact email still reaches them (email only, never SMS — same as
+        // lib.recipients). Shared-role placeholders aren't people, so
+        // they're not worth reporting.
+        const offline = String(m.get("contactEmail") || "").trim();
+        if (offline) {
+          if (!emailTo.some((t) => t.address === offline)) emailTo.push({ address: offline, name: name });
+          emailed.push(name);
+        } else if (!m.get("multi")) unreachable.push(name);
         continue;
       }
 
@@ -171,7 +178,7 @@ routerAdd(
           `[${title}] A message from the managers`,
           `<p>${esc(text)}</p><p>— ${esc(e.auth.get("name") || "Your managers")}, ${esc(title)} on Glow Tape</p>` +
             `<p style="color:#544e63">You're getting this by email because you haven't said yes to texts from Glow Tape. ` +
-            `To get these by text, open Glow Tape → Home → Text reminders.</p>`,
+            `To get these by text, open Glow Tape → ⚙ Settings → Text reminders.</p>`,
         );
       } catch (err) {
         e.app.logger().error("glowtape: cast-text mail failed", "error", String(err));
@@ -187,7 +194,7 @@ routerAdd(
     log.set("inApp", inApp.length);
     e.app.save(log);
 
-    return e.json(200, { ok: true, smsOn: smsOn, texted, inApp, unreachable });
+    return e.json(200, { ok: true, smsOn: smsOn, texted, inApp, emailed, unreachable });
   },
   $apis.requireAuth(),
 );

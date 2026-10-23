@@ -5,11 +5,11 @@ import { useTitle } from '../lib/useTitle.ts'
 import { deviceHasPasskey, isCancel, passkeysSupported, signInWithPasskey } from '../lib/passkeys.ts'
 
 type Method = 'email' | 'phone'
-type Step = 'enter' | 'code'
+type Step = 'enter' | 'code' | 'newAccount'
 
 // Passwordless sign-in, two ways: email a code, or text a code.
-// (Text sign-in only works for phones already verified on an account,
-// and only once the server has an SMS provider configured.)
+// (Text sign-in works for phones verified on an account, or a phone a
+// manager put on an unclaimed role — that path creates the account here.)
 export default function SignIn() {
   useTitle('Sign in')
   const [method, setMethod] = useState<Method>('email')
@@ -22,6 +22,8 @@ export default function SignIn() {
   const [phone, setPhone] = useState('')
   const [code, setCode] = useState('')
   const [otpId, setOtpId] = useState('')
+  const [guardianOf, setGuardianOf] = useState<string[]>([])
+  const [texts, setTexts] = useState(true)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   // Fingerprint leads only on a device that has used it before; everyone else
@@ -94,14 +96,99 @@ export default function SignIn() {
           method: 'POST',
           body: { phone, code },
         })
+        if (res.newAccount) {
+          // A manager put this number on a role: finish the account first.
+          setName(res.name || '')
+          setEmail(res.email || '')
+          setGuardianOf(res.guardianOf || [])
+          setStep('newAccount')
+          return
+        }
         pb.authStore.save(res.token, res.record)
       }
-    } catch {
-      setError("That code didn't match. Check the message and try again.")
+    } catch (err) {
+      setError(
+        err instanceof Error && /tries|expired/i.test(err.message)
+          ? err.message
+          : "That code didn't match. Check the message and try again.",
+      )
     } finally {
       setBusy(false)
     }
   }
+
+  async function finishAccount(e: FormEvent) {
+    e.preventDefault()
+    setBusy(true)
+    setError('')
+    try {
+      const res = await pb.send('/api/glowtape/signin-sms/confirm', {
+        method: 'POST',
+        body: { phone, code, band: ageBand, age: Number(age) || 0, name, email, texts },
+      })
+      pb.authStore.save(res.token, res.record)
+    } catch (err) {
+      setError(
+        err instanceof Error && err.message.length < 160
+          ? err.message
+          : "That didn't work. Start over and try again.",
+      )
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const ageChips = (
+    <>
+      <div className="chips" role="group" aria-labelledby="age-band-label">
+        {(
+          [
+            ['under13', 'Under 13'],
+            ['teen', '13–17'],
+            ['adult', '18 or older'],
+          ] as const
+        ).map(([band, label]) => (
+          <button
+            type="button"
+            key={band}
+            className={`chip ${ageBand === band ? 'chip-active' : ''}`}
+            aria-pressed={ageBand === band}
+            onClick={() => setAgeBand(band)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      {ageBand === 'under13' && (
+        <p className="hint" role="status">
+          Glow Tape accounts start at 13 — but you're not left out! Ask a parent or
+          guardian to claim your role: they sign up instead, and they'll get your
+          whole schedule and messages. (That's our safety model, on purpose.)
+        </p>
+      )}
+      {ageBand === 'teen' && (
+        <>
+          <label htmlFor="age">Your age</label>
+          <input
+            id="age"
+            type="number"
+            inputMode="numeric"
+            min="13"
+            max="17"
+            value={age}
+            onChange={(e) => setAge(e.target.value)}
+            placeholder="13–17"
+            required
+          />
+          <p className="hint" style={{ margin: 0 }}>
+            This just sets when grown-up features unlock automatically at 18. Your
+            age is never shown to anyone and isn't kept — only the range.
+          </p>
+        </>
+      )}
+    </>
+  )
+  const ageBlocked = ageBand === 'under13' || (ageBand === 'teen' && (Number(age) < 13 || Number(age) > 17))
 
   return (
     <main className="signin">
@@ -174,52 +261,7 @@ export default function SignIn() {
                     (already have an account? skip this)
                   </span>
                 </span>
-                <div className="chips" role="group" aria-labelledby="age-band-label">
-                  {(
-                    [
-                      ['under13', 'Under 13'],
-                      ['teen', '13–17'],
-                      ['adult', '18 or older'],
-                    ] as const
-                  ).map(([band, label]) => (
-                    <button
-                      type="button"
-                      key={band}
-                      className={`chip ${ageBand === band ? 'chip-active' : ''}`}
-                      aria-pressed={ageBand === band}
-                      onClick={() => setAgeBand(band)}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-                {ageBand === 'under13' && (
-                  <p className="hint" role="status">
-                    Glow Tape accounts start at 13 — but you're not left out! Ask a parent or
-                    guardian to claim your role: they sign up instead, and they'll get your
-                    whole schedule and messages. (That's our safety model, on purpose.)
-                  </p>
-                )}
-                {ageBand === 'teen' && (
-                  <>
-                    <label htmlFor="age">Your age</label>
-                    <input
-                      id="age"
-                      type="number"
-                      inputMode="numeric"
-                      min="13"
-                      max="17"
-                      value={age}
-                      onChange={(e) => setAge(e.target.value)}
-                      placeholder="13–17"
-                      required
-                    />
-                    <p className="hint" style={{ margin: 0 }}>
-                      This just sets when grown-up features unlock automatically at 18. Your
-                      age is never shown to anyone and isn't kept — only the range.
-                    </p>
-                  </>
-                )}
+                {ageChips}
                 <p className="hint" style={{ margin: 0 }}>
                   We ask because theater includes kids — the range sets the right safety
                   protections and nothing else.
@@ -251,8 +293,8 @@ export default function SignIn() {
                   required
                 />
                 <p className="hint">
-                  Works once you've added your phone in Glow Tape. New here? Start with email —
-                  it takes a minute.
+                  Works once you've added your phone in Glow Tape, or if your show already has
+                  this number for you. Otherwise start with email — it takes a minute.
                 </p>
               </>
             )}
@@ -260,9 +302,7 @@ export default function SignIn() {
               type="submit"
               disabled={
                 busy ||
-                (method === 'email' &&
-                  (ageBand === 'under13' ||
-                    (ageBand === 'teen' && (Number(age) < 13 || Number(age) > 17))))
+                (method === 'email' && ageBlocked)
               }
             >
               {busy ? 'Sending…' : method === 'email' ? 'Email me a sign-in code' : 'Text me a sign-in code'}
@@ -278,6 +318,57 @@ export default function SignIn() {
                 </button>
               </p>
             )}
+          </form>
+        ) : step === 'newAccount' ? (
+          <form onSubmit={finishAccount}>
+            <p role="status">
+              {guardianOf.length > 0 && !name
+                ? `Your show has this number for ${guardianOf.join(' and ')}'s grown-up. One step to finish your account:`
+                : 'Your show has this number for you. One step to finish your account:'}
+            </p>
+            <label htmlFor="name">Your name</label>
+            <input
+              id="name"
+              type="text"
+              autoComplete="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="First and last name"
+              required
+            />
+            <label htmlFor="email">Email</label>
+            <input
+              id="email"
+              type="email"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Example: pat@gmail.com"
+              required
+            />
+            <p className="hint" style={{ margin: 0 }}>
+              Glow Tape emails you a copy of everything, so you never miss a change.
+            </p>
+            <span id="age-band-label" style={{ fontWeight: 600 }}>
+              How old are you?
+            </span>
+            {ageChips}
+            {guardianOf.length > 0 && ageBand === 'adult' && (
+              <p className="hint" style={{ margin: 0 }}>
+                You'll be set up as a parent or guardian of {guardianOf.join(' and ')}.
+              </p>
+            )}
+            <label className="row">
+              <input type="checkbox" checked={texts} onChange={(e) => setTexts(e.target.checked)} />
+              Text me reminders about my calls and urgent messages from my show's managers
+              (message &amp; data rates may apply; reply STOP anytime)
+            </label>
+            <button type="submit" disabled={busy || !ageBand || ageBlocked}>
+              {busy ? 'Setting up…' : 'Finish and sign in'}
+            </button>
+            <button type="button" className="link" onClick={() => setStep('enter')}>
+              Start over
+            </button>
           </form>
         ) : (
           <form onSubmit={confirmCode}>

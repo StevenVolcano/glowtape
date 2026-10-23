@@ -279,6 +279,7 @@ interface CastTextResult {
   smsOn: boolean
   texted: string[]
   inApp: string[]
+  emailed?: string[]
   unreachable: string[]
 }
 
@@ -390,12 +391,17 @@ function CastTextSection() {
             {result.inApp.length > 0 && (
               <p>💬 In Glow Tape + email for {result.inApp.length}: {result.inApp.join(', ')}</p>
             )}
-            {result.texted.length === 0 && result.inApp.length === 0 && <p>Nobody to send it to yet.</p>}
+            {(result.emailed?.length ?? 0) > 0 && (
+              <p>✉️ Emailed {result.emailed!.length} not on Glow Tape yet: {result.emailed!.join(', ')}</p>
+            )}
+            {result.texted.length === 0 && result.inApp.length === 0 && !result.emailed?.length && (
+              <p>Nobody to send it to yet.</p>
+            )}
           </div>
         )}
         {result && result.unreachable.length > 0 && (
           <p className="hint">
-            Not on Glow Tape yet, so they didn't get it: {result.unreachable.join(', ')}
+            Not on Glow Tape yet and no email on file, so they didn't get it: {result.unreachable.join(', ')}
           </p>
         )}
       </form>
