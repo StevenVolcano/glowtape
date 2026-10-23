@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { pb } from '../lib/pb.ts'
 import { SMS_READY, copyrightLine } from '../lib/types.ts'
 import { useTitle } from '../lib/useTitle.ts'
+import InstallHelp from '../components/InstallHelp.tsx'
 import { deviceHasPasskey, isCancel, passkeysSupported, signInWithPasskey } from '../lib/passkeys.ts'
 
 type Method = 'email' | 'phone'
@@ -395,6 +396,8 @@ export default function SignIn() {
         )}
 
         {error && <p className="error" role="alert">{error}</p>}
+
+        <InstallHelp />
 
         <p className="hint legal-links">
           <a href="/help.html">Help</a> · <a href="/privacy.html">Privacy</a> ·{' '}
