@@ -3,7 +3,7 @@ import { pb } from '../lib/pb.ts'
 import { useProduction } from '../pages/Production.tsx'
 import { groupMemberIds, groupUnitsByAct, resolveUnitMemberIds } from '../lib/breakdown.ts'
 import { conflictAppliesTo, conflictHitsEvent, isWeekly, weeklyLabel } from '../lib/conflicts.ts'
-import { DEFAULT_EVENT_KINDS, isCommunityKind, memberName, pbDate, productionPlaces } from '../lib/types.ts'
+import { DEFAULT_EVENT_KINDS, isCommunityKind, looksLikeLink, memberName, pbDate, productionPlaces } from '../lib/types.ts'
 import type { ConflictRecord, EventRecord, GroupRecord, UnitRecord } from '../lib/types.ts'
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -40,6 +40,8 @@ export default function EventForm({
   const [startTime, setStartTime] = useState(event ? localTime(pbDate(event.start)) : '19:00')
   const [endTime, setEndTime] = useState(event?.end ? localTime(pbDate(event.end)) : '')
   const [location, setLocation] = useState(event?.location ?? '')
+  const [videoUrl, setVideoUrl] = useState(event?.videoUrl ?? '')
+  const [movedLink, setMovedLink] = useState(false)
   const [notes, setNotes] = useState(event?.notes ?? '')
   const [calledNote, setCalledNote] = useState(event?.calledNote ?? '')
   const [everyone, setEveryone] = useState(event ? event.called.length === 0 : true)
@@ -226,6 +228,7 @@ export default function EventForm({
                 title,
                 kind,
                 location,
+                videoUrl,
                 notes,
                 calledNote,
                 called: calledIds,
@@ -248,6 +251,7 @@ export default function EventForm({
             title,
             kind,
             location,
+            videoUrl,
             notes,
             calledNote,
             called: calledIds,
@@ -408,7 +412,15 @@ export default function EventForm({
         aria-label="Location"
         list={locationsListId}
         value={location}
-        onChange={(e) => setLocation(e.target.value)}
+        onChange={(e) => {
+          // A pasted Zoom invite belongs in the video box, not the place box.
+          const v = e.target.value
+          if (looksLikeLink(v) && !videoUrl.trim()) {
+            setVideoUrl(v.trim())
+            setLocation('')
+            setMovedLink(true)
+          } else setLocation(v)
+        }}
         placeholder="Location"
       />
       <datalist id={locationsListId}>
@@ -416,6 +428,23 @@ export default function EventForm({
           <option key={l} value={l} />
         ))}
       </datalist>
+      <input
+        aria-label="Video call link (Zoom, Google Meet, Teams…)"
+        inputMode="url"
+        autoComplete="off"
+        value={videoUrl}
+        onChange={(e) => {
+          setVideoUrl(e.target.value)
+          setMovedLink(false)
+        }}
+        placeholder="Zoom or video link (optional)"
+      />
+      {movedLink && (
+        <p className="hint" role="status">
+          💻 That's a link, so it went in the video call box. Add a place too if some people will be
+          in the room.
+        </p>
+      )}
       <input
         aria-label="Notes"
         value={notes}

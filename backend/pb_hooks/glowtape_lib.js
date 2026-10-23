@@ -313,6 +313,83 @@ function consumeCode(app, phone, purpose, code) {
   return userId;
 }
 
+// --- invites by phone ---------------------------------------------------------
+// A manager-entered contactPhone on an unclaimed member row is an invite: the
+// person holding that phone can sign in by text and take those rows over.
+// Shared-role placeholders aren't anyone's, and archived shows stay frozen.
+function inviteRowsForPhone(app, phone) {
+  const rows = app.findRecordsByFilter(
+    "members",
+    "user = '' && contactPhone != '' && multi = false && production.archived != true",
+    "created",
+    2000,
+    0,
+  );
+  return rows.filter((m) => normalizeUsPhone(m.get("contactPhone")) === phone);
+}
+
+// What the new-account step can prefill: the person's own name/email from a
+// non-child row, else the email on a child's row (that's the parent's).
+function inviteDefaults(rows) {
+  const own = rows.filter((m) => !m.get("minor"));
+  const pick = (list, f) => {
+    for (const m of list) {
+      const v = String(m.get(f) || "").trim();
+      if (v) return v;
+    }
+    return "";
+  };
+  return {
+    name: pick(own, "displayName"),
+    email: pick(own, "contactEmail") || pick(rows, "contactEmail"),
+    guardianOf: rows.filter((m) => m.get("minor")).map((m) => String(m.get("displayName") || "a cast member")),
+  };
+}
+
+// Same outcomes as claiming with a role code (join route): own rows get the
+// user (unless they're already in that show); a child's row gets the user as a guardian plus a guardian row in that
+// show. Only adults become guardians.
+function claimInvites(app, user, rows, adult) {
+  const membersCol = app.findCollectionByNameOrId("members");
+  const hasRow = (pid) => {
+    try {
+      app.findFirstRecordByFilter("members", "production = {:p} && user = {:u}", { p: pid, u: user.id });
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  let claimed = 0;
+  for (const m of rows) {
+    const pid = String(m.get("production"));
+    if (m.get("minor")) {
+      if (!adult) continue;
+      const gs = toIdArray(m.get("guardians"));
+      if (!gs.includes(user.id)) {
+        gs.push(user.id);
+        m.set("guardians", gs);
+        app.save(m);
+      }
+      if (!hasRow(pid)) {
+        const g = new Record(membersCol);
+        g.set("production", pid);
+        g.set("user", user.id);
+        g.set("role", "guardian");
+        g.set("position", "Guardian of " + (m.get("displayName") || "a cast member"));
+        app.save(g);
+      }
+    } else {
+      // One row per person per show (unique index) — a second role on the
+      // same number is left for the managers to sort out.
+      if (hasRow(pid)) continue;
+      m.set("user", user.id);
+      app.save(m);
+    }
+    claimed++;
+  }
+  return claimed;
+}
+
 // America/Los_Angeles UTC offset without Intl, which the JSVM lacks.
 // DST: second Sunday of March to first Sunday of November.
 function pacificOffsetHours(t) {
@@ -642,6 +719,54 @@ function syncMemberAutoGroups(app, member) {
   }
 }
 
+// Video-call links (migration 1758900000): an event can meet in a room, on
+// Zoom/Meet/Teams, or both. events.videoUrl holds the link; location stays
+// the physical place. Anything web-link-shaped is accepted (any meeting
+// service works); a bare "zoom.us/j/123" gets https:// added. Quotes, angle
+// brackets and spaces are refused so the link drops safely into emails.
+const VIDEO_URL_MAX = 500;
+function looksLikeLink(text) {
+  const t = String(text || "").trim();
+  return /^https?:\/\//i.test(t) || /^[a-z0-9-]+(\.[a-z0-9-]+)+\/\S*$/i.test(t);
+}
+function cleanVideoUrl(value) {
+  let t = String(value === null || value === undefined ? "" : value).trim();
+  if (!t) return "";
+  if (!/^https?:\/\//i.test(t)) t = "https://" + t;
+  if (t.length > VIDEO_URL_MAX) throw new Error("That video link is too long.");
+  if (!/^https?:\/\/[a-z0-9-]+(\.[a-z0-9-]+)+(:\d+)?(\/[^\s"'<>]*)?$/i.test(t)) {
+    throw new Error("The video link should look like https://zoom.us/j/123456789.");
+  }
+  return t;
+}
+// A link typed into the Location box (the easy mistake) moves to videoUrl.
+// Returns { location, videoUrl }; throws on a bad link.
+function splitPlace(location, videoUrl) {
+  let loc = String(location || "").trim();
+  let url = String(videoUrl || "").trim();
+  if (!url && looksLikeLink(loc)) {
+    url = loc;
+    loc = "";
+  }
+  return { location: loc, videoUrl: cleanVideoUrl(url) };
+}
+// " at Grange Hall", " — video call", " at Grange Hall + video call".
+function whereShort(rec) {
+  const loc = String(rec.get("location") || "");
+  const url = String(rec.get("videoUrl") || "");
+  if (loc && url) return " at " + loc + " + video call";
+  if (loc) return " at " + loc;
+  if (url) return " — video call";
+  return "";
+}
+// Email lines for one event: Where + a Join link.
+function whereHtml(location, videoUrl) {
+  return [
+    location ? `<p>Where: ${location}</p>` : "",
+    videoUrl ? `<p>Join the video call: <a href="${videoUrl}">${videoUrl}</a></p>` : "",
+  ].join("\n");
+}
+
 // Validate a run-of-show timeline ({title, minutes} rows; clock times are
 // never stored — they compute forward from the event start). Used by the
 // events/update route and the Claude connector. null / undefined / [] clear
@@ -745,7 +870,15 @@ function cleanPoll(value) {
 }
 
 module.exports = {
+  inviteRowsForPhone,
+  inviteDefaults,
+  claimInvites,
   cleanTimeline,
+  cleanVideoUrl,
+  looksLikeLink,
+  splitPlace,
+  whereShort,
+  whereHtml,
   cleanPoll,
   readJson,
   pbNow,

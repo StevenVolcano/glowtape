@@ -36,7 +36,7 @@ routerAdd(
     rec.set("purpose", "email-change");
     rec.set("user", e.auth.id);
     rec.set("ip", e.realIP() || "");
-    rec.set("expires", lib.pbNow(10 * 60 * 1000));
+    rec.set("expires", lib.pbNow(2 * 60 * 60 * 1000)); // slow inboxes; consumeCode caps tries
     rec.set("attempts", 0);
     e.app.save(rec);
     lib.sendMail(
@@ -45,7 +45,7 @@ routerAdd(
       "Glow Tape: confirm your new email",
       `<p>Your confirmation code is <strong style="font-size:1.3em">${code}</strong>.</p>` +
         `<p>Type it into Glow Tape to switch your account to this address. ` +
-        `It expires in 10 minutes. Didn't ask for this? Just ignore it.</p>`,
+        `It works for 2 hours. Didn't ask for this? Just ignore it.</p>`,
     );
     return e.json(200, { ok: true });
   },

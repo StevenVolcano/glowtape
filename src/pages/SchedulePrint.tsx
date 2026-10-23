@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { pb } from '../lib/pb.ts'
 import { useProduction } from './Production.tsx'
-import { copyrightLine, memberName, pbDate } from '../lib/types.ts'
+import { copyrightLine, memberName, pbDate, whereText } from '../lib/types.ts'
 import { timelineLine } from '../components/Timeline.tsx'
 import type { EventRecord, MemberRecord } from '../lib/types.ts'
 
@@ -83,7 +83,7 @@ export default function SchedulePrint() {
     return `${sameHalf ? short(a).replace(/[ap]m$/, '') : short(a)}–${short(b)}`
   }
   // One venue for the whole run? Say it once instead of on every row.
-  const places = [...new Set(mine.map((e) => e.location).filter(Boolean))]
+  const places = [...new Set(mine.map((e) => whereText(e)).filter(Boolean))]
   const onePlace = places.length === 1 ? places[0] : ''
 
   return (
@@ -198,7 +198,7 @@ export default function SchedulePrint() {
                     <div className="hint" style={{ fontSize: '0.85em' }}>⏱ {timelineLine(e)}</div>
                   )}
                 </td>
-                {!onePlace && <td>{e.location}</td>}
+                {!onePlace && <td>{whereText(e)}</td>}
               </tr>
             )
           })}

@@ -294,6 +294,20 @@ export function mapsUrl(places: Place[], name: string): string {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(placeLine(places, name))}`
 }
 
+// Something typed into a place box that is really a web link (a pasted Zoom
+// invite) — mirrors looksLikeLink in glowtape_lib.js.
+export function looksLikeLink(text: string): boolean {
+  const t = (text || '').trim()
+  return /^https?:\/\//i.test(t) || /^[a-z0-9-]+(\.[a-z0-9-]+)+\/\S*$/i.test(t)
+}
+
+// Where, in words, for print and calendars: "Grange Hall", "Online (video
+// call)", "Grange Hall + video call".
+export function whereText(e: { location: string; videoUrl?: string }): string {
+  if (!e.videoUrl) return e.location
+  return e.location ? `${e.location} + video call` : 'Online (video call)'
+}
+
 // A safe href for an operator-typed external link: prepend https:// when they
 // paste a bare domain ("driftwood.org/tickets"), leave real schemes alone.
 export function externalHref(url: string): string {
@@ -398,7 +412,8 @@ export interface EventRecord {
   title: string
   start: string
   end: string
-  location: string
+  location: string // the physical place ('' = online only)
+  videoUrl: string // Zoom/Meet/Teams link ('' = in person only)
   notes: string
   called: string[]
   calledNote: string

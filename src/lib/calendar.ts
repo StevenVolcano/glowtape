@@ -1,5 +1,5 @@
 import type { EventRecord } from './types.ts'
-import { pbDate } from './types.ts'
+import { externalHref, pbDate } from './types.ts'
 
 // "2026-07-15 19:00:00.000Z" -> "20260715T190000Z"
 function calStamp(value: string): string {
@@ -22,11 +22,17 @@ export function googleCalendarUrl(
     text: `${event.title} — ${productionTitle}`,
     dates: `${calStamp(event.start)}/${endOrDefault(event)}`,
   })
-  const loc = locationLine || event.location
+  const loc = locationLine || event.location || event.videoUrl
   if (loc) params.set('location', loc)
-  const details = [event.calledNote, event.notes].filter(Boolean).join('\n')
+  const details = eventDetails(event)
   if (details) params.set('details', details)
   return `https://calendar.google.com/calendar/render?${params.toString()}`
+}
+
+// Calendar description: the video link first so it's one tap from the alert.
+function eventDetails(event: EventRecord): string {
+  const join = event.videoUrl ? `Join the video call: ${externalHref(event.videoUrl)}` : ''
+  return [join, event.calledNote, event.notes].filter(Boolean).join('\n')
 }
 
 function icsEscape(text: string): string {
@@ -40,8 +46,8 @@ export function downloadEventIcs(
   productionTitle: string,
   locationLine?: string,
 ): void {
-  const details = [event.calledNote, event.notes].filter(Boolean).join('\n')
-  const loc = locationLine || event.location
+  const details = eventDetails(event)
+  const loc = locationLine || event.location || event.videoUrl
   const lines = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
@@ -54,6 +60,7 @@ export function downloadEventIcs(
     `SUMMARY:${icsEscape(`${event.title} — ${productionTitle}`)}`,
     ...(loc ? [`LOCATION:${icsEscape(loc)}`] : []),
     ...(details ? [`DESCRIPTION:${icsEscape(details)}`] : []),
+    ...(event.videoUrl ? [`URL:${externalHref(event.videoUrl)}`] : []),
     'END:VEVENT',
     'END:VCALENDAR',
   ]

@@ -125,7 +125,10 @@ routerAdd("GET", "/api/glowtape/cal/{token}/calls.ics", (e) => {
 
       const start = String(ev.get("start"));
       const end = ev.get("end") ? String(ev.get("end")) : null;
-      const desc = [ev.get("calledNote"), ev.get("notes")].filter(Boolean).join("\n");
+      const video = String(ev.get("videoUrl") || "");
+      const desc = [video ? "Join the video call: " + video : "", ev.get("calledNote"), ev.get("notes")]
+        .filter(Boolean)
+        .join("\n");
 
       lines.push("BEGIN:VEVENT");
       lines.push("UID:evt-" + ev.id + "@glowtape");
@@ -149,7 +152,10 @@ routerAdd("GET", "/api/glowtape/cal/{token}/calls.ics", (e) => {
         const locName = String(ev.get("location"));
         const addr = placeAddr[locName.toLowerCase()];
         lines.push("LOCATION:" + lib.icsEscape(addr ? locName + ", " + addr : locName));
+      } else if (video) {
+        lines.push("LOCATION:" + lib.icsEscape(video));
       }
+      if (video) lines.push("URL:" + video);
       if (desc) lines.push("DESCRIPTION:" + lib.icsEscape(desc));
       lines.push("END:VEVENT");
     }

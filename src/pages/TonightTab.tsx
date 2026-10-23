@@ -5,7 +5,7 @@ import { useAuth } from '../lib/auth.tsx'
 import { useProduction } from './Production.tsx'
 import { TimelineView } from '../components/Timeline.tsx'
 import { PollCard } from '../components/Poll.tsx'
-import { formatWhen, mapsUrl, pbDate, productionPlaces } from '../lib/types.ts'
+import { externalHref, formatWhen, mapsUrl, pbDate, productionPlaces } from '../lib/types.ts'
 import type {
   AckRecord,
   AnnouncementRecord,
@@ -295,6 +295,11 @@ export default function TonightTab() {
             {next.location && (
               <a href={mapsUrl(places, next.location)} target="_blank" rel="noreferrer">
                 📍 {next.location}
+              </a>
+            )}
+            {next.videoUrl && (
+              <a className="join-call" href={externalHref(next.videoUrl)} target="_blank" rel="noreferrer">
+                💻 Join the video call
               </a>
             )}
             {next.calledNote && <span className="hint">{next.calledNote}</span>}

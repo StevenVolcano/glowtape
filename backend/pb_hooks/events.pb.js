@@ -23,6 +23,7 @@ routerAdd(
       title: "",
       kind: "",
       location: "",
+      videoUrl: "",
       notes: "",
       calledNote: "",
       called: [],
@@ -38,6 +39,12 @@ routerAdd(
     const occurrences = data.occurrences || [];
     if (occurrences.length === 0) throw new BadRequestError("Pick at least one date.");
     if (occurrences.length > 60) throw new BadRequestError("That's more than 60 events — split it up.");
+    let place;
+    try {
+      place = lib.splitPlace(data.location, data.videoUrl);
+    } catch (err) {
+      throw new BadRequestError(String(err && err.message ? err.message : err));
+    }
 
     let production;
     try {
@@ -61,7 +68,8 @@ routerAdd(
       rec.set("kind", data.kind || "");
       rec.set("start", occ.start);
       rec.set("end", occ.end || "");
-      rec.set("location", data.location);
+      rec.set("location", place.location);
+      rec.set("videoUrl", place.videoUrl);
       rec.set("notes", data.notes);
       rec.set("calledNote", data.calledNote);
       rec.set("called", lib.toIdArray(data.called));
@@ -82,7 +90,7 @@ routerAdd(
           `<h2>${ev.get("title")}</h2>`,
           `<p><strong>${production.get("title")}</strong></p>`,
           `<p>When: ${lib.formatPacific(ev.get("start"))} (Pacific)</p>`,
-          ev.get("location") ? `<p>Where: ${ev.get("location")}</p>` : "",
+          lib.whereHtml(ev.get("location"), ev.get("videoUrl")),
           ev.get("calledNote") ? `<p>Called: ${ev.get("calledNote")}</p>` : "",
           ev.get("notes") ? `<p>${ev.get("notes")}</p>` : "",
           `<p>Open Glow Tape to tap "Got it" so your stage manager knows you saw this.</p>`,
@@ -100,7 +108,7 @@ routerAdd(
         const lines = [
           `<h2>${data.title.trim()} — ${created.length} dates</h2>`,
           `<p><strong>${production.get("title")}</strong></p>`,
-          data.location ? `<p>Where: ${data.location}</p>` : "",
+          lib.whereHtml(place.location, place.videoUrl),
           data.calledNote ? `<p>Called: ${data.calledNote}</p>` : "",
           `<ul>${items}</ul>`,
           `<p>All times Pacific. Open Glow Tape to see the full schedule and tap "Got it" on each.</p>`,
@@ -143,9 +151,7 @@ onRecordAfterUpdateSuccess((e) => {
         [
           `<h2>Cancelled: ${e.record.get("title")}</h2>`,
           `<p><strong>${production.get("title")}</strong></p>`,
-          `<p>Was: ${lib.formatPacific(e.record.get("start"))} (Pacific)${
-            e.record.get("location") ? " at " + e.record.get("location") : ""
-          }</p>`,
+          `<p>Was: ${lib.formatPacific(e.record.get("start"))} (Pacific)${lib.whereShort(e.record)}</p>`,
           `<p>No need to do anything — just don't show up. 🙂</p>`,
         ].join("\n"),
       );
@@ -183,6 +189,22 @@ routerAdd(
       }
     });
 
+    // Same for video links. A link typed into Location moves to videoUrl
+    // (replacing the old link unless a new one was sent alongside it).
+    const places = items.map((item, i) => {
+      if (item.location === undefined && item.videoUrl === undefined) return undefined;
+      try {
+        const rec = e.app.findRecordById("events", String(item.id));
+        const loc = item.location !== undefined ? item.location : rec.get("location");
+        let url = item.videoUrl !== undefined ? item.videoUrl : rec.get("videoUrl");
+        if (item.videoUrl === undefined && lib.looksLikeLink(item.location)) url = "";
+        return lib.splitPlace(loc, url);
+      } catch (err) {
+        const msg = String(err && err.message ? err.message : err);
+        throw new BadRequestError(items.length > 1 ? `Event ${i + 1}: ${msg}` : msg);
+      }
+    });
+
     const changed = [];
     let production = null;
     let everyoneNotified = false;
@@ -206,9 +228,14 @@ routerAdd(
       const beforeStart = String(rec.get("start"));
       const beforeEnd = String(rec.get("end"));
       const beforeLocation = rec.get("location");
+      const beforeVideo = rec.get("videoUrl");
 
-      for (const f of ["title", "kind", "location", "notes", "calledNote"]) {
+      for (const f of ["title", "kind", "notes", "calledNote"]) {
         if (item[f] !== undefined) rec.set(f, item[f]);
+      }
+      if (places[i]) {
+        rec.set("location", places[i].location);
+        rec.set("videoUrl", places[i].videoUrl);
       }
       if (item.start !== undefined) rec.set("start", item.start);
       if (item.end !== undefined) rec.set("end", item.end);
@@ -225,7 +252,8 @@ routerAdd(
         rec.get("status") !== "cancelled" &&
         (String(rec.get("start")) !== beforeStart ||
           String(rec.get("end")) !== beforeEnd ||
-          rec.get("location") !== beforeLocation);
+          rec.get("location") !== beforeLocation ||
+          rec.get("videoUrl") !== beforeVideo);
 
       if (significant) {
         for (const col of ["acks", "reminders_sent"]) {
@@ -249,7 +277,7 @@ routerAdd(
         const lineFor = (ev) =>
           `<li><strong>${ev.get("kind") ? ev.get("kind") + ": " : ""}${ev.get("title")}</strong> — now ${lib.formatPacific(ev.get("start"))}${
             ev.get("location") ? " at " + ev.get("location") : ""
-          }</li>`;
+          }${ev.get("videoUrl") ? ` — <a href="${ev.get("videoUrl")}">join the video call</a>` : ""}</li>`;
         const subject =
           changed.length === 1
             ? `[${production.get("title")}] Schedule change: ${changed[0].get("title")}`
