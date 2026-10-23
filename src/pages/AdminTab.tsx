@@ -76,7 +76,7 @@ function ArchiveSection() {
   }
 
   return (
-    <Section id="archive" title={archived ? 'This show is archived' : 'Archive this show'} defaultOpen className="golive">
+    <Section id="archive" title={archived ? 'This show is archived' : 'Archive this show'} className="golive">
       {archived ? (
         <>
           <p className="hint">
@@ -163,7 +163,7 @@ function JoinCodeSection() {
   }
 
   return (
-    <Section id="invite" title="Invite people" defaultOpen>
+    <Section id="invite" title="Invite people">
       <p className="hint">
         Share this code at the read-through, or send the invite link — opening it fills
         everything in automatically.
@@ -1560,7 +1560,7 @@ function ConflictAlertsSection() {
   if (alerts.length === 0) return null
 
   return (
-    <Section id="sort-out" title="⚠️ To sort out" defaultOpen>
+    <Section id="sort-out" title="⚠️ To sort out">
       <p className="hint">
         People who are called to an event that lands on one of their conflicts. Move the event in
         “Fix up the schedule,” adjust who's called, or talk it through with them.

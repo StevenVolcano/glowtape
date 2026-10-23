@@ -312,7 +312,7 @@ function FeedbackInbox() {
   const openCount = items.filter(isOpen).length
 
   return (
-    <Section id="feedback" title={<>Feedback ({openCount} open)</>} defaultOpen>
+    <Section id="feedback" title={<>Feedback ({openCount} open)</>}>
       {visible.length === 0 && <p className="hint">Inbox zero. 🎉</p>}
       <ul className="plain-list">
         {visible.map((f) => (
@@ -668,7 +668,7 @@ function RequestsSection() {
   if (requests.length === 0) return null
 
   return (
-    <Section id="requests" title={<>Production requests ({open.length} open)</>} defaultOpen>
+    <Section id="requests" title={<>Production requests ({open.length} open)</>}>
       <ul className="plain-list">
         {requests.map((r) => (
           <li key={r.id} className="stack" style={{ marginBottom: '1.2rem' }}>

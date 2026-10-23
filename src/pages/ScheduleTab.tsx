@@ -527,7 +527,7 @@ export default function ScheduleTab() {
   return (
     <div>
       <JumpNav jumps={scheduleJumps(isManager)} ariaLabel="Schedule sections" />
-      <Section id="events" title={view === 'list' ? 'Coming up' : 'Schedule'} defaultOpen>
+      <Section id="events" title={view === 'list' ? 'Coming up' : 'Schedule'}>
         <div className="row no-print" style={{ alignItems: 'center' }}>
           <ViewChips
             view={view}

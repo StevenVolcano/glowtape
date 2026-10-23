@@ -5,6 +5,7 @@ import { useLocation } from 'react-router-dom'
 // especially) were a wall of forms; folding lets people keep just what they
 // use open. The choice is remembered per section per device, and anything
 // that points at a section (#hash links, jump chips, the ☰ menu) opens it.
+// Everything starts shut (Steven's call) — the page reads as a table of contents.
 
 const OPEN_EVENT = 'gt-open-section'
 
@@ -38,18 +39,16 @@ export function openSection(hash: string) {
 export default function Section({
   id,
   title,
-  defaultOpen = false,
   className,
   children,
 }: {
   id: string
   title: ReactNode
-  defaultOpen?: boolean
   className?: string
   children: ReactNode
 }) {
   const { hash } = useLocation()
-  const [open, setOpen] = useState(() => hash === `#${id}` || (readOpen(id) ?? defaultOpen))
+  const [open, setOpen] = useState(() => hash === `#${id}` || (readOpen(id) ?? false))
 
   useEffect(() => {
     if (hash === `#${id}`) setOpen(true)

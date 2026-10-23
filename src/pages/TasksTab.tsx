@@ -77,7 +77,7 @@ export default function TasksTab() {
       {!production.noBios &&
         myEditable.map((m) => <BioEditor key={m.id} member={m} onSaved={load} />)}
       <LineNotesSection />
-      <Section id="tasks" title="To-do" defaultOpen>
+      <Section id="tasks" title="To-do">
         <div className="chips">
           {(['open', 'mine', 'all'] as const).map((f) => (
             <button
@@ -360,7 +360,7 @@ function LineNotesSection() {
   const base = `/production/${production.id}`
 
   return (
-    <Section id="line-notes" title={<>🎯 Line notes ({mine.length})</>} defaultOpen>
+    <Section id="line-notes" title={<>🎯 Line notes ({mine.length})</>}>
       <p className="hint">
         Notes from the managers about lines to look at before next time. Check one off once
         you've got it down.

@@ -116,7 +116,7 @@ export default function Home() {
 
       <h1>Hi, {user?.name || 'there'}</h1>
 
-      <Section id="my-shows" title="Your productions" defaultOpen>
+      <Section id="my-shows" title="Your productions">
         {!loaded ? (
           <p>Loading…</p>
         ) : active.length === 0 ? (
@@ -156,7 +156,7 @@ export default function Home() {
       )}
 
       {openAuditions.length > 0 && (
-        <Section id="open-auditions" title="Auditions" defaultOpen>
+        <Section id="open-auditions" title="Auditions">
           <ul className="cards">
             {openAuditions.map((p) => (
               <li key={p.id}>
@@ -174,7 +174,7 @@ export default function Home() {
         </Section>
       )}
 
-      <Section id="join" title="Join a production" defaultOpen>
+      <Section id="join" title="Join a production">
         <form onSubmit={join} className="row">
           <input
             aria-label="Join code"
@@ -189,7 +189,7 @@ export default function Home() {
         {error && <p className="error" role="alert">{error}</p>}
       </Section>
 
-      <Section id="harbor" title="Around Grays Harbor" defaultOpen>
+      <Section id="harbor" title="Around Grays Harbor">
         <ul className="cards">
           <li>
             <Link className="card card-link community-card" to="/community">

@@ -72,7 +72,7 @@ export default function MessagesTab() {
   return (
     <div>
       <Announcements />
-      <Section id="channels" title="Channels" defaultOpen>
+      <Section id="channels" title="Channels">
         {noPhotoMembers.length > 0 && (
           <p className="hint">
             📷 Heads up: this production includes {noPhotoMembers.length}{' '}
@@ -149,7 +149,7 @@ function Announcements() {
   if (items.length === 0) return null
 
   return (
-    <Section id="announcements" title="Announcements" defaultOpen>
+    <Section id="announcements" title="Announcements">
       <ul className="cards">
         {items.map((a) => {
           const mine = acks.some((k) => k.announcement === a.id && k.user === user?.id)

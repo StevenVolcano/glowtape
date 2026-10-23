@@ -119,7 +119,7 @@ export default function PushSettings() {
   if (state === 'checking' || state === 'unavailable' || state === 'unsupported') return null
 
   return (
-    <Section id="notifications" title="Notifications" defaultOpen>
+    <Section id="notifications" title="Notifications">
       {state === 'ios-install' && (
         <p className="hint">
           To get notifications on an iPhone, first add Glow Tape to your Home Screen (Safari →

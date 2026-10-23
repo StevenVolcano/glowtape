@@ -117,7 +117,7 @@ export default function SetupGuide() {
   const open = expanded ?? !allDone
 
   return (
-    <Section id="setup" title={<>Setting up {production.title}</>} defaultOpen>
+    <Section id="setup" title={<>Setting up {production.title}</>}>
       <p className="hint">
         {allDone
           ? '🎬 All set up. This checklist stays here if you need it.'
