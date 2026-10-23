@@ -14,6 +14,7 @@ import {
 import type { TrackerItemRecord } from '../lib/types.ts'
 import BreakdownView from '../components/BreakdownView.tsx'
 import ColumnResizer, { useColumnWidths } from '../components/ColumnResizer.tsx'
+import TrackerPhoto from '../components/TrackerPhoto.tsx'
 
 // The multi-tab Google Sheet, replaced: props, costumes, set, and cue
 // paperwork live here. Managers edit right in the table; everyone else reads.
@@ -45,11 +46,15 @@ export default function TrackersTab() {
 
   const cols = visibleCols(tracker)
   const labels = TRACKERS[tracker].cols
+  const photos = TRACKERS[tracker].photos
   // Once any column has been sized, every column gets a fixed width so the
-  // table stops auto-fitting; the ✕ column keeps a fixed slot.
+  // table stops auto-fitting; the photo and ✕ columns keep fixed slots.
   const ACTIONS_W = 56
+  const PHOTO_W = 80
   const sizedWidth = colWidths.sized
-    ? cols.reduce((sum, c) => sum + (colWidths.widths[c] ?? 120), 0) + (isManager ? ACTIONS_W : 0)
+    ? cols.reduce((sum, c) => sum + (colWidths.widths[c] ?? 120), 0) +
+      (isManager ? ACTIONS_W : 0) +
+      (photos ? PHOTO_W : 0)
     : undefined
 
   async function saveCell(item: TrackerItemRecord, col: TrackerCol, value: string) {
@@ -171,6 +176,7 @@ export default function TrackersTab() {
             >
               {colWidths.sized && (
                 <colgroup>
+                  {photos && <col style={{ width: PHOTO_W }} />}
                   {cols.map((c) => (
                     <col key={c} style={{ width: colWidths.widths[c] ?? 120 }} />
                   ))}
@@ -179,6 +185,7 @@ export default function TrackersTab() {
               )}
               <thead>
                 <tr>
+                  {photos && <th scope="col">Photo</th>}
                   {cols.map((c) => (
                     <th key={c} scope="col" data-col={c} className="resizable-th">
                       {labels[c]}
@@ -202,6 +209,17 @@ export default function TrackersTab() {
               <tbody>
                 {items.map((item) => (
                   <tr key={`${tracker}-${item.id}`}>
+                    {photos && (
+                      <td className="tracker-photo-cell">
+                        <TrackerPhoto
+                          item={item}
+                          canEdit={isManager}
+                          onSaved={(updated) =>
+                            setItems((prev) => prev.map((it) => (it.id === updated.id ? updated : it)))
+                          }
+                        />
+                      </td>
+                    )}
                     {cols.map((c) => (
                       <td key={c}>
                         {isManager ? (
@@ -268,7 +286,8 @@ export default function TrackersTab() {
         {isManager && (
           <p className="hint no-print">
             Drag the edge of a column heading to make it wider or narrower (it remembers on this
-            device). Tap a cell to edit — changes save on their own. Coming from Google Sheets? In your
+            device). Tap a cell to edit — changes save on their own.
+            {photos && ' Tap 📷 on a row to take or pick a photo of it, so everyone knows exactly which one.'} Coming from Google Sheets? In your
             sheet: File → Download → Comma Separated Values, one tab at a time, then import it
             here. Starting from nothing? An AI chat can draft every sheet from your script —{' '}
             <a href="/breakdown-ai.html" target="_blank" rel="noreferrer">
