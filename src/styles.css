@@ -618,6 +618,31 @@ button.menu-link {
   border-bottom: 1px solid var(--line);
 }
 
+.fold-group {
+  border-bottom: 1px solid var(--line);
+}
+
+.fold-group > .dept-heading {
+  display: flex;
+  margin: 0.25rem 0;
+}
+
+.fold-group > .dept-heading > .fold-toggle {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.fold-summary {
+  display: block;
+  color: var(--muted);
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.fold-group > .fold-body {
+  padding-bottom: 0.5rem;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .fold-caret {
     transition: none;

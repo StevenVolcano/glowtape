@@ -8,7 +8,7 @@ import { matchMember } from '../lib/breakdown.ts'
 import { csvField, parseCsv } from '../lib/trackers.ts'
 import { formatDay, memberName, LINE_NOTE_LABELS } from '../lib/types.ts'
 import type { LineNoteRecord, MemberRecord, TaskRecord } from '../lib/types.ts'
-import Section from '../components/Section.tsx'
+import Section, { FoldGroup } from '../components/Section.tsx'
 
 const DEFAULT_DEPARTMENTS = [
   'Set',
@@ -95,13 +95,18 @@ export default function TasksTab() {
             {filter === 'mine' ? 'Nothing assigned to you. Enjoy it.' : 'Nothing here — lovely.'}
           </p>
         )}
-        {departments.map((dept) => (
-          <div key={dept}>
-            <h3 className="dept-heading">{dept}</h3>
-            <ul className="plain-list">
-              {visible
-                .filter((t) => (t.department || 'General') === dept)
-                .map((t) => {
+        {departments.map((dept) => {
+          const deptTasks = visible.filter((t) => (t.department || 'General') === dept)
+          const open = deptTasks.filter((t) => !t.done).length
+          const late = deptTasks.filter((t) => !t.done && t.due && String(t.due).slice(0, 10) < today).length
+          return (
+            <FoldGroup
+              key={dept}
+              title={dept}
+              summary={`${open} open${late ? ` · ${late} overdue` : ''}${deptTasks.length > open ? ` · ${deptTasks.length - open} done` : ''}`}
+            >
+              <ul className="plain-list">
+                {deptTasks.map((t) => {
                   const assignee = members.find((m) => m.id === t.assignee)
                   const overdue = !t.done && t.due && String(t.due).slice(0, 10) < today
                   return (
@@ -137,9 +142,10 @@ export default function TasksTab() {
                     </li>
                   )
                 })}
-            </ul>
-          </div>
-        ))}
+              </ul>
+            </FoldGroup>
+          )
+        })}
       </Section>
 
       {isManager && <NewTaskForm members={members} onAdded={load} />}

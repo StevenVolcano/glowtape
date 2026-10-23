@@ -8,6 +8,7 @@ import { TAGLINE } from '../lib/types.ts'
 import { copyrightLine, externalHref, formatWhen, pbDate } from '../lib/types.ts'
 import type { CommunityEvent } from '../lib/types.ts'
 import SiteMenu from '../components/SiteMenu.tsx'
+import { FoldGroup } from '../components/Section.tsx'
 
 // The Grays Harbor theater commons: the message board plus a public calendar
 // of every audition and performance across all productions.
@@ -154,8 +155,11 @@ export default function Community() {
           </p>
         )}
         {[...byMonth.entries()].map(([month, groups]) => (
-          <div key={month}>
-            <h3 className="dept-heading">{month}</h3>
+          <FoldGroup
+            key={month}
+            title={month}
+            summary={[...groups.values()].map((d) => d[0].productionTitle).filter((t, i, a) => a.indexOf(t) === i).join(', ')}
+          >
             <ul className="cards">
               {[...groups.entries()].map(([groupKey, dates]) => {
                 const first = dates[0]
@@ -205,7 +209,7 @@ export default function Community() {
                 )
               })}
             </ul>
-          </div>
+          </FoldGroup>
         ))}
       </section>
 

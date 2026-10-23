@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useId, useState, type ReactNode } from 'react'
 import { useLocation } from 'react-router-dom'
 
 // A page section whose heading folds it open and shut. Long pages (Manage
@@ -90,5 +90,48 @@ export default function Section({
         {children}
       </div>
     </section>
+  )
+}
+
+// A fold for a group INSIDE a section — a week of the schedule, a department
+// of tasks, an act of the breakdown. Starts shut so a long list reads as a
+// short table of contents; the summary says what's inside without opening it.
+// Not remembered: the groups come and go with the data.
+export function FoldGroup({
+  title,
+  summary,
+  as: Heading = 'h3',
+  children,
+}: {
+  title: ReactNode
+  summary?: ReactNode
+  as?: 'h3' | 'h4'
+  children: ReactNode
+}) {
+  const [open, setOpen] = useState(false)
+  const bodyId = useId()
+  return (
+    <div className={`fold-group${open ? ' open' : ''}`}>
+      <Heading className="dept-heading">
+        <button
+          type="button"
+          className="fold-toggle"
+          aria-expanded={open}
+          aria-controls={bodyId}
+          onClick={() => setOpen(!open)}
+        >
+          <span className="fold-title">
+            {title}
+            {summary && <span className="fold-summary"> {summary}</span>}
+          </span>
+          <span className="fold-caret" aria-hidden="true">
+            ▸
+          </span>
+        </button>
+      </Heading>
+      <div id={bodyId} className="fold-body" hidden={!open}>
+        {children}
+      </div>
+    </div>
   )
 }

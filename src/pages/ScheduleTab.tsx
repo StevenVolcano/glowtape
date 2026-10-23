@@ -30,7 +30,7 @@ import {
   type ScheduleView,
 } from '../components/ScheduleViews.tsx'
 import type { AckRecord, AttendanceRecord, ConflictRecord, EventRecord, GroupRecord, MemberRecord, UnitRecord } from '../lib/types.ts'
-import Section from '../components/Section.tsx'
+import Section, { FoldGroup } from '../components/Section.tsx'
 
 export default function ScheduleTab() {
   const { production, members, myMember, isManager } = useProduction()
@@ -633,7 +633,23 @@ export default function ScheduleTab() {
                     : 'Nothing coming up.'}
               </p>
             )}
-            <ul className="cards">{visible.map(renderEvent)}</ul>
+            {weekGroups(visible).map(([start, list]) => {
+              const thisWeek = dayKey(start) === dayKey(startOfWeek(now))
+              const days = [...new Set(list.map((e) => pbDate(e.start).toLocaleDateString(undefined, { weekday: 'short' })))]
+              const needs = list.filter((e) => unacked.includes(e)).length
+              return (
+                <FoldGroup
+                  key={dayKey(start)}
+                  title={`${thisWeek ? 'This week' : 'Week of'} ${weekLabel(start)}`}
+                  summary={
+                    `${list.length} event${list.length === 1 ? '' : 's'} — ${days.join(', ')}` +
+                    (needs ? ` · ${needs} need${needs === 1 ? 's' : ''} your 👍` : '')
+                  }
+                >
+                  <ul className="cards">{list.map(renderEvent)}</ul>
+                </FoldGroup>
+              )
+            })}
             <button className="link" aria-expanded={showPast} onClick={() => setShowPast(!showPast)}>
               {showPast ? 'Hide past events' : 'Show past events'}
             </button>
@@ -1193,4 +1209,16 @@ function WeeklyHoursForm({
       {wkErr && <p className="error" role="alert">{wkErr}</p>}
     </form>
   )
+}
+
+// The list view, a week at a time (Sunday start, like the week view).
+function weekGroups(events: EventRecord[]): [Date, EventRecord[]][] {
+  const out = new Map<string, [Date, EventRecord[]]>()
+  for (const e of events) {
+    const start = startOfWeek(pbDate(e.start))
+    const k = dayKey(start)
+    if (!out.has(k)) out.set(k, [start, []])
+    out.get(k)![1].push(e)
+  }
+  return [...out.values()]
 }

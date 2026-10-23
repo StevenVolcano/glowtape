@@ -12,7 +12,8 @@ import { conflictAppliesTo, conflictHitsEvent, isWeekly, weeklyLabel } from '../
 import type { AttendanceRecord, AuditionRecord, ChannelRecord, ConflictRecord, EventRecord, GroupRecord, MemberRecord, MemberRole, ProfileRecord, ResourceRecord } from '../lib/types.ts'
 import { DEFAULT_EVENT_KINDS, formatStamp, memberName, normalizePlaces, pbDate, productionPlaces, shareInvite } from '../lib/types.ts'
 import type { Place } from '../lib/types.ts'
-import Section from '../components/Section.tsx'
+import Section, { FoldGroup } from '../components/Section.tsx'
+import { startOfWeek, weekLabel } from '../components/ScheduleViews.tsx'
 
 export default function AdminTab() {
   const { archived } = useProduction()
@@ -444,6 +445,23 @@ function rowFromEvent(e: EventRecord): EditRow {
   }
 }
 
+const ROLE_GROUPS: [string, MemberRole[]][] = [
+  ['Managers', MANAGER_ROLES],
+  ['Performers', ['performer']],
+  ['Crew', ['crew']],
+  ['Parents & guardians', ['guardian']],
+]
+
+function weekRows(rows: EditRow[], originals: Record<string, EditRow>): [string, EditRow[]][] {
+  const out = new Map<string, EditRow[]>()
+  for (const r of rows) {
+    const d = new Date(`${(originals[r.id] ?? r).date}T12:00`)
+    const label = weekLabel(startOfWeek(d))
+    out.set(label, [...(out.get(label) ?? []), r])
+  }
+  return [...out.entries()]
+}
+
 // Fix up several nights at once; Save all sends ONE digest email covering
 // every event whose time or place actually moved.
 function ScheduleTableSection() {
@@ -522,79 +540,92 @@ function ScheduleTableSection() {
         Adjust several events at once — type, title, day, times, place. Save all sends a single
         email covering everything that moved.
       </p>
-      <div className="edit-table">
-        <table>
-          <thead>
-            <tr>
-              <th scope="col">Type</th>
-              <th scope="col">Title</th>
-              <th scope="col">Date</th>
-              <th scope="col">Start</th>
-              <th scope="col">End</th>
-              <th scope="col">Location</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={r.id}>
-                <td>
-                  <select
-                    aria-label={`Type for ${r.title}`}
-                    value={r.kind}
-                    onChange={(e) => setField(r.id, 'kind', e.target.value)}
-                  >
-                    <option value="">—</option>
-                    {kinds.map((k) => (
-                      <option key={k} value={k}>
-                        {k}
-                      </option>
-                    ))}
-                  </select>
-                </td>
-                <td>
-                  <input
-                    aria-label="Title"
-                    value={r.title}
-                    onChange={(e) => setField(r.id, 'title', e.target.value)}
-                  />
-                </td>
-                <td>
-                  <input
-                    aria-label={`Date for ${r.title}`}
-                    type="date"
-                    value={r.date}
-                    onChange={(e) => setField(r.id, 'date', e.target.value)}
-                  />
-                </td>
-                <td>
-                  <input
-                    aria-label={`Start time for ${r.title}`}
-                    type="time"
-                    value={r.startTime}
-                    onChange={(e) => setField(r.id, 'startTime', e.target.value)}
-                  />
-                </td>
-                <td>
-                  <input
-                    aria-label={`End time for ${r.title}`}
-                    type="time"
-                    value={r.endTime}
-                    onChange={(e) => setField(r.id, 'endTime', e.target.value)}
-                  />
-                </td>
-                <td>
-                  <input
-                    aria-label={`Location for ${r.title}`}
-                    list="gt-locations"
-                    value={r.location}
-                    onChange={(e) => setField(r.id, 'location', e.target.value)}
-                  />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {/* Folded by week (of the date as loaded, so a row doesn't jump groups
+          while you retype its date), shut to start. */}
+      {weekRows(rows, originals).map(([label, list]) => {
+        const changed = list.filter((r) => dirty.includes(r)).length
+        return (
+          <FoldGroup
+            key={label}
+            title={`Week of ${label}`}
+            summary={`${list.length} event${list.length === 1 ? '' : 's'}${changed ? ` · ${changed} changed` : ''}`}
+          >
+            <div className="edit-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">Type</th>
+                    <th scope="col">Title</th>
+                    <th scope="col">Date</th>
+                    <th scope="col">Start</th>
+                    <th scope="col">End</th>
+                    <th scope="col">Location</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {list.map((r) => (
+                    <tr key={r.id}>
+                      <td>
+                        <select
+                          aria-label={`Type for ${r.title}`}
+                          value={r.kind}
+                          onChange={(e) => setField(r.id, 'kind', e.target.value)}
+                        >
+                          <option value="">—</option>
+                          {kinds.map((k) => (
+                            <option key={k} value={k}>
+                              {k}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td>
+                        <input
+                          aria-label="Title"
+                          value={r.title}
+                          onChange={(e) => setField(r.id, 'title', e.target.value)}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          aria-label={`Date for ${r.title}`}
+                          type="date"
+                          value={r.date}
+                          onChange={(e) => setField(r.id, 'date', e.target.value)}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          aria-label={`Start time for ${r.title}`}
+                          type="time"
+                          value={r.startTime}
+                          onChange={(e) => setField(r.id, 'startTime', e.target.value)}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          aria-label={`End time for ${r.title}`}
+                          type="time"
+                          value={r.endTime}
+                          onChange={(e) => setField(r.id, 'endTime', e.target.value)}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          aria-label={`Location for ${r.title}`}
+                          list="gt-locations"
+                          value={r.location}
+                          onChange={(e) => setField(r.id, 'location', e.target.value)}
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </FoldGroup>
+        )
+      })}
       <datalist id="gt-locations">
         {locations.map((l) => (
           <option key={l} value={l} />
@@ -1234,120 +1265,134 @@ function MembersSection() {
 
   return (
     <Section id="people" title={<>People &amp; roles</>}>
-      <ul className="plain-list">
-        {members.map((m) => (
-          <li key={m.id} className="member-row">
-            <strong>
-              {m.user ? (
-                m.expand?.user?.name
-              ) : (
-                <>
-                  <em>{memberName(m)}</em>{' '}
-                  {m.minor && <span className="pill">child</span>}{' '}
-                  <span className="pill">{production.joinCode}-{m.roleCode}</span>
-                  {m.multi && <span className="hint"> shared</span>}
-                  {m.minor && (
-                    <span className="hint">
-                      {' '}
-                      {m.guardians?.length
-                        ? `${m.guardians.length} guardian${m.guardians.length > 1 ? 's' : ''}`
-                        : 'no guardian yet — share the code with a parent'}
-                    </span>
+      {/* Folded by kind of role, shut to start — a big cast is a long list. */}
+      {ROLE_GROUPS.map(([label, roles]) => {
+        const list = members.filter((m) => roles.includes(m.role))
+        if (list.length === 0) return null
+        const unclaimed = list.filter((m) => !m.user).length
+        return (
+          <FoldGroup
+            key={label}
+            title={label}
+            summary={`${list.length}${unclaimed ? ` · ${unclaimed} not claimed yet` : ''}`}
+          >
+            <ul className="plain-list">
+              {list.map((m) => (
+                <li key={m.id} className="member-row">
+                  <strong>
+                    {m.user ? (
+                      m.expand?.user?.name
+                    ) : (
+                      <>
+                        <em>{memberName(m)}</em>{' '}
+                        {m.minor && <span className="pill">child</span>}{' '}
+                        <span className="pill">{production.joinCode}-{m.roleCode}</span>
+                        {m.multi && <span className="hint"> shared</span>}
+                        {m.minor && (
+                          <span className="hint">
+                            {' '}
+                            {m.guardians?.length
+                              ? `${m.guardians.length} guardian${m.guardians.length > 1 ? 's' : ''}`
+                              : 'no guardian yet — share the code with a parent'}
+                          </span>
+                        )}
+                        <button
+                          className="link"
+                          onClick={() => shareInvite(`${production.joinCode}-${m.roleCode}`, production.title)}
+                        >
+                          📤 share
+                        </button>
+                      </>
+                    )}
+                  </strong>
+                  <select
+                    aria-label={`Role for ${memberName(m)}`}
+                    value={m.role}
+                    disabled={busyId === m.id}
+                    onChange={(e) => setRole(m, e.target.value as MemberRole)}
+                  >
+                    {(Object.keys(ROLE_LABELS) as MemberRole[]).map((r) => (
+                      <option key={r} value={r}>
+                        {ROLE_LABELS[r]}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    aria-label={`Position for ${memberName(m)}`}
+                    defaultValue={m.position}
+                    placeholder="Character / position"
+                    onBlur={(e) => {
+                      if (e.target.value !== m.position) setPosition(m, e.target.value)
+                    }}
+                  />
+                  {!m.user && !m.claimedFrom && (
+                    <textarea
+                      aria-label={`Casting notes for ${memberName(m)}`}
+                      rows={2}
+                      style={{ width: '100%' }}
+                      maxLength={500}
+                      defaultValue={m.roleNotes}
+                      placeholder="Casting notes for the audition form — Example: woman, 40s–60s, the family's sharp-tongued matriarch; strong alto"
+                      onBlur={(e) => {
+                        if (e.target.value !== (m.roleNotes ?? '')) setRoleNotes(m, e.target.value)
+                      }}
+                    />
                   )}
-                  <button
-                    className="link"
-                    onClick={() => shareInvite(`${production.joinCode}-${m.roleCode}`, production.title)}
-                  >
-                    📤 share
+                  {groups.length > 0 && !m.claimedFrom && m.role !== 'guardian' && (
+                    <div className="chips" style={{ width: '100%' }}>
+                      <span className="hint" style={{ alignSelf: 'center' }}>Groups:</span>
+                      {groups.map((g) => (
+                        <button
+                          type="button"
+                          key={g.id}
+                          className={`chip ${(m.groups ?? []).includes(g.id) ? 'chip-active' : ''}`}
+                          aria-pressed={(m.groups ?? []).includes(g.id)}
+                          onClick={() => toggleMemberGroup(m, g.id)}
+                        >
+                          {g.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  <label className="row manage-toggle">
+                    <input
+                      type="checkbox"
+                      checked={m.manager}
+                      disabled={busyId === m.id}
+                      onChange={(e) => setManager(m, e.target.checked)}
+                    />
+                    Manage
+                  </label>
+                  {(m.user || m.minor) && (
+                    <button
+                      className="link"
+                      aria-label={`Photo consent for ${memberName(m)}: ${
+                        m.noPhotos ? 'no photos allowed' : 'photos OK'
+                      } — tap to toggle`}
+                      onClick={() => setNoPhotos(m, !m.noPhotos)}
+                    >
+                      {m.noPhotos ? '🚫📷 no photos' : '📷 ok'}
+                    </button>
+                  )}
+                  <button className="link" disabled={busyId === m.id} onClick={() => remove(m)}>
+                    remove
                   </button>
-                </>
-              )}
-            </strong>
-            <select
-              aria-label={`Role for ${memberName(m)}`}
-              value={m.role}
-              disabled={busyId === m.id}
-              onChange={(e) => setRole(m, e.target.value as MemberRole)}
-            >
-              {(Object.keys(ROLE_LABELS) as MemberRole[]).map((r) => (
-                <option key={r} value={r}>
-                  {ROLE_LABELS[r]}
-                </option>
+                  {!m.user && !m.minor && !m.multi && (
+                    <OfflineContact
+                      member={m}
+                      contact={offline[m.id] ?? { email: '', phone: '' }}
+                      onSaved={async () => {
+                        await reload()
+                        await loadOffline()
+                      }}
+                    />
+                  )}
+                </li>
               ))}
-            </select>
-            <input
-              aria-label={`Position for ${memberName(m)}`}
-              defaultValue={m.position}
-              placeholder="Character / position"
-              onBlur={(e) => {
-                if (e.target.value !== m.position) setPosition(m, e.target.value)
-              }}
-            />
-            {!m.user && !m.claimedFrom && (
-              <textarea
-                aria-label={`Casting notes for ${memberName(m)}`}
-                rows={2}
-                style={{ width: '100%' }}
-                maxLength={500}
-                defaultValue={m.roleNotes}
-                placeholder="Casting notes for the audition form — Example: woman, 40s–60s, the family's sharp-tongued matriarch; strong alto"
-                onBlur={(e) => {
-                  if (e.target.value !== (m.roleNotes ?? '')) setRoleNotes(m, e.target.value)
-                }}
-              />
-            )}
-            {groups.length > 0 && !m.claimedFrom && m.role !== 'guardian' && (
-              <div className="chips" style={{ width: '100%' }}>
-                <span className="hint" style={{ alignSelf: 'center' }}>Groups:</span>
-                {groups.map((g) => (
-                  <button
-                    type="button"
-                    key={g.id}
-                    className={`chip ${(m.groups ?? []).includes(g.id) ? 'chip-active' : ''}`}
-                    aria-pressed={(m.groups ?? []).includes(g.id)}
-                    onClick={() => toggleMemberGroup(m, g.id)}
-                  >
-                    {g.name}
-                  </button>
-                ))}
-              </div>
-            )}
-            <label className="row manage-toggle">
-              <input
-                type="checkbox"
-                checked={m.manager}
-                disabled={busyId === m.id}
-                onChange={(e) => setManager(m, e.target.checked)}
-              />
-              Manage
-            </label>
-            {(m.user || m.minor) && (
-              <button
-                className="link"
-                aria-label={`Photo consent for ${memberName(m)}: ${
-                  m.noPhotos ? 'no photos allowed' : 'photos OK'
-                } — tap to toggle`}
-                onClick={() => setNoPhotos(m, !m.noPhotos)}
-              >
-                {m.noPhotos ? '🚫📷 no photos' : '📷 ok'}
-              </button>
-            )}
-            <button className="link" disabled={busyId === m.id} onClick={() => remove(m)}>
-              remove
-            </button>
-            {!m.user && !m.minor && !m.multi && (
-              <OfflineContact
-                member={m}
-                contact={offline[m.id] ?? { email: '', phone: '' }}
-                onSaved={async () => {
-                  await reload()
-                  await loadOffline()
-                }}
-              />
-            )}
-          </li>
-        ))}
-      </ul>
+            </ul>
+          </FoldGroup>
+        )
+      })}
       <AddRoleForm onAdded={reload} />
       <p className="hint">
         The <strong>Manage</strong> checkbox grants this tab — it checks itself for directors,
