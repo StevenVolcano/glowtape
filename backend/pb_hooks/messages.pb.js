@@ -63,7 +63,7 @@ onRecordCreateRequest((e) => {
   e.record.set("gifTitle", "");
   e.record.set("edited", false);
 
-  // Polls: managers of the show only; votes/closing/pinning go through
+  // Polls: anyone who can post in a show channel; votes/closing/pinning go through
   // polls.pb.js, so a new message always starts with a clean slate.
   const lib = require(`${__hooks}/glowtape_lib.js`);
   const rawPoll = lib.readJson(e.record, "poll");
@@ -74,10 +74,6 @@ onRecordCreateRequest((e) => {
     const channel = e.app.findRecordById("channels", e.record.get("channel"));
     const productionId = String(channel.get("production") || "");
     if (!productionId) throw new BadRequestError("Polls are for a show's chat.");
-    const production = e.app.findRecordById("productions", productionId);
-    if (!lib.canManage(production, e.auth)) {
-      throw new BadRequestError("Only the show's managers can start a poll.");
-    }
     let poll;
     try {
       poll = lib.cleanPoll(rawPoll);

@@ -6,7 +6,9 @@ import type { MemberRecord, MessageRecord, Poll, PollPick, PollVotes } from '../
 
 // Polls live on chat messages (migration 1758700000). Managers start them
 // from the chat composer; everyone who can read the channel votes and sees
-// the results. Votes, closing and pinning go through polls.pb.js.
+// the results. Anyone in a show channel can start one; the author or a
+// manager closes it, managers pin it. Votes, closing and pinning go
+// through polls.pb.js.
 
 function errText(err: unknown, fallback: string) {
   const data = (err as { response?: { message?: string; status?: number } })?.response
@@ -205,7 +207,7 @@ export function PollCard({
 
 type TimeRow = { date: string; from: string; to: string }
 
-// The manager's "start a poll" form, shown above the chat composer.
+// The "start a poll" form, shown above the chat composer.
 export function PollComposer({
   channelId,
   onCreated,

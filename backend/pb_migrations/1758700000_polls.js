@@ -5,7 +5,7 @@
 // - poll: {kind: 'choice'|'times', question, multi, options: [{id, label,
 //   start?, end?}]}. 'choice' = pick an answer; 'times' = Doodle-style "when
 //   works?" where each option is a date/time and people mark yes / maybe.
-//   Only managers can post one (checked in messages.pb.js).
+//   Anyone who can post in a show channel can start one (messages.pb.js).
 // - pollVotes: {userId: {name, picks: {optionId: 'yes'|'maybe'}}}. Written
 //   ONLY by POST /api/glowtape/polls/vote (polls.pb.js), so the record API
 //   can't forge someone else's vote; readable by whoever can read the

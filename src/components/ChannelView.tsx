@@ -129,7 +129,7 @@ export default function ChannelView({
   // Managers of the show (or the operator on the community board) can
   // remove anyone's message.
   canModerate?: boolean
-  // Managers of the show can start polls (server-checked in messages.pb.js).
+  // Show channels (not the community board) can carry polls.
   canPoll?: boolean
 }) {
   const { user } = useAuth()
@@ -479,7 +479,7 @@ export default function ChannelView({
                     <PollCard
                       message={m}
                       members={members}
-                      canManage={canPoll}
+                      canManage={canModerate}
                       onChange={(patch) =>
                         setMessages((prev) => prev.map((x) => (x.id === m.id ? { ...x, ...patch } : x)))
                       }
