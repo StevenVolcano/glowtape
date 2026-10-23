@@ -467,6 +467,8 @@ export interface AttendanceRecord {
   member: string
   status: 'present' | 'late' | 'absent'
   note: string
+  /** Set by the late/can't-make-it self-report; cleared once roll settles it. */
+  calledIn?: boolean
 }
 
 export interface AckRecord {

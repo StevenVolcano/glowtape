@@ -155,6 +155,9 @@ export default function ScheduleTab() {
     const row = attendance.find((a) => a.event === event.id && a.member === member.id)
     if (!row) {
       await pb.collection('attendance').create({ event: event.id, member: member.id, status: 'present' })
+    } else if (row.calledIn) {
+      // They gave notice but turned up after all — one tap marks them here.
+      await pb.collection('attendance').update(row.id, { status: 'present', calledIn: false })
     } else if (row.status === 'present') {
       await pb.collection('attendance').update(row.id, { status: 'late' })
     } else if (row.status === 'late') {
@@ -409,8 +412,11 @@ export default function ScheduleTab() {
               {(() => {
                 const rows = attendance.filter((a) => a.event === e.id)
                 if (rows.length === 0) return null
-                const c = (s: string) => rows.filter((a) => a.status === s).length
-                return ` · roll: ${c('present')} present, ${c('late')} late, ${c('absent')} absent`
+                const c = (s: string) => rows.filter((a) => a.status === s && !a.calledIn).length
+                const told = rows.filter((a) => a.calledIn).length
+                return ` · roll: ${c('present')} present, ${c('late')} late, ${c('absent')} missing${
+                  told ? `, ${told} called in` : ''
+                }`
               })()}
             </div>
           )}
@@ -453,34 +459,75 @@ export default function ScheduleTab() {
             </div>
           )}
           {isManager && rollFor === e.id && e.status !== 'cancelled' && (
-            <ul className="plain-list roll-call">
-              {calledMembers(e).map((m) => {
-                const row = attendance.find((a) => a.event === e.id && a.member === m.id)
-                const icon =
-                  row?.status === 'present'
-                    ? '✓'
-                    : row?.status === 'late'
-                      ? '🕒'
-                      : row?.status === 'absent'
-                        ? '✗'
-                        : '—'
+            <div className="stack roll-call">
+              {(() => {
+                const rowFor = (m: MemberRecord) =>
+                  attendance.find((a) => a.event === e.id && a.member === m.id)
+                const everyone = calledMembers(e)
+                const calledIn = everyone.filter((m) => rowFor(m)?.calledIn)
+                const rest = everyone.filter((m) => !rowFor(m)?.calledIn)
                 return (
-                  <li key={m.id}>
-                    <button
-                      className="chip"
-                      aria-label={`${memberName(m)} — ${
-                        row?.status ?? 'unmarked'
-                      }. Tap to change.`}
-                      onClick={() => cycleRoll(e, m)}
-                    >
-                      {icon} {memberName(m)}
-                    </button>
-                    {row?.note && <span className="hint"> {row.note}</span>}
-                  </li>
+                  <>
+                    {calledIn.length > 0 && (
+                      <>
+                        <h4 className="roll-heading">📞 Called in ({calledIn.length})</h4>
+                        <ul className="plain-list">
+                          {calledIn.map((m) => {
+                            const row = rowFor(m)!
+                            const label = row.status === 'late' ? 'running late' : "can't make it"
+                            return (
+                              <li key={m.id}>
+                                <button
+                                  className="chip roll-called-in"
+                                  aria-label={`${memberName(m)} — called in, ${label}. Tap if they're here.`}
+                                  onClick={() => cycleRoll(e, m)}
+                                >
+                                  📞 {memberName(m)} · {label}
+                                </button>
+                                {row.note && <span className="hint"> “{row.note}”</span>}
+                              </li>
+                            )
+                          })}
+                        </ul>
+                      </>
+                    )}
+                    <ul className="plain-list">
+                      {rest.map((m) => {
+                        const row = rowFor(m)
+                        const missing = row?.status === 'absent'
+                        const icon =
+                          row?.status === 'present'
+                            ? '✓'
+                            : row?.status === 'late'
+                              ? '🕒'
+                              : missing
+                                ? '✗'
+                                : '—'
+                        return (
+                          <li key={m.id}>
+                            <button
+                              className={missing ? 'chip roll-missing' : 'chip'}
+                              aria-label={`${memberName(m)} — ${
+                                missing ? 'missing, no word' : row?.status ?? 'unmarked'
+                              }. Tap to change.`}
+                              onClick={() => cycleRoll(e, m)}
+                            >
+                              {icon} {memberName(m)}
+                              {missing && ' · missing'}
+                            </button>
+                            {row?.note && <span className="hint"> {row.note}</span>}
+                          </li>
+                        )
+                      })}
+                      <li className="hint">
+                        Tap a name to cycle: — → ✓ present → 🕒 late → ✗ missing. 📞 Called in = they
+                        told you ahead of time; tap one if they show up anyway.
+                      </li>
+                    </ul>
+                  </>
                 )
-              })}
-              <li className="hint">Tap a name to cycle: — → ✓ present → 🕒 late → ✗ absent</li>
-            </ul>
+              })()}
+            </div>
           )}
           {isManager && e.status !== 'cancelled' && (
             <TimelinePlanner event={e} onSaved={load} />

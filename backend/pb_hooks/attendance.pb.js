@@ -69,6 +69,7 @@ routerAdd(
     }
     row.set("status", data.status);
     row.set("note", note);
+    row.set("calledIn", true);
     e.app.save(row);
 
     // Alert the production team right away.
@@ -180,6 +181,7 @@ routerAdd(
       }
       row.set("status", "present");
       row.set("note", "checked in " + time);
+      row.set("calledIn", false);
       e.app.save(row);
       checked.push(member.id);
     }

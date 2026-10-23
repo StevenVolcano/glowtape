@@ -514,6 +514,27 @@ form.stack,
   font-weight: 700;
 }
 
+/* Roll call: "told us ahead" vs "no word" must never look alike — color,
+   icon, label and border style all differ (the last survives forced colors). */
+.roll-heading {
+  margin: 0.25rem 0 0;
+  font-size: 1rem;
+  color: var(--accent);
+}
+
+.roll-called-in {
+  border-color: var(--accent);
+  background: #eee9f7;
+}
+
+.roll-missing {
+  border-style: dashed;
+  border-color: var(--error);
+  background: #fbeceb;
+  color: var(--error);
+  font-weight: 700;
+}
+
 /* --- Messages --- */
 .channel {
   display: flex;
