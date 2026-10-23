@@ -284,7 +284,8 @@ const TOOLS = [
               kind: { type: "string", description: "Event type, e.g. Rehearsal, Tech, Performance (see the production's eventKinds)." },
               start: { type: "string" },
               end: { type: "string" },
-              location: { type: "string" },
+              location: { type: "string", description: "The physical place. Leave out for an online-only meeting." },
+              videoUrl: { type: "string", description: "Zoom / Google Meet / Teams link, if people can (or must) join online." },
               notes: { type: "string" },
               calledNote: { type: "string", description: "Plain-English who's called, e.g. 'Act 1 cast'." },
               called: { type: "array", items: { type: "string" } },
@@ -308,12 +309,19 @@ const TOOLS = [
       const prepared = list.map((ev, i) => {
         const title = String(ev.title || "").trim();
         if (!title) throw new Error(`Event ${i + 1} needs a title.`);
+        let place;
+        try {
+          place = lib.splitPlace(ev.location, ev.videoUrl);
+        } catch (err) {
+          throw new Error(`Event ${i + 1}: ${err.message}`);
+        }
         return {
           title,
           kind: String(ev.kind || ""),
           start: pbTime(ev.start, `Event ${i + 1} start`),
           end: ev.end ? pbTime(ev.end, `Event ${i + 1} end`) : "",
-          location: String(ev.location || ""),
+          location: place.location,
+          videoUrl: place.videoUrl,
           notes: String(ev.notes || ""),
           calledNote: String(ev.calledNote || ""),
           called: Array.isArray(ev.called) ? ev.called.map(String) : [],
@@ -327,7 +335,7 @@ const TOOLS = [
         for (const ev of prepared) {
           const rec = new Record(col);
           rec.set("production", p.id);
-          for (const f of ["title", "kind", "start", "end", "location", "notes", "calledNote"]) rec.set(f, ev[f]);
+          for (const f of ["title", "kind", "start", "end", "location", "videoUrl", "notes", "calledNote"]) rec.set(f, ev[f]);
           rec.set("called", ev.called);
           rec.set("calledGroups", ev.calledGroups);
           if (ev.timeline.length > 0) rec.set("timeline", ev.timeline);
@@ -345,7 +353,7 @@ const TOOLS = [
           const items = created
             .slice()
             .sort((a, b) => String(a.get("start")).localeCompare(String(b.get("start"))))
-            .map((ev) => `<li><strong>${ev.get("kind") ? ev.get("kind") + ": " : ""}${ev.get("title")}</strong> — ${lib.formatPacific(ev.get("start"))}${ev.get("location") ? " at " + ev.get("location") : ""}</li>`)
+            .map((ev) => `<li><strong>${ev.get("kind") ? ev.get("kind") + ": " : ""}${ev.get("title")}</strong> — ${lib.formatPacific(ev.get("start"))}${lib.whereShort(ev)}</li>`)
             .join("\n");
           lib.sendMail(
             app,
@@ -370,7 +378,7 @@ const TOOLS = [
   },
   {
     name: "update_events",
-    description: "Edit existing events (all in one show). Each item: {id, and any of title, kind, start, end, location, notes, calledNote, called, calledGroups, timeline}. Only fields you send change. Date/time/place changes reset 'Got it' acks and send ONE change digest to the people called — same as editing in the app. A timeline-only edit (the run of show) is silent: no email, no push, acks kept. timeline [] or null clears it.",
+    description: "Edit existing events (all in one show). Each item: {id, and any of title, kind, start, end, location, videoUrl, notes, calledNote, called, calledGroups, timeline}. Only fields you send change. Date/time/place/video-link changes reset 'Got it' acks and send ONE change digest to the people called — same as editing in the app. A timeline-only edit (the run of show) is silent: no email, no push, acks kept. timeline [] or null clears it.",
     inputSchema: {
       type: "object",
       properties: {
@@ -385,6 +393,7 @@ const TOOLS = [
               start: { type: "string", description: "ISO 8601 with an offset." },
               end: { type: "string", description: "ISO 8601 with an offset, or '' for no end." },
               location: { type: "string" },
+              videoUrl: { type: "string", description: "Zoom / Meet / Teams link; '' removes it." },
               notes: { type: "string" },
               calledNote: { type: "string" },
               called: { type: "array", items: { type: "string" }, description: "Member ids; [] = everyone." },

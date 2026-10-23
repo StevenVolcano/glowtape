@@ -219,7 +219,8 @@ cronAdd("glowtape_sms_reminders", "*/10 * * * *", () => {
 
           const forChild = !m.get("user") && m.get("displayName") ? "For " + m.get("displayName") + ": " : "";
           const when = lib.formatPacific(event.get("start"));
-          const loc = event.get("location") ? " at " + event.get("location") : "";
+          const loc = lib.whereShort(event);
+          const video = event.get("videoUrl") ? " Join: " + event.get("videoUrl") : "";
           const word = lib.reminderWord(nowMs, startMs);
           if (textNow) {
             lib.sendSms(
@@ -227,7 +228,7 @@ cronAdd("glowtape_sms_reminders", "*/10 * * * *", () => {
               user.get("phone"),
               "Glow Tape: " + forChild + event.get("title") +
                 " (" + production.get("title") + ") is " + word + " — " +
-                when + loc + ". Reply STOP to opt out.",
+                when + loc + "." + video + " Reply STOP to opt out.",
             );
           }
           if (pushCache[uid]) {

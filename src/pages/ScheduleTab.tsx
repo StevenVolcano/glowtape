@@ -4,7 +4,7 @@ import { pb } from '../lib/pb.ts'
 import { pbErrorMessage } from '../lib/files.ts'
 import { useAuth } from '../lib/auth.tsx'
 import { useProduction } from './Production.tsx'
-import { formatDay, formatWhen, mapsUrl, memberName, pbDate, placeLine, productionPlaces } from '../lib/types.ts'
+import { externalHref, formatDay, formatWhen, mapsUrl, memberName, pbDate, placeLine, productionPlaces } from '../lib/types.ts'
 import { downloadEventIcs, googleCalendarUrl } from '../lib/calendar.ts'
 import EventForm from '../components/EventForm.tsx'
 import QrCode from '../components/QrCode.tsx'
@@ -299,6 +299,10 @@ export default function ScheduleTab() {
     const ackCount = acks.filter((a) => a.event === e.id).length
     // Collapsed by default; an open editor or roll call keeps the card open.
     const open = expanded.has(e.id) || editingId === e.id || rollFor === e.id
+    // The Join button rides on the collapsed card from half an hour before.
+    const minsUntil = (pbDate(e.start).getTime() - Date.now()) / 60e3
+    const showJoin =
+      !!e.videoUrl && e.status !== 'cancelled' && (open || (minsUntil <= 30 && minsUntil > -240))
     return (
       <li
         key={e.id}
@@ -315,11 +319,19 @@ export default function ScheduleTab() {
           <strong>{e.title}</strong>
           {e.kind && e.kind !== e.title && <span className="pill">{e.kind}</span>}
           {e.status === 'cancelled' && <span className="pill pill-cancel">Cancelled</span>}
+          {e.videoUrl && <span className="pill">{e.location ? '💻 + in person' : '💻 Online'}</span>}
           <span>{formatWhen(e.start, e.end)}</span>
           <span className="event-caret" aria-hidden="true">
             {open ? '▾ Less' : '▸ More'}
           </span>
         </button>
+        {showJoin && (
+          <div className="row">
+            <a className="join-call" href={externalHref(e.videoUrl)} target="_blank" rel="noreferrer">
+              💻 Join the video call
+            </a>
+          </div>
+        )}
         {iAmCalled &&
           e.status !== 'cancelled' &&
           (myAck ? (
