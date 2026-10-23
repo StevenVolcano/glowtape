@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { pb } from '../lib/pb.ts'
 import { REMINDER_DEFAULT, REMINDER_OPTIONS } from '../lib/types.ts'
 import type { UserRecord } from '../lib/types.ts'
+import Section from './Section.tsx'
 
 const MAX = 3
 
@@ -43,8 +44,7 @@ export default function ReminderSettings({ user }: { user: UserRecord }) {
   const full = chosen.length >= MAX
 
   return (
-    <section>
-      <h2>When to remind me</h2>
+    <Section id="reminder-times" title="When to remind me">
       <div className="card stack">
         <p className="hint" style={{ margin: 0 }}>
           Pick up to {MAX} times before each call. Reminders come as a phone notification (if
@@ -79,6 +79,6 @@ export default function ReminderSettings({ user }: { user: UserRecord }) {
         {status && <p className="acked" role="status" style={{ margin: 0 }}>{status}</p>}
         {error && <p className="error" role="alert" style={{ margin: 0 }}>{error}</p>}
       </div>
-    </section>
+    </Section>
   )
 }

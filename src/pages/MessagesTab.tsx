@@ -10,6 +10,7 @@ import type {
   ChannelPrefRecord,
   ChannelRecord,
 } from '../lib/types.ts'
+import Section from '../components/Section.tsx'
 
 export default function MessagesTab() {
   const { production, members, myMember, isManager } = useProduction()
@@ -71,8 +72,7 @@ export default function MessagesTab() {
   return (
     <div>
       <Announcements />
-      <section>
-        <h2>Channels</h2>
+      <Section id="channels" title="Channels">
         {noPhotoMembers.length > 0 && (
           <p className="hint">
             📷 Heads up: this production includes {noPhotoMembers.length}{' '}
@@ -110,7 +110,7 @@ export default function MessagesTab() {
           </button>
         )}
         {active && <ChannelView channelId={active} members={members} canModerate={isManager} canPoll />}
-      </section>
+      </Section>
     </div>
   )
 }
@@ -149,8 +149,7 @@ function Announcements() {
   if (items.length === 0) return null
 
   return (
-    <section>
-      <h2>Announcements</h2>
+    <Section id="announcements" title="Announcements">
       <ul className="cards">
         {items.map((a) => {
           const mine = acks.some((k) => k.announcement === a.id && k.user === user?.id)
@@ -175,7 +174,7 @@ function Announcements() {
           )
         })}
       </ul>
-    </section>
+    </Section>
   )
 }
 

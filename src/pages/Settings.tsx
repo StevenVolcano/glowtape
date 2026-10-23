@@ -1,4 +1,3 @@
-import { Link } from 'react-router-dom'
 import { useAuth } from '../lib/auth.tsx'
 import { useTitle } from '../lib/useTitle.ts'
 import PushSettings from '../components/PushSettings.tsx'
@@ -6,6 +5,7 @@ import ReminderSettings from '../components/ReminderSettings.tsx'
 import PhoneSettings from '../components/PhoneSettings.tsx'
 import EmailSettings from '../components/EmailSettings.tsx'
 import PasskeySettings from '../components/PasskeySettings.tsx'
+import SiteMenu from '../components/SiteMenu.tsx'
 
 // Everything about how Glow Tape reaches you and how you sign in, in one
 // place. These used to sit at the bottom of Home, which buried your shows
@@ -18,9 +18,7 @@ export default function Settings() {
   return (
     <main className="page">
       <header className="topbar">
-        <Link to="/" className="link">
-          ← Home
-        </Link>
+        <SiteMenu />
         <span className="brand-small">Glow Tape</span>
       </header>
 

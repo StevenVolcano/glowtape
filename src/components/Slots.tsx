@@ -5,6 +5,7 @@ import { useProduction } from '../pages/Production.tsx'
 import { pbErrorMessage } from '../lib/files.ts'
 import { formatDay, memberName, pbDate } from '../lib/types.ts'
 import type { MemberRecord, SlotRecord } from '../lib/types.ts'
+import Section from './Section.tsx'
 
 // Sign-up slots: costume fittings, headshots, one-on-ones. The costumer
 // posts a sheet of short slots; cast tap a time to book it (guardians book
@@ -85,8 +86,7 @@ export default function SlotsSection() {
   }
 
   return (
-    <section id="signups">
-      <h2>📐 Sign-up slots</h2>
+    <Section id="signups" title="📐 Sign-up slots">
       {slots.length === 0 ? (
         <p className="hint">
           {isManager
@@ -232,7 +232,7 @@ export default function SlotsSection() {
         )
       })}
       {isManager && <NewSheetForm onAdded={load} />}
-    </section>
+    </Section>
   )
 }
 

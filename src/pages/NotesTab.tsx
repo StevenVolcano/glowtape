@@ -5,6 +5,7 @@ import { useAuth } from '../lib/auth.tsx'
 import { useProduction } from './Production.tsx'
 import { formatStamp, pbDate } from '../lib/types.ts'
 import type { ChannelRecord, NoteRecord } from '../lib/types.ts'
+import { FoldGroup } from '../components/Section.tsx'
 
 // Rehearsal notes (and any other production notes). Each note has a stable
 // URL — Copy link, paste it in a channel, and the chat makes it tappable.
@@ -94,6 +95,18 @@ export default function NotesTab() {
     )
   }
 
+  const noteRow = (n: NoteRecord) => (
+    <li key={n.id}>
+      <button className="link" onClick={() => navigate(`${base}/${n.id}`)}>
+        📝 {n.title}
+      </button>{' '}
+      <span className="hint">
+        {n.expand?.author?.name} · {formatStamp(n.updated)}
+      </span>
+      {snippet(n) && <div className="hint">“{snippet(n)}”</div>}
+    </li>
+  )
+
   return (
     <div>
       <section>
@@ -123,19 +136,21 @@ export default function NotesTab() {
               : `${matches.length} of ${notes.length} notes match.`}
           </p>
         )}
-        <ul className="plain-list">
-          {matches.map((n) => (
-            <li key={n.id}>
-              <button className="link" onClick={() => navigate(`${base}/${n.id}`)}>
-                📝 {n.title}
-              </button>{' '}
-              <span className="hint">
-                {n.expand?.author?.name} · {formatStamp(n.updated)}
-              </span>
-              {snippet(n) && <div className="hint">“{snippet(n)}”</div>}
-            </li>
-          ))}
-        </ul>
+        {q ? (
+          <ul className="plain-list">{matches.map(noteRow)}</ul>
+        ) : (
+          // Folded by month of the last edit, shut to start — a season of
+          // notes reads as a short list of months.
+          byMonth(matches).map(([month, list]) => (
+            <FoldGroup
+              key={month}
+              title={month}
+              summary={`${list.length} note${list.length === 1 ? '' : 's'}`}
+            >
+              <ul className="plain-list">{list.map(noteRow)}</ul>
+            </FoldGroup>
+          ))
+        )}
       </section>
     </div>
   )
@@ -294,4 +309,13 @@ function NoteView({
       </div>
     </section>
   )
+}
+
+function byMonth(notes: NoteRecord[]): [string, NoteRecord[]][] {
+  const out = new Map<string, NoteRecord[]>()
+  for (const n of notes) {
+    const month = pbDate(n.updated).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
+    out.set(month, [...(out.get(month) ?? []), n])
+  }
+  return [...out.entries()]
 }

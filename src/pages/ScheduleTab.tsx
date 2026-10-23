@@ -13,7 +13,7 @@ import ShowReport from '../components/ShowReport.tsx'
 import BringList from '../components/BringList.tsx'
 import TimelinePlanner, { TimelineView } from '../components/Timeline.tsx'
 import SlotsSection from '../components/Slots.tsx'
-import { JumpNav } from '../components/ManageJumpNav.tsx'
+import { JumpNav, scheduleJumps } from '../components/ManageJumpNav.tsx'
 import { DAY_SHORT, isWeekly, weeklyLabel } from '../lib/conflicts.ts'
 import {
   MonthGrid,
@@ -30,6 +30,7 @@ import {
   type ScheduleView,
 } from '../components/ScheduleViews.tsx'
 import type { AckRecord, AttendanceRecord, ConflictRecord, EventRecord, GroupRecord, MemberRecord, UnitRecord } from '../lib/types.ts'
+import Section, { FoldGroup } from '../components/Section.tsx'
 
 export default function ScheduleTab() {
   const { production, members, myMember, isManager } = useProduction()
@@ -570,19 +571,10 @@ export default function ScheduleTab() {
       </li>
     )
   }
-  const scheduleJumps = [
-    ['#events', 'Events'],
-    ['#signups', 'Sign-ups'],
-    ['#conflicts', 'Conflicts'],
-    ...(isManager ? ([['#findtime', 'Find a time']] as const) : []),
-    ['#calendar', 'Calendar feed'],
-  ] as readonly (readonly [string, string])[]
-
   return (
     <div>
-      <JumpNav jumps={scheduleJumps} ariaLabel="Schedule sections" />
-      <section id="events">
-        <h2>{view === 'list' ? 'Coming up' : 'Schedule'}</h2>
+      <JumpNav jumps={scheduleJumps(isManager)} ariaLabel="Schedule sections" />
+      <Section id="events" title={view === 'list' ? 'Coming up' : 'Schedule'}>
         <div className="row no-print" style={{ alignItems: 'center' }}>
           <ViewChips
             view={view}
@@ -688,7 +680,23 @@ export default function ScheduleTab() {
                     : 'Nothing coming up.'}
               </p>
             )}
-            <ul className="cards">{visible.map(renderEvent)}</ul>
+            {weekGroups(visible).map(([start, list]) => {
+              const thisWeek = dayKey(start) === dayKey(startOfWeek(now))
+              const days = [...new Set(list.map((e) => pbDate(e.start).toLocaleDateString(undefined, { weekday: 'short' })))]
+              const needs = list.filter((e) => unacked.includes(e)).length
+              return (
+                <FoldGroup
+                  key={dayKey(start)}
+                  title={`${thisWeek ? 'This week' : 'Week of'} ${weekLabel(start)}`}
+                  summary={
+                    `${list.length} event${list.length === 1 ? '' : 's'} — ${days.join(', ')}` +
+                    (needs ? ` · ${needs} need${needs === 1 ? 's' : ''} your 👍` : '')
+                  }
+                >
+                  <ul className="cards">{list.map(renderEvent)}</ul>
+                </FoldGroup>
+              )
+            })}
             <button className="link" aria-expanded={showPast} onClick={() => setShowPast(!showPast)}>
               {showPast ? 'Hide past events' : 'Show past events'}
             </button>
@@ -749,7 +757,7 @@ export default function ScheduleTab() {
             )}
           </>
         )}
-      </section>
+      </Section>
 
       <SlotsSection />
       <ConflictsSection conflicts={conflicts} reload={load} />
@@ -781,8 +789,7 @@ function CalendarSubscribeSection() {
   }
 
   return (
-    <section id="calendar">
-      <h2>Put your calls on your own calendar</h2>
+    <Section id="calendar" title="Put your calls on your own calendar">
       <p className="hint">
         Subscribe once and every event you're called for shows up in Google Calendar, Apple
         Calendar, or your phone's calendar — and stays up to date when the schedule changes.
@@ -804,7 +811,7 @@ function CalendarSubscribeSection() {
           </p>
         </div>
       )}
-    </section>
+    </Section>
   )
 }
 
@@ -963,8 +970,7 @@ function ConflictsSection({ conflicts, reload }: { conflicts: ConflictRecord[]; 
   }
 
   return (
-    <section id="conflicts">
-      <h2>{isManager ? 'Conflicts (everyone)' : 'My conflicts'}</h2>
+    <Section id="conflicts" title={isManager ? 'Conflicts (everyone)' : 'My conflicts'}>
       <p className="hint">
         Tell your stage manager when you're <em>not</em> available, before the schedule is built.
       </p>
@@ -1135,7 +1141,7 @@ function ConflictsSection({ conflicts, reload }: { conflicts: ConflictRecord[]; 
         )}
       </form>
       <WeeklyHoursForm reload={reload} forMember={forMember} forLabel={forMember ? memberLabel(forMember) : ''} />
-    </section>
+    </Section>
   )
 }
 
@@ -1250,4 +1256,16 @@ function WeeklyHoursForm({
       {wkErr && <p className="error" role="alert">{wkErr}</p>}
     </form>
   )
+}
+
+// The list view, a week at a time (Sunday start, like the week view).
+function weekGroups(events: EventRecord[]): [Date, EventRecord[]][] {
+  const out = new Map<string, [Date, EventRecord[]]>()
+  for (const e of events) {
+    const start = startOfWeek(pbDate(e.start))
+    const k = dayKey(start)
+    if (!out.has(k)) out.set(k, [start, []])
+    out.get(k)![1].push(e)
+  }
+  return [...out.values()]
 }

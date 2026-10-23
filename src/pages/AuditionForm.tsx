@@ -9,6 +9,7 @@ import { useTitle } from '../lib/useTitle.ts'
 import { formatDay, formatWhen } from '../lib/types.ts'
 import { downloadMultiIcs } from '../lib/calendar.ts'
 import type { AuditionRecord } from '../lib/types.ts'
+import SiteMenu from '../components/SiteMenu.tsx'
 
 interface AuditionEvent {
   start: string
@@ -206,9 +207,7 @@ export default function AuditionForm() {
   return (
     <main className="page">
       <header className="topbar">
-        <Link to="/" className="link">
-          ← Home
-        </Link>
+        <SiteMenu />
         <span className="brand-small">Glow Tape</span>
       </header>
 

@@ -1,8 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { Link, Navigate } from 'react-router-dom'
+import { Navigate } from 'react-router-dom'
 import { pb } from '../lib/pb.ts'
 import { useAuth } from '../lib/auth.tsx'
-import { JumpNav } from '../components/ManageJumpNav.tsx'
+import { JumpNav, OPERATOR_JUMPS } from '../components/ManageJumpNav.tsx'
 import { useTitle } from '../lib/useTitle.ts'
 import { formatDay, formatStamp, shareInvite } from '../lib/types.ts'
 import type {
@@ -12,6 +12,8 @@ import type {
   OrgRecord,
   ProductionRequestRecord,
 } from '../lib/types.ts'
+import SiteMenu from '../components/SiteMenu.tsx'
+import Section from '../components/Section.tsx'
 
 // Emails are no longer readable via user expands (contact privacy) — the
 // console fetches them through the operator-gated route.
@@ -43,23 +45,13 @@ export default function Operator() {
   return (
     <main className="page">
       <header className="topbar">
-        <Link to="/" className="link">
-          ← Home
-        </Link>
+        <SiteMenu />
         <span className="brand-small">Glow Tape</span>
       </header>
       <h1>Operator console</h1>
       <JumpNav
         ariaLabel="Operator sections"
-        jumps={[
-          ['#requests', 'Requests'],
-          ['#onboard', 'Set up a show'],
-          ['#feedback', 'Feedback'],
-          ['#codes', 'Access codes'],
-          ['#orgs', 'Organizations'],
-          ['#companies', 'Companies'],
-          ['#claude', 'Claude connector'],
-        ]}
+        jumps={OPERATOR_JUMPS}
       />
       <RequestsSection />
       <OnboardSection />
@@ -128,8 +120,7 @@ function OrgsSection({ onChanged }: { onChanged: () => void }) {
   }
 
   return (
-    <section id="orgs">
-      <h2>Organizations</h2>
+    <Section id="orgs" title="Organizations">
       <p className="hint">
         The umbrella a production lives under — approving a request creates one automatically.
         Edit a name right in its box; add one ahead of time below. (Deleting still takes the
@@ -163,7 +154,7 @@ function OrgsSection({ onChanged }: { onChanged: () => void }) {
         </button>
       </form>
       {message && <p className="acked" role="status">{message}</p>}
-    </section>
+    </Section>
   )
 }
 
@@ -220,8 +211,7 @@ function CompaniesSection() {
   }
 
   return (
-    <section id="companies">
-      <h2>Theater companies</h2>
+    <Section id="companies" title="Theater companies">
       <p className="hint">
         The dropdown people see in their profile's stage-history table (they can always type
         somewhere else by hand). Link a company to the organization that runs its shows here, then
@@ -278,7 +268,7 @@ function CompaniesSection() {
         </button>
       </form>
       {message && <p className="error" role="status">{message}</p>}
-    </section>
+    </Section>
   )
 }
 
@@ -322,8 +312,7 @@ function FeedbackInbox() {
   const openCount = items.filter(isOpen).length
 
   return (
-    <section id="feedback">
-      <h2>Feedback ({openCount} open)</h2>
+    <Section id="feedback" title={<>Feedback ({openCount} open)</>}>
       {visible.length === 0 && <p className="hint">Inbox zero. 🎉</p>}
       <ul className="plain-list">
         {visible.map((f) => (
@@ -366,7 +355,7 @@ function FeedbackInbox() {
       <button className="link" aria-expanded={showClosed} onClick={() => setShowClosed(!showClosed)}>
         {showClosed ? 'Hide done & declined' : 'Show done & declined'}
       </button>
-    </section>
+    </Section>
   )
 }
 
@@ -432,8 +421,7 @@ function AccessCodesSection() {
   const expired = (c: AccessCodeRecord) => !!c.expires && new Date(c.expires) < new Date()
 
   return (
-    <section id="codes">
-      <h2>Community access codes</h2>
+    <Section id="codes" title="Community access codes">
       <p className="hint">
         Signup codes for people who aren't joining through a production — rotate them monthly
         or quarterly by adding a new one and deactivating the old.
@@ -485,7 +473,7 @@ function AccessCodesSection() {
         </button>
       </form>
       {message && <p className="acked" role="status">{message}</p>}
-    </section>
+    </Section>
   )
 }
 
@@ -536,8 +524,7 @@ function ClaudeConnectorSection() {
   }
 
   return (
-    <section id="claude">
-      <h2>Claude connector (just you)</h2>
+    <Section id="claude" title="Claude connector (just you)">
       <p className="hint">
         Lets your own Claude read and change your shows — everything you can see and do here,
         including contacts and chats — so you can turn a calendar into schedule events without
@@ -595,7 +582,7 @@ function ClaudeConnectorSection() {
       )}
       {message && <p className="acked" role="status">{message}</p>}
       {error && <p className="error" role="alert">{error}</p>}
-    </section>
+    </Section>
   )
 }
 
@@ -681,8 +668,7 @@ function RequestsSection() {
   if (requests.length === 0) return null
 
   return (
-    <section id="requests">
-      <h2>Production requests ({open.length} open)</h2>
+    <Section id="requests" title={<>Production requests ({open.length} open)</>}>
       <ul className="plain-list">
         {requests.map((r) => (
           <li key={r.id} className="stack" style={{ marginBottom: '1.2rem' }}>
@@ -769,7 +755,7 @@ function RequestsSection() {
         ))}
       </ul>
       {message && <p className="acked" role="status">{message}</p>}
-    </section>
+    </Section>
   )
 }
 
@@ -839,8 +825,7 @@ function OnboardSection() {
   }
 
   return (
-    <section id="onboard">
-      <h2>Set up a production directly</h2>
+    <Section id="onboard" title="Set up a production directly">
       <p className="hint">
         For the director who asked in person or by email — no request form needed. They get an
         email with everything; if they're not on Glow Tape yet, their sign-up code lands them
@@ -937,6 +922,6 @@ function OnboardSection() {
           </div>
         )}
       </form>
-    </section>
+    </Section>
   )
 }

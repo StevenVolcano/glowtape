@@ -1,9 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { Link } from 'react-router-dom'
 import { pb } from '../lib/pb.ts'
 import { useAuth } from '../lib/auth.tsx'
 import { useTitle } from '../lib/useTitle.ts'
 import type { ProductionRequestRecord } from '../lib/types.ts'
+import SiteMenu from '../components/SiteMenu.tsx'
 
 const ROLE_OPTIONS = [
   ['director', "I'm the director"],
@@ -80,9 +80,7 @@ export default function RequestProduction() {
   return (
     <main className="page">
       <header className="topbar">
-        <Link to="/" className="link">
-          ← Home
-        </Link>
+        <SiteMenu />
         <span className="brand-small">Glow Tape</span>
       </header>
 

@@ -8,6 +8,7 @@ import { matchMember } from '../lib/breakdown.ts'
 import { csvField, parseCsv } from '../lib/trackers.ts'
 import { formatDay, memberName, LINE_NOTE_LABELS } from '../lib/types.ts'
 import type { LineNoteRecord, MemberRecord, TaskRecord } from '../lib/types.ts'
+import Section, { FoldGroup } from '../components/Section.tsx'
 
 const DEFAULT_DEPARTMENTS = [
   'Set',
@@ -76,8 +77,7 @@ export default function TasksTab() {
       {!production.noBios &&
         myEditable.map((m) => <BioEditor key={m.id} member={m} onSaved={load} />)}
       <LineNotesSection />
-      <section>
-        <h2>To-do</h2>
+      <Section id="tasks" title="To-do">
         <div className="chips">
           {(['open', 'mine', 'all'] as const).map((f) => (
             <button
@@ -95,13 +95,18 @@ export default function TasksTab() {
             {filter === 'mine' ? 'Nothing assigned to you. Enjoy it.' : 'Nothing here — lovely.'}
           </p>
         )}
-        {departments.map((dept) => (
-          <div key={dept}>
-            <h3 className="dept-heading">{dept}</h3>
-            <ul className="plain-list">
-              {visible
-                .filter((t) => (t.department || 'General') === dept)
-                .map((t) => {
+        {departments.map((dept) => {
+          const deptTasks = visible.filter((t) => (t.department || 'General') === dept)
+          const open = deptTasks.filter((t) => !t.done).length
+          const late = deptTasks.filter((t) => !t.done && t.due && String(t.due).slice(0, 10) < today).length
+          return (
+            <FoldGroup
+              key={dept}
+              title={dept}
+              summary={`${open} open${late ? ` · ${late} overdue` : ''}${deptTasks.length > open ? ` · ${deptTasks.length - open} done` : ''}`}
+            >
+              <ul className="plain-list">
+                {deptTasks.map((t) => {
                   const assignee = members.find((m) => m.id === t.assignee)
                   const overdue = !t.done && t.due && String(t.due).slice(0, 10) < today
                   return (
@@ -137,10 +142,11 @@ export default function TasksTab() {
                     </li>
                   )
                 })}
-            </ul>
-          </div>
-        ))}
-      </section>
+              </ul>
+            </FoldGroup>
+          )
+        })}
+      </Section>
 
       {isManager && <NewTaskForm members={members} onAdded={load} />}
       {isManager && <TaskCsv tasks={tasks} members={members} onImported={load} />}
@@ -354,8 +360,7 @@ function LineNotesSection() {
   const base = `/production/${production.id}`
 
   return (
-    <section>
-      <h2>🎯 Line notes ({mine.length})</h2>
+    <Section id="line-notes" title={<>🎯 Line notes ({mine.length})</>}>
       <p className="hint">
         Notes from the managers about lines to look at before next time. Check one off once
         you've got it down.
@@ -390,7 +395,7 @@ function LineNotesSection() {
           )
         })}
       </ul>
-    </section>
+    </Section>
   )
 }
 
@@ -435,8 +440,7 @@ function NewTaskForm({
   }
 
   return (
-    <section>
-      <h2>Add a task</h2>
+    <Section id="add-task" title="Add a task">
       <form onSubmit={add} className="stack">
         <input
           aria-label="Task"
@@ -482,7 +486,7 @@ function NewTaskForm({
         {done && <p className="acked" role="status">{done}</p>}
         {addErr && <p className="error" role="alert">{addErr}</p>}
       </form>
-    </section>
+    </Section>
   )
 }
 

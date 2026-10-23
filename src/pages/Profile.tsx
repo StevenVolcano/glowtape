@@ -1,6 +1,6 @@
-import { Link } from 'react-router-dom'
 import ProfileEditor from '../components/ProfileEditor.tsx'
 import { useTitle } from '../lib/useTitle.ts'
+import SiteMenu from '../components/SiteMenu.tsx'
 
 // The community acting profile: headshot + experience, shown to directors
 // alongside audition signups. The editor itself lives in
@@ -11,9 +11,7 @@ export default function Profile() {
   return (
     <main className="page">
       <header className="topbar">
-        <Link to="/" className="link">
-          ← Home
-        </Link>
+        <SiteMenu />
         <span className="brand-small">Glow Tape</span>
       </header>
 

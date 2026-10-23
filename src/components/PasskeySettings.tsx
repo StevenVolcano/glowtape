@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { pb } from '../lib/pb.ts'
 import { formatStamp } from '../lib/types.ts'
 import { deviceLabel, isCancel, passkeysSupported, registerPasskey } from '../lib/passkeys.ts'
+import Section from './Section.tsx'
 
 type Passkey = { id: string; label: string; created: string; lastUsed: string }
 
@@ -60,8 +61,7 @@ export default function PasskeySettings() {
   if (!supported && !keys?.length) return null
 
   return (
-    <section>
-      <h2>Fingerprint sign-in</h2>
+    <Section id="passkeys" title="Fingerprint sign-in">
       <div className="card stack">
         <p className="hint" style={{ margin: 0 }}>
           Skip the emailed code: sign in with your fingerprint, face, or the PIN that unlocks
@@ -99,6 +99,6 @@ export default function PasskeySettings() {
         {done && <p className="acked" role="status">{done}</p>}
         {error && <p className="error" role="alert">{error}</p>}
       </div>
-    </section>
+    </Section>
   )
 }

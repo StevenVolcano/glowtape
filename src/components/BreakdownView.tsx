@@ -18,6 +18,7 @@ import {
 } from '../lib/breakdown.ts'
 import { memberName, pbDate } from '../lib/types.ts'
 import type { EventRecord, GroupRecord, MemberRecord, UnitRecord } from '../lib/types.ts'
+import { FoldGroup } from './Section.tsx'
 
 // The show breakdown: songs, scenes, or page hunks, each knowing who's
 // involved. This is what "who's called" hangs off when scheduling.
@@ -287,17 +288,8 @@ export default function BreakdownView() {
         <p className="hint">You're not in any units yet — lucky you, or check with the SM.</p>
       )}
 
-      {groupUnitsByAct(visible).map((section, i) => (
-        <div key={section.act || `no-act-${i}`}>
-          {section.act && (
-            <h4 className="act-heading">
-              {section.act}{' '}
-              <span className="hint">
-                — {section.units.length} {BREAKDOWN_STYLES[style].unit.toLowerCase()}
-                {section.units.length === 1 ? '' : 's'}
-              </span>
-            </h4>
-          )}
+      {groupUnitsByAct(visible).map((section, i) => {
+        const list = (
           <ul className="plain-list">
             {section.units.map((u) => (
               <li key={u.id} style={{ marginBottom: '0.5rem' }}>
@@ -328,8 +320,20 @@ export default function BreakdownView() {
               </li>
             ))}
           </ul>
-        </div>
-      ))}
+        )
+        // A show with acts folds by act (shut to start); no acts → a flat list.
+        if (!section.act) return <div key={`no-act-${i}`}>{list}</div>
+        return (
+          <FoldGroup
+            key={section.act}
+            as="h4"
+            title={section.act}
+            summary={`${section.units.length} ${BREAKDOWN_STYLES[style].unit.toLowerCase()}${section.units.length === 1 ? '' : 's'}`}
+          >
+            {list}
+          </FoldGroup>
+        )
+      })}
 
       {isManager && (
         <div className="row no-print" style={{ flexWrap: 'wrap' }}>

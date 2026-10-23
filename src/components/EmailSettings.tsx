@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { pb } from '../lib/pb.ts'
 import type { UserRecord } from '../lib/types.ts'
+import Section from './Section.tsx'
 
 // Change the sign-in email. The code goes to the NEW address — proving they
 // own that inbox before the account switches to it (there's no password).
@@ -46,8 +47,7 @@ export default function EmailSettings({ user }: { user: UserRecord }) {
   }
 
   return (
-    <section>
-      <h2>My email</h2>
+    <Section id="my-email" title="My email">
       <div className="card stack">
         <div>
           ✉️ <strong>{user.email}</strong> is your sign-in address.
@@ -97,6 +97,6 @@ export default function EmailSettings({ user }: { user: UserRecord }) {
         )}
         {error && <p className="error" role="alert">{error}</p>}
       </div>
-    </section>
+    </Section>
   )
 }

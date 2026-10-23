@@ -4,6 +4,7 @@ import { pb } from '../lib/pb.ts'
 import { useAuth } from '../lib/auth.tsx'
 import { useProduction } from '../pages/Production.tsx'
 import { productionPlaces } from '../lib/types.ts'
+import Section from './Section.tsx'
 
 interface Step {
   key: string
@@ -116,8 +117,7 @@ export default function SetupGuide() {
   const open = expanded ?? !allDone
 
   return (
-    <section>
-      <h2>Setting up {production.title}</h2>
+    <Section id="setup" title={<>Setting up {production.title}</>}>
       <p className="hint">
         {allDone
           ? '🎬 All set up. This checklist stays here if you need it.'
@@ -152,6 +152,6 @@ export default function SetupGuide() {
           ))}
         </ol>
       )}
-    </section>
+    </Section>
   )
 }
