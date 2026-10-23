@@ -1,25 +1,31 @@
 import type { TrackerItemRecord } from './types.ts'
 
 // Column layout per tracker. Keys map to tracker_items fields; a blank label
-// hides the column for that tracker.
+// hides the column for that tracker. `photos` adds a photo column (physical
+// things you need to recognize — cues don't get one).
 export const TRACKERS = {
   props: {
+    photos: true,
     label: 'Props',
     cols: { name: 'Item', a: 'Scene', b: 'Character', c: 'Source', status: 'Status', notes: 'Notes' },
   },
   costumes: {
+    photos: true,
     label: 'Costumes',
     cols: { name: 'Piece', a: 'Character', b: 'Scene', c: 'Source', status: 'Status', notes: 'Notes' },
   },
   set: {
+    photos: true,
     label: 'Set',
     cols: { name: 'Piece', a: 'Scene', b: '', c: 'Source', status: 'Status', notes: 'Notes' },
   },
   light_cues: {
+    photos: false,
     label: 'Light cues',
     cols: { name: 'Cue #', a: 'Page', b: 'Trigger / line', c: 'Action', status: '', notes: 'Notes' },
   },
   sound_cues: {
+    photos: false,
     label: 'Sound cues',
     cols: { name: 'Cue #', a: 'Page', b: 'Trigger / line', c: 'Action', status: '', notes: 'Notes' },
   },

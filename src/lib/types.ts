@@ -459,6 +459,7 @@ export interface TrackerItemRecord {
   status: string
   notes: string
   order: number
+  photo: string
 }
 
 export interface AttendanceRecord {
