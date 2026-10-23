@@ -313,6 +313,83 @@ function consumeCode(app, phone, purpose, code) {
   return userId;
 }
 
+// --- invites by phone ---------------------------------------------------------
+// A manager-entered contactPhone on an unclaimed member row is an invite: the
+// person holding that phone can sign in by text and take those rows over.
+// Shared-role placeholders aren't anyone's, and archived shows stay frozen.
+function inviteRowsForPhone(app, phone) {
+  const rows = app.findRecordsByFilter(
+    "members",
+    "user = '' && contactPhone != '' && multi = false && production.archived != true",
+    "created",
+    2000,
+    0,
+  );
+  return rows.filter((m) => normalizeUsPhone(m.get("contactPhone")) === phone);
+}
+
+// What the new-account step can prefill: the person's own name/email from a
+// non-child row, else the email on a child's row (that's the parent's).
+function inviteDefaults(rows) {
+  const own = rows.filter((m) => !m.get("minor"));
+  const pick = (list, f) => {
+    for (const m of list) {
+      const v = String(m.get(f) || "").trim();
+      if (v) return v;
+    }
+    return "";
+  };
+  return {
+    name: pick(own, "displayName"),
+    email: pick(own, "contactEmail") || pick(rows, "contactEmail"),
+    guardianOf: rows.filter((m) => m.get("minor")).map((m) => String(m.get("displayName") || "a cast member")),
+  };
+}
+
+// Same outcomes as claiming with a role code (join route): own rows get the
+// user (unless they're already in that show); a child's row gets the user as a guardian plus a guardian row in that
+// show. Only adults become guardians.
+function claimInvites(app, user, rows, adult) {
+  const membersCol = app.findCollectionByNameOrId("members");
+  const hasRow = (pid) => {
+    try {
+      app.findFirstRecordByFilter("members", "production = {:p} && user = {:u}", { p: pid, u: user.id });
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  let claimed = 0;
+  for (const m of rows) {
+    const pid = String(m.get("production"));
+    if (m.get("minor")) {
+      if (!adult) continue;
+      const gs = toIdArray(m.get("guardians"));
+      if (!gs.includes(user.id)) {
+        gs.push(user.id);
+        m.set("guardians", gs);
+        app.save(m);
+      }
+      if (!hasRow(pid)) {
+        const g = new Record(membersCol);
+        g.set("production", pid);
+        g.set("user", user.id);
+        g.set("role", "guardian");
+        g.set("position", "Guardian of " + (m.get("displayName") || "a cast member"));
+        app.save(g);
+      }
+    } else {
+      // One row per person per show (unique index) — a second role on the
+      // same number is left for the managers to sort out.
+      if (hasRow(pid)) continue;
+      m.set("user", user.id);
+      app.save(m);
+    }
+    claimed++;
+  }
+  return claimed;
+}
+
 // America/Los_Angeles UTC offset without Intl, which the JSVM lacks.
 // DST: second Sunday of March to first Sunday of November.
 function pacificOffsetHours(t) {
@@ -745,6 +822,9 @@ function cleanPoll(value) {
 }
 
 module.exports = {
+  inviteRowsForPhone,
+  inviteDefaults,
+  claimInvites,
   cleanTimeline,
   cleanPoll,
   readJson,

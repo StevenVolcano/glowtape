@@ -11,7 +11,7 @@
 // Safety rails: US numbers only, codes are hashed and expire in 10 minutes,
 // max 3 codes per phone and 10 per IP per hour, 5 wrong guesses kills a
 // code, sign-in codes are only ever sent to phones already verified on an
-// account, and the phone/phoneVerified fields cannot be edited through the
+// account or put on an unclaimed role by a manager (an invite), and the phone/phoneVerified fields cannot be edited through the
 // regular record API.
 //
 // NOTE: handlers run in isolated VMs — shared helpers are require()d INSIDE
@@ -57,9 +57,11 @@ routerAdd(
   $apis.requireAuth(),
 );
 
-// Sign in by text. Codes are only sent to phones already verified on an
-// account; unknown numbers get the same "ok" so the endpoint doesn't leak
-// which numbers are registered (and can't be used to text strangers).
+// Sign in by text. Codes go to phones already verified on an account, or to
+// a phone a manager put on an unclaimed role (an invite — signing in creates
+// the account and claims those roles). Any other number gets the same "ok",
+// so the endpoint doesn't leak which numbers are known (and can't be used to
+// text strangers).
 routerAdd("POST", "/api/glowtape/signin-sms/start", (e) => {
   const lib = require(`${__hooks}/glowtape_lib.js`);
   const data = new DynamicModel({ phone: "" });
@@ -67,28 +69,128 @@ routerAdd("POST", "/api/glowtape/signin-sms/start", (e) => {
   const phone = lib.normalizeUsPhone(data.phone);
   if (!phone) throw new BadRequestError("Enter a 10-digit US phone number.");
   lib.assertRateLimit(e.app, phone, e.realIP());
+  let userId = "";
   try {
-    const user = e.app.findFirstRecordByFilter(
-      "users",
-      "phone = {:phone} && phoneVerified = true",
-      { phone },
-    );
-    lib.createAndSendCode(e.app, phone, "signin", user.id, e.realIP());
+    userId = e.app.findFirstRecordByFilter("users", "phone = {:phone} && phoneVerified = true", {
+      phone,
+    }).id;
   } catch {
-    // no matching account: swallow silently
+    /* no account yet */
+  }
+  // An empty user on the code marks it as an invite sign-in for confirm.
+  if (userId || lib.inviteRowsForPhone(e.app, phone).length > 0) {
+    lib.createAndSendCode(e.app, phone, "signin", userId, e.realIP());
   }
   return e.json(200, { ok: true });
 });
 
+// Confirm a texted code. Existing accounts sign straight in. An invite-only
+// phone first gets { newAccount: true, name, email, guardianOf } (code checked
+// but not used up) so the app can ask the age range + confirm name/email; the
+// second call with `band` creates the account, claims the roles, signs in.
 routerAdd("POST", "/api/glowtape/signin-sms/confirm", (e) => {
   const lib = require(`${__hooks}/glowtape_lib.js`);
-  const data = new DynamicModel({ phone: "", code: "" });
+  const data = new DynamicModel({
+    phone: "",
+    code: "",
+    band: "",
+    age: 0,
+    name: "",
+    email: "",
+    texts: false,
+  });
   e.bindBody(data);
   const phone = lib.normalizeUsPhone(data.phone);
   if (!phone) throw new BadRequestError("Enter a 10-digit US phone number.");
-  const userId = lib.consumeCode(e.app, phone, "signin", data.code);
-  if (!userId) throw new BadRequestError("That code didn't match.");
-  const user = e.app.findRecordById("users", userId);
+  const code = String(data.code || "").trim();
+
+  // The newest live code — the same one consumeCode checks.
+  const pending = e.app.findRecordsByFilter(
+    "phone_codes",
+    "phone = {:phone} && purpose = 'signin' && expires >= {:now}",
+    "-created",
+    1,
+    0,
+    { phone, now: lib.pbNow(0) },
+  )[0];
+
+  if (!pending || pending.get("user")) {
+    const userId = lib.consumeCode(e.app, phone, "signin", code);
+    if (!userId) throw new BadRequestError("That code didn't match.");
+    const user = e.app.findRecordById("users", userId);
+    lib.claimInvites(e.app, user, lib.inviteRowsForPhone(e.app, phone), user.get("ageBand") !== "teen");
+    return $apis.recordAuthResponse(e, user, "phone");
+  }
+
+  // --- invite sign-in: no account yet ---
+  const rows = lib.inviteRowsForPhone(e.app, phone);
+  const band = String(data.band || "");
+  if (!band) {
+    // Check the code without using it up (wrong guesses still count).
+    const attempts = (pending.getInt("attempts") || 0) + 1;
+    if (attempts > 5) {
+      e.app.delete(pending);
+      throw new BadRequestError("Too many tries. Request a new code.");
+    }
+    if (pending.get("codeHash") !== lib.hashCode(phone, code)) {
+      pending.set("attempts", attempts);
+      e.app.save(pending);
+      throw new BadRequestError("That code didn't match.");
+    }
+    const d = lib.inviteDefaults(rows);
+    return e.json(200, { newAccount: true, name: d.name, email: d.email, guardianOf: d.guardianOf });
+  }
+
+  let teenAge = 0;
+  if (band === "under13") {
+    throw new BadRequestError(
+      "Glow Tape accounts start at 13. Ask a parent or guardian to sign in instead — they'll get your whole schedule.",
+    );
+  } else if (band === "teen") {
+    teenAge = Math.floor(Number(data.age) || 0);
+    if (teenAge < 13 || teenAge > 17) throw new BadRequestError("Enter an age from 13 to 17.");
+  } else if (band !== "adult") {
+    throw new BadRequestError("Please pick your age range.");
+  }
+  const name = String(data.name || "").trim();
+  if (!name) throw new BadRequestError("Enter your name.");
+  const email = String(data.email || "").trim().toLowerCase();
+  if (!email.includes("@") || email.length < 5) {
+    throw new BadRequestError("Enter your email — Glow Tape emails you a copy of everything.");
+  }
+  let taken = false;
+  try {
+    e.app.findAuthRecordByEmail("users", email);
+    taken = true;
+  } catch {
+    /* free */
+  }
+  if (taken) {
+    throw new BadRequestError(
+      "There's already a Glow Tape account with that email. Sign in with the email code instead.",
+    );
+  }
+
+  lib.consumeCode(e.app, phone, "signin", code);
+  const user = new Record(e.app.findCollectionByNameOrId("users"));
+  user.set("email", email);
+  user.set("name", name);
+  // The email is proven only if it's the one the managers had on file.
+  user.set("verified", rows.some((m) => String(m.get("contactEmail") || "").trim().toLowerCase() === email));
+  user.set("phone", phone);
+  user.set("phoneVerified", true);
+  user.set("smsOptIn", !!data.texts);
+  if (teenAge) {
+    user.set("ageBand", "teen");
+    const roll = new Date();
+    roll.setFullYear(roll.getFullYear() + (18 - teenAge));
+    user.set("teenUntil", roll.toISOString().replace("T", " "));
+  } else {
+    user.set("ageBand", "adult");
+  }
+  user.setRandomPassword();
+  e.app.save(user);
+  lib.claimInvites(e.app, user, rows, !teenAge);
   return $apis.recordAuthResponse(e, user, "phone");
 });
 
