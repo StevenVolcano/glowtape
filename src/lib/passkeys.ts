@@ -8,6 +8,28 @@ export function passkeysSupported(): boolean {
   return typeof window !== 'undefined' && !!window.PublicKeyCredential && !!navigator.credentials
 }
 
+// Remembers that THIS device has signed in with (or saved) a passkey, so the
+// sign-in screen can lead with the fingerprint button only where it will work.
+// First-timers tapped it and failed when it led for everyone.
+const HERE_KEY = 'gt-passkey-here'
+
+export function deviceHasPasskey(): boolean {
+  try {
+    return localStorage.getItem(HERE_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+export function rememberPasskeyHere(on: boolean): void {
+  try {
+    if (on) localStorage.setItem(HERE_KEY, '1')
+    else localStorage.removeItem(HERE_KEY)
+  } catch {
+    // private mode etc. — the sign-in screen just keeps the email code first
+  }
+}
+
 function toB64url(buf: ArrayBuffer): string {
   let s = ''
   for (const b of new Uint8Array(buf)) s += String.fromCharCode(b)
@@ -79,6 +101,7 @@ export async function registerPasskey(label: string): Promise<void> {
       label,
     },
   })
+  rememberPasskeyHere(true)
 }
 
 export async function signInWithPasskey(): Promise<void> {
@@ -103,5 +126,6 @@ export async function signInWithPasskey(): Promise<void> {
       signature: toB64url(res.signature),
     },
   })
+  rememberPasskeyHere(true)
   pb.authStore.save(out.token, out.record)
 }

@@ -3,20 +3,15 @@ import { Link } from 'react-router-dom'
 import { pb } from '../lib/pb.ts'
 import { useAuth } from '../lib/auth.tsx'
 import { useTitle } from '../lib/useTitle.ts'
-import PhoneSettings from '../components/PhoneSettings.tsx'
-import EmailSettings from '../components/EmailSettings.tsx'
-import PasskeySettings from '../components/PasskeySettings.tsx'
 import FeedbackSection from '../components/FeedbackSection.tsx'
-import PushSettings from '../components/PushSettings.tsx'
-import ReminderSettings from '../components/ReminderSettings.tsx'
 import { TAGLINE, copyrightLine, pbDate } from '../lib/types.ts'
 import type { ProductionRecord } from '../lib/types.ts'
 
 type PhaseEvent = { production: string; kind: string; start: string; end: string }
 
 // Where a show is, read off its schedule so nobody has to keep a status up to
-// date: before the first rehearsal → planning, before opening → rehearsals,
-// through the last performance → performances, after it → closed.
+// date — worded as a plain sentence, since bare words like "closed" read as
+// "you're locked out" to newcomers.
 function showPhase(events: PhaseEvent[], now = new Date()): string {
   const rehearsals = events.filter((e) => !/performance|audition|strike|party/i.test(e.kind))
   const performances = events.filter((e) => /performance/i.test(e.kind))
@@ -24,10 +19,13 @@ function showPhase(events: PhaseEvent[], now = new Date()): string {
   const opening = performances.length ? pbDate(performances[0].start) : null
   const last = performances[performances.length - 1]
   const closing = last ? pbDate(last.end || last.start) : null
-  if (closing && now > closing) return 'closed'
-  if (opening && now >= opening) return 'performances'
-  if (firstRehearsal && now >= firstRehearsal) return 'rehearsals'
-  return 'planning'
+  const opens = opening
+    ? `opens ${opening.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`
+    : ''
+  if (closing && now > closing) return "That's a wrap"
+  if (opening && now >= opening) return '🎭 Performing now'
+  if (firstRehearsal && now >= firstRehearsal) return opens ? `Rehearsing · ${opens}` : 'Rehearsing'
+  return opens ? `Getting ready · ${opens}` : 'Getting ready'
 }
 
 export default function Home() {
@@ -111,9 +109,14 @@ export default function Home() {
     <main className="page">
       <header className="topbar">
         <span className="brand-small">Glow Tape</span>
-        <button className="link" onClick={signOut}>
-          Sign out
-        </button>
+        <span className="row-inline">
+          <Link className="link" to="/settings">
+            ⚙ Settings
+          </Link>
+          <button className="link" onClick={signOut}>
+            Sign out
+          </button>
+        </span>
       </header>
 
       <h1>Hi, {user?.name || 'there'}</h1>
@@ -132,7 +135,7 @@ export default function Home() {
           <ul className="cards">
             {active.map((p) => (
               <li key={p.id}>
-                <Link className="card card-link" to={`/production/${p.id}/schedule`}>
+                <Link className="card card-link" to={`/production/${p.id}/dashboard`}>
                   <strong>{p.title}</strong>
                   <span className="pill">{phaseOf(p.id)}</span>
                 </Link>
@@ -149,7 +152,7 @@ export default function Home() {
           <ul className="cards">
             {past.map((p) => (
               <li key={p.id}>
-                <Link className="card card-link" to={`/production/${p.id}/schedule`}>
+                <Link className="card card-link" to={`/production/${p.id}/dashboard`}>
                   <strong>{p.title}</strong>
                   <span className="pill">📦 archived</span>
                 </Link>
@@ -196,23 +199,30 @@ export default function Home() {
       </section>
 
       <section>
-        <h2>Theater Community</h2>
+        <h2>Around Grays Harbor</h2>
         <ul className="cards">
           <li>
-            <Link className="card card-link" to="/community">
-              <strong>🎪 The community board &amp; calendar</strong>
-              <span className="pill">all theaters</span>
+            <Link className="card card-link community-card" to="/community">
+              <strong>🎪 Community board &amp; calendar</strong>
+              <span className="pill">every theater in town</span>
             </Link>
           </li>
         </ul>
         <p className="hint">
-          Auditions and performances across Grays Harbor, plus the community message board.
+          Auditions and performances across all Grays Harbor theaters, plus a town-wide message
+          board. Your own show's schedule and cast chat live inside your show above.
         </p>
       </section>
 
       <section>
         <h2>More</h2>
         <ul className="plain-list">
+          <li>
+            ⚙ <Link to="/settings">My settings</Link>{' '}
+            <span className="hint">
+              — notifications, reminder times, text reminders, email, fingerprint sign-in
+            </span>
+          </li>
           {!window.matchMedia('(display-mode: standalone)').matches && (
             <li>
               📲 <a href="/help.html#install">Put Glow Tape on your home screen</a>{' '}
@@ -262,14 +272,6 @@ export default function Home() {
           )}
         </section>
       )}
-
-      <PushSettings />
-
-      {user && <ReminderSettings user={user} />}
-
-      {user && <EmailSettings user={user} />}
-      {user && <PasskeySettings />}
-      {user && <PhoneSettings user={user} />}
 
       <p className="hint legal-links">
         <em>{TAGLINE}</em>

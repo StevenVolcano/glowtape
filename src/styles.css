@@ -284,6 +284,32 @@ form.stack,
   border-color: var(--lamp);
 }
 
+/* Wraps on narrow phones so a long status ("Rehearsing · opens Nov 14")
+   drops under the title instead of squeezing it. */
+.card-link {
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+}
+
+/* The town-wide board must not look like one of your own shows — new users
+   mistook it for their cast chat. Dashed border + plain pill set it apart. */
+.card-link.community-card {
+  border: 2px dashed var(--ctrl);
+  box-shadow: none;
+}
+
+.card-link.community-card .pill {
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid var(--ctrl);
+}
+
+.row-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 1rem;
+}
+
 .pill {
   background: var(--accent);
   color: #fff;
