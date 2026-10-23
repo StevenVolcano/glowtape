@@ -683,8 +683,71 @@ function cleanTimeline(value) {
   return out;
 }
 
+// Polls in chat (migration 1758700000). A json field read in the JSVM comes
+// back as raw bytes, so read it as text and parse (see reminderKinds).
+function readJson(record, field) {
+  const text = String(record.getString(field) || "");
+  if (!text || text === "null") return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
+
+const POLL_MAX_OPTIONS = 20;
+
+// Validate a poll from a request body: {kind, question, multi, options}.
+// 'choice' options need a label; 'times' options need an ISO start (end and a
+// short note optional). Ids are assigned here so clients can't collide them.
+function cleanPoll(value) {
+  let poll;
+  try {
+    poll = JSON.parse(JSON.stringify(value));
+  } catch {
+    poll = null;
+  }
+  if (!poll || typeof poll !== "object" || Array.isArray(poll)) throw new Error("That poll didn't come through.");
+  const kind = poll.kind === "times" ? "times" : poll.kind === "choice" ? "choice" : "";
+  if (!kind) throw new Error("A poll is either a question with answers or a when-works-for-you poll.");
+  const question = typeof poll.question === "string" ? poll.question.trim() : "";
+  if (!question) throw new Error("The poll needs a question.");
+  if (question.length > 300) throw new Error("Keep the question under 300 characters.");
+  const list = Array.isArray(poll.options) ? poll.options : [];
+  const options = [];
+  const seen = {};
+  for (const raw of list) {
+    if (!raw || typeof raw !== "object") continue;
+    const label = typeof raw.label === "string" ? raw.label.trim().slice(0, 150) : "";
+    const opt = { id: `o${options.length + 1}`, label };
+    if (kind === "times") {
+      const start = typeof raw.start === "string" ? raw.start : "";
+      const startMs = Date.parse(start);
+      if (!start || isNaN(startMs)) throw new Error(`Option ${options.length + 1} needs a date and time.`);
+      opt.start = new Date(startMs).toISOString();
+      const endMs = typeof raw.end === "string" && raw.end ? Date.parse(raw.end) : NaN;
+      if (!isNaN(endMs)) {
+        if (endMs <= startMs) throw new Error(`Option ${options.length + 1} ends before it starts.`);
+        opt.end = new Date(endMs).toISOString();
+      }
+    } else if (!label) {
+      continue; // blank answer rows are just unused inputs
+    }
+    const key = (opt.start || "") + "|" + (opt.end || "") + "|" + label.toLowerCase();
+    if (seen[key]) continue;
+    seen[key] = 1;
+    options.push(opt);
+  }
+  if (options.length < 2) throw new Error("A poll needs at least two options.");
+  if (options.length > POLL_MAX_OPTIONS) throw new Error(`A poll can have at most ${POLL_MAX_OPTIONS} options.`);
+  if (kind === "times") options.sort((a, b) => Date.parse(a.start) - Date.parse(b.start));
+  return { kind, question, multi: kind === "times" ? true : !!poll.multi, options };
+}
+
 module.exports = {
   cleanTimeline,
+  cleanPoll,
+  readJson,
   pbNow,
   REMINDER_KEYS,
   reminderKinds,

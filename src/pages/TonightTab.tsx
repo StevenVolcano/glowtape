@@ -4,6 +4,7 @@ import { pb } from '../lib/pb.ts'
 import { useAuth } from '../lib/auth.tsx'
 import { useProduction } from './Production.tsx'
 import { TimelineView } from '../components/Timeline.tsx'
+import { PollCard } from '../components/Poll.tsx'
 import { formatWhen, mapsUrl, pbDate, productionPlaces } from '../lib/types.ts'
 import type {
   AckRecord,
@@ -11,6 +12,7 @@ import type {
   ConflictRecord,
   EventRecord,
   LineNoteRecord,
+  MessageRecord,
   SlotRecord,
   TaskRecord,
 } from '../lib/types.ts'
@@ -52,6 +54,7 @@ export default function TonightTab() {
   const [lineNotes, setLineNotes] = useState<LineNoteRecord[]>([])
   const [tasks, setTasks] = useState<TaskRecord[]>([])
   const [pinned, setPinned] = useState<AnnouncementRecord | null>(null)
+  const [polls, setPolls] = useState<MessageRecord[]>([])
   const [slots, setSlots] = useState<SlotRecord[]>([])
   const [conflicts, setConflicts] = useState<ConflictRecord[]>([])
   const [pushOn, setPushOn] = useState<boolean | null>(null)
@@ -105,6 +108,15 @@ export default function TonightTab() {
     setPinned(an[0] ?? null)
     setSlots(sl)
     setConflicts(cf)
+    // Open polls a manager pinned. The messages rules decide who sees each
+    // one, so a poll in a 🔒 channel only shows for people in that channel.
+    pb.collection('messages')
+      .getFullList<MessageRecord>({
+        filter: pb.filter('channel.production = {:p} && pollPinned = true && pollClosed = false', { p }),
+        sort: '-created',
+      })
+      .then(setPolls)
+      .catch(() => setPolls([]))
   }
 
   useEffect(() => {
@@ -322,6 +334,26 @@ export default function TonightTab() {
             </ul>
           </div>
         )}
+
+        {polls.map((m) => (
+          <div key={m.id} className="card stack">
+            <PollCard
+              message={m}
+              members={members}
+              canManage={isManager}
+              onChange={(patch) =>
+                setPolls((prev) =>
+                  prev
+                    .map((x) => (x.id === m.id ? { ...x, ...patch } : x))
+                    .filter((x) => x.pollPinned && !x.pollClosed),
+                )
+              }
+            />
+            <Link className="link" to={`${base}/messages?channel=${m.channel}`}>
+              Talk about it in the chat →
+            </Link>
+          </div>
+        ))}
 
         {pinned && (
           <div className="card stack">

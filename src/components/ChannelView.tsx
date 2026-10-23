@@ -4,6 +4,7 @@ import { pb } from '../lib/pb.ts'
 import { useAuth } from '../lib/auth.tsx'
 import { scrubImage } from '../lib/images.ts'
 import { STAGEHAND_TITLE, chatName, formatStamp, pbDate } from '../lib/types.ts'
+import { PollCard, PollComposer } from './Poll.tsx'
 import GifPicker, { gifFallbackUrl, gifStillUrl, gifUrl, type GifChoice } from './GifPicker.tsx'
 import type { MemberRecord, MessageRecord, ReactionRecord } from '../lib/types.ts'
 
@@ -121,12 +122,15 @@ export default function ChannelView({
   channelId,
   members = [],
   canModerate = false,
+  canPoll = false,
 }: {
   channelId: string
   members?: MemberRecord[]
   // Managers of the show (or the operator on the community board) can
   // remove anyone's message.
   canModerate?: boolean
+  // Managers of the show can start polls (server-checked in messages.pb.js).
+  canPoll?: boolean
 }) {
   const { user } = useAuth()
 
@@ -151,6 +155,7 @@ export default function ChannelView({
   const [file, setFile] = useState<File | null>(null)
   const [gif, setGif] = useState<GifChoice | null>(null)
   const [showGifs, setShowGifs] = useState(false)
+  const [showPoll, setShowPoll] = useState(false)
   const [replyTo, setReplyTo] = useState<MessageRecord | null>(null)
   const [editing, setEditing] = useState<MessageRecord | null>(null)
   const [busy, setBusy] = useState(false)
@@ -180,6 +185,7 @@ export default function ChannelView({
     setEditing(null)
     setGif(null)
     setShowGifs(false)
+    setShowPoll(false)
 
     pb.collection('messages')
       .getList<MessageRecord>(1, PAGE, {
@@ -469,7 +475,18 @@ export default function ChannelView({
                     </a>
                   )}
                   {m.gif && <GifImage id={m.gif} title={m.gifTitle} />}
-                  <Linkified text={m.text} />
+                  {m.poll ? (
+                    <PollCard
+                      message={m}
+                      members={members}
+                      canManage={canPoll}
+                      onChange={(patch) =>
+                        setMessages((prev) => prev.map((x) => (x.id === m.id ? { ...x, ...patch } : x)))
+                      }
+                    />
+                  ) : (
+                    <Linkified text={m.text} />
+                  )}
                 </span>
                 <span className="reactions">
                   {reactionSummary(m).map(([emoji, rows]) => (
@@ -507,7 +524,7 @@ export default function ChannelView({
                       <button type="button" className="reaction" onClick={() => startReply(m)}>
                         <span aria-hidden="true">↩</span> Reply
                       </button>
-                      {mine && (
+                      {mine && !m.poll && (
                         <button type="button" className="reaction" onClick={() => startEdit(m)}>
                           <span aria-hidden="true">✎</span> Edit
                         </button>
@@ -577,6 +594,17 @@ export default function ChannelView({
           onClose={() => setShowGifs(false)}
         />
       )}
+      {showPoll && !editing && (
+        <PollComposer
+          channelId={channelId}
+          onCancel={() => setShowPoll(false)}
+          onCreated={(created) => {
+            setMessages((prev) => (prev.some((x) => x.id === created.id) ? prev : [...prev, created]))
+            setShowPoll(false)
+            setSendErr('')
+          }}
+        />
+      )}
       <form onSubmit={send} className="row composer">
         {!editing && (
           <>
@@ -602,6 +630,20 @@ export default function ChannelView({
             >
               GIF
             </button>
+            {canPoll && (
+              <button
+                type="button"
+                className="photo-btn gif-btn"
+                aria-label="Start a poll"
+                aria-expanded={showPoll}
+                onClick={() => {
+                  setShowPoll(!showPoll)
+                  setShowGifs(false)
+                }}
+              >
+                <span aria-hidden="true">📊</span>
+              </button>
+            )}
           </>
         )}
         <input

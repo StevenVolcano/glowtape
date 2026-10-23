@@ -63,6 +63,37 @@ onRecordCreateRequest((e) => {
   e.record.set("gifTitle", "");
   e.record.set("edited", false);
 
+  // Polls: managers of the show only; votes/closing/pinning go through
+  // polls.pb.js, so a new message always starts with a clean slate.
+  const lib = require(`${__hooks}/glowtape_lib.js`);
+  const rawPoll = lib.readJson(e.record, "poll");
+  e.record.set("pollVotes", null);
+  e.record.set("pollClosed", false);
+  e.record.set("pollPinned", false);
+  if (rawPoll) {
+    const channel = e.app.findRecordById("channels", e.record.get("channel"));
+    const productionId = String(channel.get("production") || "");
+    if (!productionId) throw new BadRequestError("Polls are for a show's chat.");
+    const production = e.app.findRecordById("productions", productionId);
+    if (!lib.canManage(production, e.auth)) {
+      throw new BadRequestError("Only the show's managers can start a poll.");
+    }
+    let poll;
+    try {
+      poll = lib.cleanPoll(rawPoll);
+    } catch (err) {
+      throw new BadRequestError(String(err.message || err));
+    }
+    if (gif || e.record.get("image")) throw new BadRequestError("A poll can't carry a photo or GIF.");
+    e.record.set("poll", poll);
+    e.record.set("pollVotes", {});
+    // The question is the message text, so pushes, replies and the
+    // operator's report email all read naturally.
+    e.record.set("text", `${poll.kind === "times" ? "📅" : "📊"} ${poll.question}`);
+  } else {
+    e.record.set("poll", null);
+  }
+
   if (gif) {
     if (e.record.get("image")) throw new BadRequestError("Send a photo or a GIF, not both.");
     const key = ($os.getenv("GLOWTAPE_GIPHY_API_KEY") || "").trim();
@@ -105,10 +136,13 @@ onRecordCreateRequest((e) => {
 // gets marked edited so nobody is misled about what was said when.
 onRecordUpdateRequest((e) => {
   const before = e.record.original();
-  for (const f of ["channel", "author", "image", "gif", "gifTitle", "replyTo"]) {
-    if (String(e.record.get(f) || "") !== String(before.get(f) || "")) {
+  for (const f of ["channel", "author", "image", "gif", "gifTitle", "replyTo", "poll", "pollVotes", "pollClosed", "pollPinned"]) {
+    if (String(e.record.getString(f) || "") !== String(before.getString(f) || "")) {
       throw new BadRequestError("Only the text of a message can be changed.");
     }
+  }
+  if (before.getString("poll") && before.getString("poll") !== "null") {
+    throw new BadRequestError("A poll can't be edited once people can vote. Delete it and start a new one.");
   }
   const text = String(e.record.get("text") || "").trim();
   if (!text && !e.record.get("image") && !e.record.get("gif")) {

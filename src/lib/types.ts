@@ -566,9 +566,32 @@ export interface MessageRecord {
   gifTitle: string
   replyTo: string
   edited: boolean
+  poll: Poll | null // set only by managers; votes/closing/pinning via polls.pb.js routes
+  pollVotes: PollVotes | null
+  pollClosed: boolean
+  pollPinned: boolean // shown on the Dashboard while open
   created: string
   expand?: { author?: UserRecord; replyTo?: MessageRecord & { expand?: { author?: UserRecord } } }
 }
+
+// 'choice' = a question with answers; 'times' = Doodle-style "when works?",
+// where each option is a date/time and people mark yes or maybe.
+export interface PollOption {
+  id: string
+  label: string
+  start?: string // ISO, times polls only
+  end?: string
+}
+
+export interface Poll {
+  kind: 'choice' | 'times'
+  question: string
+  multi: boolean
+  options: PollOption[]
+}
+
+export type PollPick = 'yes' | 'maybe'
+export type PollVotes = Record<string, { name: string; picks: Record<string, PollPick> }>
 
 export interface ReactionRecord {
   id: string
