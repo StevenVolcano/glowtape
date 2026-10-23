@@ -807,6 +807,58 @@ body.kiosk .legal-links {
   min-width: 11rem;
 }
 
+/* Resizable Sheets columns: a 24px grab strip straddles each header's right
+   edge (mouse, finger, or arrow keys). Once sized, the table is fixed-layout
+   and cells fill their column instead of their own min-widths. */
+.edit-table th.resizable-th {
+  position: relative;
+  padding-right: 1rem;
+}
+
+.col-resizer {
+  position: absolute;
+  top: 0;
+  right: -12px;
+  bottom: 0;
+  width: 24px;
+  cursor: col-resize;
+  touch-action: none;
+  z-index: 1;
+}
+
+.col-resizer::after {
+  content: '';
+  position: absolute;
+  top: 20%;
+  bottom: 20%;
+  left: 11px;
+  width: 2px;
+  border-radius: 1px;
+  background: var(--line);
+}
+
+.col-resizer:hover::after,
+.col-resizer:focus-visible::after,
+.col-resizer-active::after {
+  top: 0;
+  bottom: 0;
+  background: var(--ctrl);
+}
+
+.edit-table table.cols-sized {
+  table-layout: fixed;
+}
+
+.edit-table table.cols-sized td {
+  overflow-wrap: anywhere;
+}
+
+.edit-table table.cols-sized input,
+.edit-table table.cols-sized td:nth-child(2) input {
+  min-width: 0;
+  width: 100%;
+}
+
 .conflict-alert {
   background: #fdf0ef;
   border: 1px solid var(--error);
