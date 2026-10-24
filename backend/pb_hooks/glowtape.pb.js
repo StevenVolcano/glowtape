@@ -126,6 +126,7 @@ routerAdd(
   "POST",
   "/api/glowtape/join",
   (e) => {
+    const lib = require(`${__hooks}/glowtape_lib.js`);
     const data = new DynamicModel({ code: "" });
     e.bindBody(data);
     // Accept "ABC123", "ABC123XY", or "ABC123-XY" (role claim codes are the
@@ -248,6 +249,38 @@ routerAdd(
 
     if (existing) {
       return e.json(200, { ok: true, production: production.id, already: true });
+    }
+
+    // A manager may already have entered this person (contactEmail on an
+    // unclaimed row). The plain show code takes those rows over instead of
+    // adding a blank performer next to them — same outcome as the role code.
+    const email = String(e.auth.email() || "").trim().toLowerCase();
+    if (email && e.auth.get("verified")) {
+      const invites = e.app
+        .findRecordsByFilter(
+          "members",
+          "production = {:p} && user = '' && multi = false && contactEmail != ''",
+          "created",
+          200,
+          0,
+          { p: production.id },
+        )
+        .filter((m) => String(m.get("contactEmail") || "").trim().toLowerCase() === email);
+      if (invites.length > 0) {
+        const own = invites.filter((m) => !m.get("minor"));
+        const rows = own.length > 0 ? [own[0]] : invites;
+        const claimed = lib.claimInvites(e.app, e.auth, rows, e.auth.get("ageBand") !== "teen");
+        if (claimed > 0) {
+          const first = rows[0];
+          return e.json(200, {
+            ok: true,
+            production: production.id,
+            already: false,
+            claimed: first.get("minor") ? undefined : first.get("position"),
+            guardianOf: first.get("minor") ? first.get("displayName") : undefined,
+          });
+        }
+      }
     }
 
     const members = e.app.findCollectionByNameOrId("members");
