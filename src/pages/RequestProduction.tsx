@@ -147,7 +147,7 @@ export default function RequestProduction() {
         {minors && (
           <p className="hint">
             Great — Glow Tape is built for that. Children join through their parents (no child
-            accounts), guardians see everything, and there are no private messages. Read{' '}
+            accounts), guardians see everything, and there are no private messages with anyone under 18. Read{' '}
             <a href="/youth-safety.html">how youth safety works</a>.
           </p>
         )}

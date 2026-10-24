@@ -50,7 +50,12 @@ onRecordAfterCreateSuccess((e) => {
       url = `/production/${productionId}/messages?channel=${channel.id}`;
       const memberId = String(channel.get("member") || "");
       const groupId = String(channel.get("group") || "");
-      if (String(channel.get("audience")) === "team") {
+      const dmUsers = lib.toIdArray(channel.get("dmUsers"));
+      if (dmUsers.length) {
+        // Direct message: just the other person (never managers or guardians).
+        targets = dmUsers;
+        where = `${authorName} — ${where}`;
+      } else if (String(channel.get("audience")) === "team") {
         // Team audience wins over member/group: the read rule ANDs the team
         // gate with the others, so managers-only is the widest legal set.
         targets = lib.toIdArray(production.get("managers"));
@@ -120,7 +125,7 @@ onRecordAfterCreateSuccess((e) => {
 
     const text = String(e.record.get("text") || "");
     lib.sendPush(e.app, finalTargets, {
-      title: `#${channel.get("name")} — ${where}`,
+      title: lib.toIdArray(channel.get("dmUsers")).length ? `💬 ${where}` : `#${channel.get("name")} — ${where}`,
       body: `${authorName}: ${text ? text.slice(0, 120) : e.record.get("gif") ? "GIF" : "📷 photo"}`,
       url,
       tag: `channel-${channel.id}`,

@@ -869,7 +869,25 @@ function cleanPoll(value) {
   return { kind, question, multi: kind === "times" ? true : !!poll.multi, options };
 }
 
+// Adults-only features (direct messages): true when the account's band is
+// 'adult'. A teen whose teenUntil has passed is rolled over to 'adult' on
+// the spot (and saved), because the DM API rules check ageBand = 'adult'
+// directly. Legacy accounts with no band ('') are NOT adults here.
+function isAdultAccount(app, user) {
+  const band = String(user.get("ageBand") || "");
+  if (band === "adult") return true;
+  const until = String(user.get("teenUntil") || "");
+  if (band === "teen" && until && new Date(until.replace(" ", "T")).getTime() <= Date.now()) {
+    user.set("ageBand", "adult");
+    user.set("teenUntil", "");
+    app.save(user);
+    return true;
+  }
+  return false;
+}
+
 module.exports = {
+  isAdultAccount,
   inviteRowsForPhone,
   inviteDefaults,
   claimInvites,
