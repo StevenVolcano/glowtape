@@ -579,6 +579,13 @@ export interface ChannelRecord {
   archived: boolean
   defaultMuted: boolean
   member: string // set = semi-private: that member + guardians + managers only
+  dmUsers?: string[] // set = direct message between these two adults (migration 1759300000)
+}
+
+export interface DmBlockRecord {
+  id: string
+  user: string
+  blocked: string
 }
 
 export interface ProductionRequestRecord {
