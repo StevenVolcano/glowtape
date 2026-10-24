@@ -22,10 +22,20 @@
 // refuses DM posts when a block exists either way.
 
 const DM = "dmUsers:length = 0";
+// Every rule keeps the signed-in guard from 1759200000 at the very front.
+const GUARD = "@request.auth.id != ''";
 const adultsIn = (path) =>
   `${path}dmUsers.id ?= @request.auth.id && @request.auth.ageBand = 'adult' && ${path}dmUsers.ageBand = 'adult'`;
 
-const wrap = (prefix, old) => `(${prefix}${DM} && (${old})) || (${adultsIn(prefix)})`;
+// Take the guard off (if present) so the DM wrap goes inside it, then put it back.
+const bare = (rule) => {
+  const s = String(rule);
+  const head = `${GUARD} && (`;
+  return s.indexOf(head) === 0 && s.endsWith(")") ? s.slice(head.length, s.length - 1) : s;
+};
+const guard = (s) => `${GUARD} && (${s})`;
+
+const wrap = (prefix, old) => guard(`(${prefix}${DM} && (${bare(old)})) || (${adultsIn(prefix)})`);
 
 migrate(
   (app) => {
@@ -45,11 +55,11 @@ migrate(
         { name: "created", type: "autodate", onCreate: true, onUpdate: false },
       ],
       indexes: ["CREATE UNIQUE INDEX idx_dm_blocks_pair ON dm_blocks (user, blocked)"],
-      listRule: "user = @request.auth.id",
-      viewRule: "user = @request.auth.id",
-      createRule: "user = @request.auth.id && blocked != @request.auth.id",
+      listRule: guard("user = @request.auth.id"),
+      viewRule: guard("user = @request.auth.id"),
+      createRule: guard("user = @request.auth.id && blocked != @request.auth.id"),
       updateRule: null,
-      deleteRule: "user = @request.auth.id",
+      deleteRule: guard("user = @request.auth.id"),
     });
     app.save(blocks);
 
@@ -57,31 +67,31 @@ migrate(
     c.listRule = wrap("", String(c.listRule));
     c.viewRule = wrap("", String(c.viewRule));
     // Managers manage show channels, never someone's DM.
-    c.updateRule = `${DM} && (${String(c.updateRule)})`;
-    c.deleteRule = `${DM} && (${String(c.deleteRule)})`;
+    c.updateRule = guard(`${DM} && (${bare(c.updateRule)})`);
+    c.deleteRule = guard(`${DM} && (${bare(c.deleteRule)})`);
     app.save(c);
 
     const m = app.findCollectionByNameOrId("messages");
     m.listRule = wrap("channel.", String(m.listRule));
     m.viewRule = wrap("channel.", String(m.viewRule));
-    m.createRule = `(channel.${DM} && (${String(m.createRule)})) || (author = @request.auth.id && ${adultsIn("channel.")})`;
+    m.createRule = guard(`(channel.${DM} && (${bare(m.createRule)})) || (author = @request.auth.id && ${adultsIn("channel.")})`);
     // Own messages only in a DM — the manager/operator delete clause is for show channels.
-    m.deleteRule = `author = @request.auth.id || (channel.${DM} && (${String(m.deleteRule)}))`;
+    m.deleteRule = guard(`author = @request.auth.id || (channel.${DM} && (${bare(m.deleteRule)}))`);
     app.save(m);
 
     const r = app.findCollectionByNameOrId("reactions");
     r.listRule = wrap("message.channel.", String(r.listRule));
     r.viewRule = wrap("message.channel.", String(r.viewRule));
-    r.createRule = `(message.channel.${DM} && (${String(r.createRule)})) || (user = @request.auth.id && ${adultsIn("message.channel.")})`;
+    r.createRule = guard(`(message.channel.${DM} && (${bare(r.createRule)})) || (user = @request.auth.id && ${adultsIn("message.channel.")})`);
     app.save(r);
   },
   (app) => {
     // Undo by peeling the wrappers back off (exact strings built above).
     const unwrap = (rule, head, tail) => {
-      const s = String(rule);
+      const s = bare(rule);
       const i = s.indexOf(head);
       const j = s.lastIndexOf(tail);
-      return i === 0 && j > 0 ? s.slice(head.length, j) : s;
+      return guard(i === 0 && j > 0 ? s.slice(head.length, j) : s);
     };
     const c = app.findCollectionByNameOrId("channels");
     c.listRule = unwrap(c.listRule, `(${DM} && (`, `)) || (`);

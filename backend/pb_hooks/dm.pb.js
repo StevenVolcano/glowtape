@@ -1,6 +1,6 @@
 /// <reference path="../pb_data/types.d.ts" />
 //
-// Direct messages between adults who share a show (migration 1759100000).
+// Direct messages between adults who share a show (migration 1759300000).
 // A DM is a channel with dmUsers = [the two people]; the API rules only open
 // it when BOTH accounts are ageBand 'adult'. This file:
 //   - POST /api/glowtape/dm/start — find-or-create the DM with a castmate
