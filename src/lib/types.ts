@@ -199,6 +199,37 @@ export interface GroupRecord {
   auto?: 'cast' | 'crew' | '' // system groups whose membership syncs from roles
 }
 
+export interface VideoRequestRecord {
+  id: string
+  production: string
+  title: string
+  instructions: string
+  due: string
+  members: string[] // empty = every performer
+  reviewGroup: string // members of this group can watch + give notes
+  closed: boolean
+  author: string
+  created: string
+}
+
+// Files are protected — fetch a token before loading `video` (lib/videos.ts).
+export interface VideoCheckinRecord {
+  id: string
+  collectionId: string
+  collectionName: string
+  production: string
+  request: string
+  member: string
+  video: string
+  seconds: number
+  uploadedBy: string
+  feedback: string
+  reviewed: boolean
+  feedbackBy: string
+  created: string
+  updated: string
+}
+
 export interface UnitRecord {
   id: string
   production: string

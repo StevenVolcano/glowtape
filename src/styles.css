@@ -1783,3 +1783,24 @@ section > :is(.row, .chips) + :is(.row, .chips) {
   flex: 1 1 auto;
   min-width: 0;
 }
+
+/* Video check-ins (components/VideoCheckins.tsx) */
+.video-live,
+.video-player {
+  display: block;
+  width: 100%;
+  max-width: 32rem;
+  max-height: 70vh;
+  border-radius: 8px;
+  background: #000;
+}
+/* the live preview is a mirror, like every phone's selfie camera */
+.video-live {
+  transform: scaleX(-1);
+}
+progress {
+  width: 100%;
+  max-width: 32rem;
+  height: 1rem;
+  accent-color: var(--ok);
+}
