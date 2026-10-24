@@ -4,6 +4,8 @@
 # archive including uploads once a week on Sundays (4 kept). Stops the
 # service for a few seconds so the SQLite file copies in a consistent state.
 # If an rclone remote named "offsite" exists, fresh archives copy there too.
+# Video check-ins (storage/videocheckins00) are never backed up: they're big
+# and short-lived, and the show deletes them once they've been reviewed.
 set -euo pipefail
 
 STAMP=$(date +%F)
@@ -13,7 +15,8 @@ systemctl stop glowtape
 trap 'systemctl start glowtape' EXIT
 tar czf "$DEST/pb_data-db-$STAMP.tgz" --exclude='pb_data/storage' -C /opt/glowtape/backend pb_data
 if [ "$(date +%u)" = "7" ]; then
-  tar czf "$DEST/pb_data-full-$STAMP.tgz" -C /opt/glowtape/backend pb_data
+  tar czf "$DEST/pb_data-full-$STAMP.tgz" --exclude='pb_data/storage/videocheckins00' \
+    -C /opt/glowtape/backend pb_data
 fi
 systemctl start glowtape
 trap - EXIT

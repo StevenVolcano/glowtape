@@ -39,6 +39,8 @@ const GUARDED = [
   "show_reports",
   "bring_items",
   "timeline_templates",
+  "video_requests",
+  "video_checkins",
   // resolved through a parent (event / announcement / channel / message)
   "acks",
   "attendance",
