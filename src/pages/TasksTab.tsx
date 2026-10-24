@@ -9,6 +9,7 @@ import { csvField, parseCsv } from '../lib/trackers.ts'
 import { formatDay, memberName, LINE_NOTE_LABELS } from '../lib/types.ts'
 import type { LineNoteRecord, MemberRecord, TaskRecord } from '../lib/types.ts'
 import Section, { FoldGroup } from '../components/Section.tsx'
+import VideoCheckinsSection from '../components/VideoCheckins.tsx'
 
 const DEFAULT_DEPARTMENTS = [
   'Set',
@@ -77,6 +78,7 @@ export default function TasksTab() {
       {!production.noBios &&
         myEditable.map((m) => <BioEditor key={m.id} member={m} onSaved={load} />)}
       <LineNotesSection />
+      <VideoCheckinsSection />
       <Section id="tasks" title="To-do">
         <div className="chips">
           {(['open', 'mine', 'all'] as const).map((f) => (

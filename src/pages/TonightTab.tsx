@@ -15,6 +15,8 @@ import type {
   MessageRecord,
   SlotRecord,
   TaskRecord,
+  VideoCheckinRecord,
+  VideoRequestRecord,
 } from '../lib/types.ts'
 
 // The landing page: what's in front of us right this moment. Countdown to
@@ -58,6 +60,7 @@ export default function TonightTab() {
   const [slots, setSlots] = useState<SlotRecord[]>([])
   const [conflicts, setConflicts] = useState<ConflictRecord[]>([])
   const [pushOn, setPushOn] = useState<boolean | null>(null)
+  const [videosOwed, setVideosOwed] = useState<string[]>([])
   const [settledHidden, setSettledHidden] = useState(
     () => localStorage.getItem(`gt-settled-${production.id}`) === '1',
   )
@@ -117,6 +120,30 @@ export default function TonightTab() {
       })
       .then(setPolls)
       .catch(() => setPolls([]))
+    // Open video requests I (or my kids) haven't sent yet.
+    Promise.all([
+      pb.collection('video_requests').getFullList<VideoRequestRecord>({
+        filter: pb.filter('production = {:p} && closed = false', { p }),
+      }),
+      pb.collection('video_checkins').getFullList<VideoCheckinRecord>({
+        filter: pb.filter('production = {:p}', { p }),
+        fields: 'id,request,member',
+      }),
+    ])
+      .then(([rq, ci]) => {
+        const recorders = members.filter(
+          (m) => m.role !== 'guardian' && myMemberIds.includes(m.id),
+        )
+        const owed = rq.filter((r) =>
+          recorders.some(
+            (m) =>
+              (r.members?.length ? r.members.includes(m.id) : m.role === 'performer') &&
+              !ci.some((c) => c.request === r.id && c.member === m.id),
+          ),
+        )
+        setVideosOwed(owed.map((r) => r.title))
+      })
+      .catch(() => setVideosOwed([]))
   }
 
   useEffect(() => {
@@ -205,6 +232,8 @@ export default function TonightTab() {
     (title) => !slots.some((s) => s.title === title && myMemberIds.includes(s.member)),
   )
   const needs: { key: string; label: string; to: string }[] = []
+  for (const title of videosOwed)
+    needs.push({ key: `video-${title}`, label: `🎥 Record your video: ${title}`, to: `${base}/todo#videos` })
   if (myLineNotes > 0)
     needs.push({ key: 'ln', label: `🎯 ${myLineNotes} line note${myLineNotes === 1 ? '' : 's'} to work on`, to: `${base}/todo` })
   if (unackedCount > 0)
