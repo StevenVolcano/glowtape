@@ -810,6 +810,93 @@ button.menu-link {
   flex: 1 1 8rem;
 }
 
+/* --- Doodle-style grid (FindTime.tsx, Poll.tsx): people down, times across;
+   scrolls sideways inside its own box so the page never does. --- */
+.doodle-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.doodle {
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.doodle th,
+.doodle td {
+  border: 1px solid var(--line);
+  padding: 0.35rem 0.4rem;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.doodle .doodle-name {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--card);
+  text-align: left;
+  font-weight: 600;
+  max-width: 9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.doodle-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 3.5rem;
+  min-height: 44px;
+  padding: 0.25rem;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  color: var(--ink);
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.doodle-day-static {
+  white-space: normal;
+  min-width: 6rem;
+  font-size: 0.85rem;
+}
+
+.doodle-yes {
+  background: #e3f3e8;
+  color: var(--ok);
+  font-weight: 700;
+}
+
+.doodle-maybe {
+  background: #fff4d6;
+  font-weight: 700;
+}
+
+.doodle-no {
+  background: #f8e8e6;
+  color: var(--error);
+}
+
+.doodle-unknown {
+  color: var(--muted);
+}
+
+.doodle th.doodle-best,
+.doodle td.doodle-best {
+  background: #f4fadd;
+  font-weight: 700;
+}
+
+.doodle th.doodle-asked {
+  outline: 3px solid var(--accent);
+  outline-offset: -3px;
+}
+
 /* --- Lists / members --- */
 .plain-list {
   list-style: none;

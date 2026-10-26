@@ -38,7 +38,8 @@ export default function MessagesTab() {
         // members + guardians + managers) — whatever comes back is visible.
         setChannels(list)
         const pick = wanted && list.some((c) => c.id === wanted) ? wanted : null
-        if (pick && list.find((c) => c.id === pick && isDm(c))) openSection('direct-messages')
+        // Sections start folded; a link to a channel should land on it open.
+        if (pick) openSection(list.find((c) => c.id === pick && isDm(c)) ? 'direct-messages' : 'channels')
         setActive((prev) => pick ?? prev ?? list.find((c) => !isDm(c))?.id ?? null)
       })
       .catch(() => {})

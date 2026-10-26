@@ -46,6 +46,7 @@ export function PollCard({
   const closed = message.pollClosed
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
+  const [grid, setGrid] = useState(false)
   const isTimes = poll.kind === 'times'
   const canClose = canManage || message.author === user?.id
 
@@ -176,6 +177,62 @@ export function PollCard({
           )
         })}
       </ul>
+      {isTimes && voters.length > 0 && (
+        <button type="button" className="link" aria-expanded={grid} onClick={() => setGrid(!grid)}>
+          {grid ? 'Hide the grid' : '▦ See everyone’s answers as a grid'}
+        </button>
+      )}
+      {isTimes && grid && (
+        <div className="doodle-scroll" tabIndex={0} aria-label="Everyone's answers — scrolls sideways">
+          <table className="doodle">
+            <caption className="sr-only">Who can make each time</caption>
+            <thead>
+              <tr>
+                <th scope="col" className="doodle-name">
+                  Who
+                </th>
+                {tally.map((t) => (
+                  <th scope="col" key={t.o.id} className={best > 0 && score(t) === best ? 'doodle-best' : ''}>
+                    <span className="doodle-day doodle-day-static">{optionLabel(poll, t.o)}</span>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {voters.map(([uid, v]) => (
+                <tr key={uid}>
+                  <th scope="row" className="doodle-name">
+                    {voterLabel(members, uid, v.name)}
+                  </th>
+                  {poll.options.map((o) => {
+                    const p = v.picks[o.id]
+                    return (
+                      <td key={o.id} className={p === 'yes' ? 'doodle-yes' : p === 'maybe' ? 'doodle-maybe' : 'doodle-no'}>
+                        <span aria-hidden="true">{p === 'yes' ? '✓' : p === 'maybe' ? '~' : '✕'}</span>
+                        <span className="sr-only">{p === 'yes' ? 'works' : p === 'maybe' ? 'maybe' : 'no'}</span>
+                      </td>
+                    )
+                  })}
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr>
+                <th scope="row" className="doodle-name">
+                  Can make it
+                </th>
+                {tally.map((t) => (
+                  <td key={t.o.id} className={best > 0 && score(t) === best ? 'doodle-best' : ''}>
+                    {best > 0 && score(t) === best && <span aria-hidden="true">★</span>}
+                    {t.yes.length}
+                    {t.maybe.length > 0 ? ` +${t.maybe.length}?` : ''}
+                  </td>
+                ))}
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      )}
       {(canClose || canManage) && (
         <div className="row">
           {canClose && (
