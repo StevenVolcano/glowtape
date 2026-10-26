@@ -43,6 +43,12 @@ export function useProduction(): ProductionContextValue {
   return ctx
 }
 
+// For components that also render outside a show (chat on the community
+// board): null there instead of throwing.
+export function useMaybeProduction(): ProductionContextValue | null {
+  return useContext(ProductionContext)
+}
+
 export default function Production() {
   const { id } = useParams()
   const { user } = useAuth()

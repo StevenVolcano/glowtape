@@ -1,7 +1,9 @@
 import { useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
+import { useMaybeProduction } from '../pages/Production.tsx'
 import { pb } from '../lib/pb.ts'
 import { useAuth } from '../lib/auth.tsx'
-import { chatName, formatWhen, memberName } from '../lib/types.ts'
+import { chatName, formatWhen, memberName, productionPlaces } from '../lib/types.ts'
 import type { MemberRecord, MessageRecord, Poll, PollPick, PollVotes } from '../lib/types.ts'
 
 // Polls live on chat messages (migration 1758700000). Managers start them
@@ -47,6 +49,7 @@ export function PollCard({
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
   const [grid, setGrid] = useState(false)
+  const [scheduling, setScheduling] = useState<string | null>(null) // option id
   const isTimes = poll.kind === 'times'
   const canClose = canManage || message.author === user?.id
 
@@ -158,6 +161,28 @@ export function PollCard({
               <div className="tape-track poll-bar" aria-hidden="true">
                 <div className="tape-fill" style={{ width: `${pct}%` }} />
               </div>
+              {/* While a poll is open only the leading times offer it, to keep the card calm; once closed, any time can be picked. */}
+              {isTimes && canManage && t.o.start && (top || closed || scheduling === t.o.id) && (
+                <button
+                  type="button"
+                  className="link"
+                  aria-expanded={scheduling === t.o.id}
+                  onClick={() => setScheduling(scheduling === t.o.id ? null : t.o.id)}
+                >
+                  📅 Put this on the schedule
+                </button>
+              )}
+              {scheduling === t.o.id && (
+                <ScheduleFromPoll
+                  message={message}
+                  option={t.o}
+                  yesVoters={t.yes.map(([uid]) => uid)}
+                  onDone={() => {
+                    if (!closed) manage({ closed: true })
+                  }}
+                  onCancel={() => setScheduling(null)}
+                />
+              )}
               {(t.yes.length > 0 || t.maybe.length > 0) && (
                 <span className="hint poll-names">
                   {names(t.yes)}
@@ -271,6 +296,145 @@ export function PollCard({
           )}
         </div>
       )}
+      {err && (
+        <p className="error" role="alert">
+          {err}
+        </p>
+      )}
+    </div>
+  )
+}
+
+// A manager turns a winning time into a real rehearsal: the normal events
+// route (one email to everyone called, acks, reminders — same as the
+// Schedule tab), pre-filled from the poll. Who's called defaults to the
+// people the poll asked, else everyone who said it works.
+function ScheduleFromPoll({
+  message,
+  option,
+  yesVoters,
+  onDone,
+  onCancel,
+}: {
+  message: MessageRecord
+  option: Poll['options'][number]
+  yesVoters: string[] // user ids
+  onDone: () => void
+  onCancel: () => void
+}) {
+  const ctx = useMaybeProduction()
+  const [title, setTitle] = useState('Rehearsal')
+  const [location, setLocation] = useState('')
+  const asked = message.pollFor ?? []
+  const [who, setWho] = useState<'asked' | 'yes' | 'all'>(asked.length ? 'asked' : 'yes')
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+  const [done, setDone] = useState(false)
+  if (!ctx) return null
+  const { production, members } = ctx
+  const places = productionPlaces(production)
+
+  // A "Works" from an account counts for that person's own row, or — for a
+  // parent with no role of their own — for the children they answer for.
+  const yesMembers = (() => {
+    const out = new Set<string>()
+    for (const uid of yesVoters) {
+      const own = members.filter((m) => m.user === uid && m.role !== 'guardian')
+      if (own.length) own.forEach((m) => out.add(m.id))
+      else members.filter((m) => m.guardians?.includes(uid) && m.role !== 'guardian').forEach((m) => out.add(m.id))
+    }
+    return [...out]
+  })()
+  const called = who === 'asked' ? asked : who === 'yes' ? yesMembers : []
+
+  async function add() {
+    if (!title.trim()) return setErr('Give it a title.')
+    if (who === 'yes' && called.length === 0) return setErr('Nobody has said this time works yet — pick Everyone, or wait for answers.')
+    setBusy(true)
+    try {
+      await pb.send('/api/glowtape/events', {
+        method: 'POST',
+        body: {
+          production: production.id,
+          title: title.trim(),
+          kind: 'Rehearsal',
+          location,
+          called,
+          notes: `Picked from the poll: ${message.poll?.question ?? ''}`.slice(0, 500),
+          occurrences: [{ start: option.start, end: option.end ?? '' }],
+        },
+      })
+      setDone(true)
+      setErr('')
+      onDone()
+    } catch (e) {
+      setErr(errText(e, "That didn't save — check your connection and try again."))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  if (done) {
+    return (
+      <p role="status" className="poll-schedule" style={{ margin: 0 }}>
+        ✓ It's on the schedule — everyone called got an email, and the poll is closed.{' '}
+        <Link className="link" to={`/production/${production.id}/schedule`}>
+          See the schedule →
+        </Link>
+      </p>
+    )
+  }
+
+  return (
+    <div className="card stack poll-schedule">
+      <strong>📅 {optionLabel(message.poll!, option)}</strong>
+      <label>
+        Title
+        <input value={title} maxLength={200} onChange={(e) => setTitle(e.target.value)} />
+      </label>
+      <label>
+        Where
+        <input
+          value={location}
+          list={`poll-places-${message.id}`}
+          onChange={(e) => setLocation(e.target.value)}
+          placeholder="Example: Driftwood Playhouse"
+        />
+        <datalist id={`poll-places-${message.id}`}>
+          {places.map((p) => (
+            <option key={p.name} value={p.name} />
+          ))}
+        </datalist>
+      </label>
+      <fieldset className="stack">
+        <legend>Who's called</legend>
+        {asked.length > 0 && (
+          <label className="row">
+            <input type="radio" name={`who-${message.id}`} checked={who === 'asked'} onChange={() => setWho('asked')} />
+            The {asked.length === 1 ? 'person' : `${asked.length} people`} the poll asked
+          </label>
+        )}
+        <label className="row">
+          <input type="radio" name={`who-${message.id}`} checked={who === 'yes'} onChange={() => setWho('yes')} />
+          Everyone who said it works ({yesMembers.length})
+        </label>
+        <label className="row">
+          <input type="radio" name={`who-${message.id}`} checked={who === 'all'} onChange={() => setWho('all')} />
+          The whole show
+        </label>
+      </fieldset>
+      <p className="hint" style={{ margin: 0 }}>
+        Adds one rehearsal and emails everyone called, just like the Schedule tab. The poll closes. You can
+        edit details on the Schedule tab afterwards.
+      </p>
+      <div className="row">
+        <button type="button" disabled={busy} onClick={add}>
+          Add to the schedule
+        </button>
+        <button type="button" className="link" onClick={onCancel}>
+          cancel
+        </button>
+      </div>
       {err && (
         <p className="error" role="alert">
           {err}
