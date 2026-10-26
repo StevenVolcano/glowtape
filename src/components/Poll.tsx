@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { pb } from '../lib/pb.ts'
 import { useAuth } from '../lib/auth.tsx'
-import { chatName, formatWhen } from '../lib/types.ts'
+import { chatName, formatWhen, memberName } from '../lib/types.ts'
 import type { MemberRecord, MessageRecord, Poll, PollPick, PollVotes } from '../lib/types.ts'
 
 // Polls live on chat messages (migration 1758700000). Managers start them
@@ -101,6 +101,15 @@ export function PollCard({
     }
   }
 
+  // Hand-picked polls say who they're asking and who hasn't answered yet
+  // (a parent's answer counts for their child).
+  const asked = (message.pollFor ?? [])
+    .map((id) => members.find((m) => m.id === id))
+    .filter((m): m is MemberRecord => !!m)
+  const answered = (m: MemberRecord) => [m.user, ...(m.guardians ?? [])].some((u) => !!u && !!votes[u])
+  const waiting = asked.filter((m) => !answered(m))
+  const memberLabel = (m: MemberRecord) => chatName(memberName(m), m)
+
   const names = (rows: [string, PollVotes[string]][]) =>
     rows.map(([uid, v]) => voterLabel(members, uid, v.name)).join(', ')
 
@@ -120,6 +129,15 @@ export function PollCard({
               : 'Pick one.'}{' '}
         {voters.length === 1 ? '1 person has' : `${voters.length} people have`} answered.
       </span>
+      {asked.length > 0 && (
+        <span className="hint">
+          Asking {asked.length === 1 ? '1 person' : `${asked.length} people`}: {asked.map(memberLabel).join(', ')}.
+          {!closed &&
+            (waiting.length === 0
+              ? ' ✓ Everyone has answered.'
+              : ` Still waiting on ${waiting.map(memberLabel).join(', ')}.`)}
+        </span>
+      )}
       <ul className="poll-options">
         {tally.map((t) => {
           const label = optionLabel(poll, t.o)

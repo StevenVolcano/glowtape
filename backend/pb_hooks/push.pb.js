@@ -117,7 +117,15 @@ onRecordAfterCreateSuccess((e) => {
         }
       }
     }
-    const finalTargets = targets.filter(allowed);
+    // A poll asking hand-picked people pings just them (+ their guardians)
+    // among those who can see the channel. Being asked directly beats a mute.
+    const pollFor = lib.toIdArray(e.record.get("pollFor"));
+    const finalTargets =
+      pollFor.length && productionId
+        ? lib
+            .recipientUserIds(e.app, productionId, pollFor)
+            .filter((uid) => uid !== authorId && targets.includes(uid))
+        : targets.filter(allowed);
     if (finalTargets.length === 0) {
       e.next();
       return;

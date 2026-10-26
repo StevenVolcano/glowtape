@@ -83,11 +83,25 @@ onRecordCreateRequest((e) => {
     if (gif || e.record.get("image")) throw new BadRequestError("A poll can't carry a photo or GIF.");
     e.record.set("poll", poll);
     e.record.set("pollVotes", {});
+    // Hand-picked people to ask: rows in this show only.
+    const asked = lib.toIdArray(e.record.get("pollFor"));
+    for (const id of asked) {
+      let m = null;
+      try {
+        m = e.app.findRecordById("members", id);
+      } catch {
+        /* handled below */
+      }
+      if (!m || String(m.get("production")) !== productionId) {
+        throw new BadRequestError("Someone you picked isn't in this show any more.");
+      }
+    }
     // The question is the message text, so pushes, replies and the
     // operator's report email all read naturally.
     e.record.set("text", `${poll.kind === "times" ? "📅" : "📊"} ${poll.question}`);
   } else {
     e.record.set("poll", null);
+    e.record.set("pollFor", []);
   }
 
   if (gif) {
@@ -132,7 +146,7 @@ onRecordCreateRequest((e) => {
 // gets marked edited so nobody is misled about what was said when.
 onRecordUpdateRequest((e) => {
   const before = e.record.original();
-  for (const f of ["channel", "author", "image", "gif", "gifTitle", "replyTo", "poll", "pollVotes", "pollClosed", "pollPinned"]) {
+  for (const f of ["channel", "author", "image", "gif", "gifTitle", "replyTo", "poll", "pollVotes", "pollClosed", "pollPinned", "pollFor"]) {
     if (String(e.record.getString(f) || "") !== String(before.getString(f) || "")) {
       throw new BadRequestError("Only the text of a message can be changed.");
     }

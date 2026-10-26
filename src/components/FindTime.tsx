@@ -322,6 +322,7 @@ export default function FindTime({
               {days.length > 0 && (
                 <AskPoll
                   days={askDays}
+                  askFor={who === 'pick' ? chosen.map((m) => m.id) : []}
                   fromTime={fromTime}
                   toTime={toTime}
                   who={who}
@@ -361,6 +362,7 @@ const BEST_PICK = 6
 // poll in a channel, so people confirm (conflict lists go stale; a poll asks).
 function AskPoll({
   days,
+  askFor,
   fromTime,
   toTime,
   who,
@@ -371,6 +373,7 @@ function AskPoll({
   onPosted,
 }: {
   days: Day[]
+  askFor: string[] // hand-picked members: only they get notified
   fromTime: string
   toTime: string
   who: string
@@ -425,6 +428,7 @@ function AskPoll({
         author: pb.authStore.record?.id,
         text: q,
         poll: { kind: 'times', question: q, multi: true, options },
+        ...(askFor.length ? { pollFor: askFor } : {}),
       })
       onPosted({ channel, name: channels.find((c) => c.id === channel)?.name ?? 'the chat' })
       onClear()
@@ -490,6 +494,11 @@ function AskPoll({
               ))}
             </select>
           </label>
+          <p className="hint" style={{ margin: 0 }}>
+            {askFor.length
+              ? `Only the ${askFor.length} ${askFor.length === 1 ? 'person' : 'people'} you picked (and their parents) get a notification. Everyone in the channel can still see it.`
+              : 'Everyone in the channel gets a notification, unless they muted it.'}
+          </p>
           <button type="button" disabled={busy || days.length < 2} onClick={post}>
             Post the poll
           </button>

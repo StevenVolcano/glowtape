@@ -625,6 +625,7 @@ export interface MessageRecord {
   pollVotes: PollVotes | null
   pollClosed: boolean
   pollPinned: boolean // shown on the Dashboard while open
+  pollFor?: string[] // member ids a poll is asking; only they get the push (empty = whole channel)
   created: string
   expand?: { author?: UserRecord; replyTo?: MessageRecord & { expand?: { author?: UserRecord } } }
 }

@@ -757,6 +757,101 @@ button.menu-link {
   align-self: flex-end;
 }
 
+/* --- Messages inbox (MessagesTab.tsx): one row per conversation --- */
+.inbox {
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.inbox li + li {
+  border-top: 1px solid var(--line);
+}
+
+.inbox-row {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.15rem;
+  width: 100%;
+  min-height: 56px;
+  padding: 0.6rem 0.85rem;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  color: var(--ink);
+  text-align: left;
+  font-weight: 400;
+}
+
+.inbox-row:hover {
+  background: #f4fadd;
+}
+
+.inbox-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.inbox-name {
+  font-weight: 600;
+}
+
+.inbox-when {
+  color: var(--muted);
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.inbox-preview {
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inbox-unread .inbox-name,
+.inbox-unread .inbox-preview {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.inbox-dot {
+  display: inline-block;
+  width: 0.6rem;
+  height: 0.6rem;
+  margin-right: 0.4rem;
+  border-radius: 50%;
+  background: var(--accent);
+  vertical-align: middle;
+}
+
+.inbox-heading {
+  margin-bottom: 0.5rem;
+}
+
+.conversation {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: flex-start;
+}
+
+.conversation > .channel {
+  align-self: stretch;
+}
+
+.conversation-title {
+  margin: 0;
+}
+
 /* --- Polls (Poll.tsx) --- */
 .poll {
   display: flex;
@@ -1890,4 +1985,9 @@ progress {
   max-width: 32rem;
   height: 1rem;
   accent-color: var(--ok);
+}
+
+/* An open conversation gets more of the screen than the old inline box. */
+.conversation .messages {
+  max-height: 65vh;
 }

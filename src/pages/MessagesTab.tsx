@@ -1,10 +1,10 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { pb } from '../lib/pb.ts'
 import { useAuth } from '../lib/auth.tsx'
 import ChannelView from '../components/ChannelView.tsx'
 import { useProduction } from './Production.tsx'
-import { chatName, memberName } from '../lib/types.ts'
+import { chatName, firstLastInitial, memberName, pbDate } from '../lib/types.ts'
 import type {
   AnnouncementAckRecord,
   AnnouncementRecord,
@@ -12,20 +12,74 @@ import type {
   ChannelRecord,
   DmBlockRecord,
   MemberRecord,
+  MessageRecord,
 } from '../lib/types.ts'
-import Section, { openSection } from '../components/Section.tsx'
+import Section from '../components/Section.tsx'
 
 const isDm = (c: ChannelRecord) => (c.dmUsers?.length ?? 0) > 0
 
+// Messages is laid out like a phone's messaging app: a list of
+// conversations (newest activity first, unread in bold), and tapping one
+// opens it full width with a back link. Which one is open lives in the URL
+// (?channel=), so notifications land on it and the phone's back button
+// returns to the list. "Read" is remembered per device (localStorage) —
+// good enough for a bold dot, no server bookkeeping.
+
+type Preview = { text: string; who: string; author: string; created: string }
+
+const readKey = (id: string) => `gt-read-${id}`
+function lastRead(id: string): string {
+  try {
+    return localStorage.getItem(readKey(id)) ?? ''
+  } catch {
+    return ''
+  }
+}
+function markRead(id: string) {
+  try {
+    localStorage.setItem(readKey(id), new Date().toISOString())
+  } catch {
+    // private window — everything just stays "read" on open
+  }
+}
+
+function previewText(m: MessageRecord): string {
+  if (m.poll) return m.text
+  if (m.text) return m.text
+  if (m.gif) return 'GIF'
+  if (m.image) return '📷 photo'
+  return ''
+}
+
+function whenShort(iso: string): string {
+  const d = pbDate(iso)
+  const now = new Date()
+  if (d.toDateString() === now.toDateString()) {
+    return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
+  }
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+}
+
 export default function MessagesTab() {
-  const { production, members, myMember, isManager } = useProduction()
+  const { production, members, myMember, isManager, archived } = useProduction()
   const { user } = useAuth()
+  const me = user!.id
   const [channels, setChannels] = useState<ChannelRecord[]>([])
   const [prefs, setPrefs] = useState<ChannelPrefRecord[]>([])
-  const [active, setActive] = useState<string | null>(null)
-  // ?channel=<id> (from a message notification) opens that channel.
-  const [params] = useSearchParams()
-  const wanted = params.get('channel')
+  const [previews, setPreviews] = useState<Record<string, Preview>>({})
+  const [adult, setAdult] = useState(false)
+  const [blocks, setBlocks] = useState<DmBlockRecord[]>([])
+  const [, setTick] = useState(0) // re-render after marking read
+  const [params, setParams] = useSearchParams()
+  const active = params.get('channel')
+
+  function open(id: string | null) {
+    const next = new URLSearchParams(params)
+    if (id) next.set('channel', id)
+    else next.delete('channel')
+    setParams(next)
+    window.scrollTo({ top: 0 })
+  }
 
   useEffect(() => {
     pb.collection('channels')
@@ -33,22 +87,82 @@ export default function MessagesTab() {
         filter: pb.filter('production = {:p} && archived != true', { p: production.id }),
         sort: 'created',
       })
-      .then((list) => {
+      .then(async (list) => {
         // The server enforces who sees what (team = managers, 🔒 = group
-        // members + guardians + managers) — whatever comes back is visible.
+        // members + guardians + managers, 💬 = the two adults) — whatever
+        // comes back is visible.
         setChannels(list)
-        const pick = wanted && list.some((c) => c.id === wanted) ? wanted : null
-        // Sections start folded; a link to a channel should land on it open.
-        if (pick) openSection(list.find((c) => c.id === pick && isDm(c)) ? 'direct-messages' : 'channels')
-        setActive((prev) => pick ?? prev ?? list.find((c) => !isDm(c))?.id ?? null)
+        const latest = await Promise.all(
+          list.map((c) =>
+            pb
+              .collection('messages')
+              .getList<MessageRecord>(1, 1, {
+                filter: pb.filter('channel = {:c}', { c: c.id }),
+                sort: '-created',
+                expand: 'author',
+              })
+              .then((r) => [c.id, r.items[0]] as const)
+              .catch(() => [c.id, undefined] as const),
+          ),
+        )
+        const next: Record<string, Preview> = {}
+        for (const [id, m] of latest) {
+          if (m) next[id] = { text: previewText(m), who: m.expand?.author?.name ?? '', author: m.author, created: m.created }
+        }
+        setPreviews(next)
       })
       .catch(() => {})
 
     pb.collection('channel_prefs')
-      .getFullList<ChannelPrefRecord>({ filter: pb.filter('user = {:u}', { u: user!.id }) })
+      .getFullList<ChannelPrefRecord>({ filter: pb.filter('user = {:u}', { u: me }) })
       .then(setPrefs)
       .catch(() => {})
-  }, [production.id, user, wanted])
+    pb.send<{ ageBand: string }>('/api/glowtape/me', { method: 'GET' })
+      .then((r) => setAdult(r.ageBand === 'adult'))
+      .catch(() => {})
+    pb.collection('dm_blocks')
+      .getFullList<DmBlockRecord>()
+      .then(setBlocks)
+      .catch(() => {})
+  }, [production.id, me])
+
+  // Keep the list's previews live.
+  useEffect(() => {
+    const unsub = pb.collection('messages').subscribe<MessageRecord>(
+      '*',
+      (e) => {
+        if (e.action !== 'create') return
+        setPreviews((prev) =>
+          prev[e.record.channel] || channels.some((c) => c.id === e.record.channel)
+            ? {
+                ...prev,
+                [e.record.channel]: {
+                  text: previewText(e.record),
+                  who: e.record.expand?.author?.name ?? '',
+                  author: e.record.author,
+                  created: e.record.created,
+                },
+              }
+            : prev,
+        )
+      },
+      { expand: 'author' },
+    )
+    return () => {
+      unsub.then((fn) => fn()).catch(() => {})
+    }
+  }, [channels])
+
+  // Opening a conversation reads it; so does leaving it (messages that
+  // arrived while it was open were seen).
+  useEffect(() => {
+    if (!active) return
+    markRead(active)
+    return () => {
+      markRead(active)
+      setTick((t) => t + 1)
+    }
+  }, [active])
 
   const prefFor = (channelId: string) => prefs.find((p) => p.channel === channelId)
   const isMuted = (c: ChannelRecord) => {
@@ -63,80 +177,190 @@ export default function MessagesTab() {
     } else {
       await pb.collection('channel_prefs').create({
         channel: c.id,
-        user: user!.id,
+        user: me,
         muted: !c.defaultMuted,
       })
     }
     const fresh = await pb
       .collection('channel_prefs')
-      .getFullList<ChannelPrefRecord>({ filter: pb.filter('user = {:u}', { u: user!.id }) })
+      .getFullList<ChannelPrefRecord>({ filter: pb.filter('user = {:u}', { u: me }) })
     setPrefs(fresh)
   }
 
-  const activeChannel = channels.find((c) => c.id === active) ?? null
-  const noPhotoMembers = members.filter((m) => m.noPhotos)
-  const showChannels = channels.filter((c) => !isDm(c))
-  const dms = channels.filter(isDm)
-  const activeIsDm = !!activeChannel && isDm(activeChannel)
+  function added(ch: ChannelRecord) {
+    setChannels((prev) => (prev.some((c) => c.id === ch.id) ? prev : [...prev, ch]))
+    open(ch.id)
+  }
 
-  const muteButton = activeChannel && (
-    <button className="link" onClick={() => toggleMute(activeChannel)}>
-      {isMuted(activeChannel)
-        ? '🔕 This conversation is muted — tap to turn notifications on'
-        : '🔔 Notifications on — tap to mute this conversation'}
-    </button>
-  )
+  const nameOf = (c: ChannelRecord) => (isDm(c) ? `💬 ${otherPerson(c, me, members).name}` : c.name)
+  const unread = (c: ChannelRecord) => {
+    const p = previews[c.id]
+    return !!p && p.author !== me && p.created.replace(' ', 'T') > lastRead(c.id)
+  }
+  const byActivity = (a: ChannelRecord, b: ChannelRecord) =>
+    (previews[b.id]?.created ?? '').localeCompare(previews[a.id]?.created ?? '')
+
+  const activeChannel = channels.find((c) => c.id === active) ?? null
+  const showChannels = channels.filter((c) => !isDm(c) && !c.member)
+  const privateChats = channels.filter((c) => isDm(c) || c.member).sort(byActivity)
+
+  if (activeChannel) {
+    return (
+      <Conversation
+        channel={activeChannel}
+        name={nameOf(activeChannel)}
+        muted={isMuted(activeChannel)}
+        onToggleMute={() => toggleMute(activeChannel)}
+        onBack={() => open(null)}
+        blocks={blocks}
+        setBlocks={setBlocks}
+      />
+    )
+  }
+
+  const row = (c: ChannelRecord) => {
+    const p = previews[c.id]
+    const isNew = unread(c)
+    return (
+      <li key={c.id}>
+        <button
+          type="button"
+          className={`inbox-row ${isNew ? 'inbox-unread' : ''}`}
+          onClick={() => open(c.id)}
+          aria-label={`${nameOf(c)}${isNew ? ', new messages' : ''}${isMuted(c) ? ', muted' : ''}`}
+        >
+          <span className="inbox-top">
+            <span className="inbox-name">
+              {isNew && <span className="inbox-dot" aria-hidden="true" />}
+              {nameOf(c)}
+              {isMuted(c) && <span aria-hidden="true"> 🔕</span>}
+            </span>
+            {p && <span className="inbox-when">{whenShort(p.created)}</span>}
+          </span>
+          <span className="inbox-preview">
+            {p ? `${p.author === me ? 'You' : firstLastInitial(p.who || '…')}: ${p.text}` : 'No messages yet'}
+          </span>
+        </button>
+      </li>
+    )
+  }
 
   return (
     <div>
       <Announcements />
-      <Section id="channels" title="Channels">
-        {noPhotoMembers.length > 0 && (
-          <p className="hint">
-            📷 Heads up: this production includes {noPhotoMembers.length}{' '}
-            {noPhotoMembers.length === 1 ? 'person' : 'people'} without photo consent — please
-            check faces before posting pictures.
-          </p>
-        )}
-        <div className="chips">
-          {showChannels.map((c) => (
-            <button
-              key={c.id}
-              aria-pressed={active === c.id}
-              className={`chip ${active === c.id ? 'chip-active' : ''}`}
-              onClick={() => setActive(c.id)}
-            >
-              {c.name}
-              {isMuted(c) ? ' 🔕' : ''}
+      <h2>Conversations</h2>
+      <ul className="inbox" aria-label="Show chat">
+        {showChannels.map(row)}
+      </ul>
+      {(privateChats.length > 0 || !isManager || adult) && (
+        <>
+          <h3 className="inbox-heading">Private</h3>
+          {privateChats.length > 0 && (
+            <ul className="inbox" aria-label="Private conversations">
+              {privateChats.map(row)}
+            </ul>
+          )}
+          {!isManager && myMember && <TeamChannelButton channels={channels} onOpened={added} />}
+          {adult && !archived && <StartDm dms={channels.filter(isDm)} onOpened={added} />}
+        </>
+      )}
+    </div>
+  )
+}
+
+// One open conversation, full width, with a way back to the list.
+function Conversation({
+  channel,
+  name,
+  muted,
+  onToggleMute,
+  onBack,
+  blocks,
+  setBlocks,
+}: {
+  channel: ChannelRecord
+  name: string
+  muted: boolean
+  onToggleMute: () => void
+  onBack: () => void
+  blocks: DmBlockRecord[]
+  setBlocks: (fn: (prev: DmBlockRecord[]) => DmBlockRecord[]) => void
+}) {
+  const { members, isManager } = useProduction()
+  const { user } = useAuth()
+  const [err, setErr] = useState('')
+  const dm = isDm(channel)
+  const other = dm ? otherPerson(channel, user!.id, members) : null
+  const myBlock = other ? blocks.find((b) => b.blocked === other.id) : undefined
+  const noPhotoMembers = members.filter((m) => m.noPhotos)
+
+  async function block() {
+    if (!other) return
+    if (!confirm(`Block ${other.name}? Neither of you will be able to send direct messages to the other until you unblock them. They aren't told.`)) return
+    setErr('')
+    try {
+      const b = await pb.collection('dm_blocks').create<DmBlockRecord>({ user: user!.id, blocked: other.id })
+      setBlocks((prev) => [...prev, b])
+    } catch {
+      setErr("Couldn't block them just now. Try again in a minute.")
+    }
+  }
+
+  async function unblock() {
+    if (!myBlock) return
+    setErr('')
+    try {
+      await pb.collection('dm_blocks').delete(myBlock.id)
+      setBlocks((prev) => prev.filter((b) => b.id !== myBlock.id))
+    } catch {
+      setErr("Couldn't unblock them just now. Try again in a minute.")
+    }
+  }
+
+  return (
+    <div className="conversation">
+      <button type="button" className="link" onClick={onBack}>
+        ← All conversations
+      </button>
+      <h2 className="conversation-title">{name}</h2>
+      <div className="row conversation-tools">
+        <button type="button" className="link" aria-pressed={muted} onClick={onToggleMute}>
+          {muted ? '🔕 Muted — turn notifications on' : '🔔 Mute'}
+        </button>
+        {other &&
+          (myBlock ? (
+            <button type="button" className="link" onClick={unblock}>
+              🚫 Unblock {other.name}
+            </button>
+          ) : (
+            <button type="button" className="link" onClick={block}>
+              🚫 Block
             </button>
           ))}
-        </div>
-        {!isManager && myMember && (
-          <TeamChannelButton
-            channels={channels}
-            onOpened={(ch) => {
-              setChannels((prev) => (prev.some((c) => c.id === ch.id) ? prev : [...prev, ch]))
-              setActive(ch.id)
-            }}
-          />
-        )}
-        {activeChannel && !activeIsDm && muteButton}
-        {activeChannel && !activeIsDm && (
-          <ChannelView channelId={activeChannel.id} members={members} canModerate={isManager} canPoll />
-        )}
-        {activeIsDm && <p className="hint">You're in a direct message — it's open below.</p>}
-      </Section>
-      <DirectMessages
-        dms={dms}
-        active={active}
-        onPick={(id) => setActive(id)}
-        onOpened={(ch) => {
-          setChannels((prev) => (prev.some((c) => c.id === ch.id) ? prev : [...prev, ch]))
-          setActive(ch.id)
-        }}
-        muteButton={activeIsDm ? muteButton : null}
-        isMuted={isMuted}
-      />
+      </div>
+      {dm ? (
+        <p className="hint" style={{ margin: 0 }}>
+          Private between the two of you — managers can't read it. If something's wrong, ⚑ report the
+          message; reports go to Glow Tape's operator.
+        </p>
+      ) : (
+        noPhotoMembers.length > 0 && (
+          <p className="hint" style={{ margin: 0 }}>
+            📷 {noPhotoMembers.length} {noPhotoMembers.length === 1 ? 'person' : 'people'} in this show
+            didn't give photo consent — check faces before posting pictures.
+          </p>
+        )
+      )}
+      {err && (
+        <p className="error" role="alert">
+          {err}
+        </p>
+      )}
+      {dm ? (
+        <ChannelView channelId={channel.id} members={members} />
+      ) : (
+        <ChannelView channelId={channel.id} members={members} canModerate={isManager} canPoll />
+      )}
     </div>
   )
 }
@@ -149,48 +373,17 @@ function otherPerson(c: ChannelRecord, me: string, members: MemberRecord[]) {
   return { id: other, name: m ? chatName(memberName(m), m) : 'Someone no longer in the show' }
 }
 
-// Direct messages: private between two adults who share this show. The
-// server decides who may use them (both accounts 18+) — teens never get DM
-// channels back from the API, and the section stays hidden for them.
-function DirectMessages({
-  dms,
-  active,
-  onPick,
-  onOpened,
-  muteButton,
-  isMuted,
-}: {
-  dms: ChannelRecord[]
-  active: string | null
-  onPick: (id: string) => void
-  onOpened: (ch: ChannelRecord) => void
-  muteButton: ReactNode
-  isMuted: (c: ChannelRecord) => boolean
-}) {
-  const { production, members, archived } = useProduction()
+// Start (or reopen) a direct message: private between two adults who share
+// this show. The server decides who may use them (both accounts 18+) — the
+// form only shows for adults.
+function StartDm({ dms, onOpened }: { dms: ChannelRecord[]; onOpened: (ch: ChannelRecord) => void }) {
+  const { production, members } = useProduction()
   const { user } = useAuth()
-  const [adult, setAdult] = useState(false)
-  const [blocks, setBlocks] = useState<DmBlockRecord[]>([])
+  const me = user!.id
+  const [showForm, setShowForm] = useState(false)
   const [pick, setPick] = useState('')
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
-
-  useEffect(() => {
-    pb.send<{ ageBand: string }>('/api/glowtape/me', { method: 'GET' })
-      .then((r) => setAdult(r.ageBand === 'adult'))
-      .catch(() => {})
-    pb.collection('dm_blocks')
-      .getFullList<DmBlockRecord>()
-      .then(setBlocks)
-      .catch(() => {})
-  }, [user?.id])
-
-  if (!adult && dms.length === 0) return null
-
-  const me = user!.id
-  const activeDm = dms.find((c) => c.id === active) ?? null
-  const activeOther = activeDm ? otherPerson(activeDm, me, members) : null
-  const myBlock = activeOther ? blocks.find((b) => b.blocked === activeOther.id) : undefined
 
   // One choice per person: their own row wins over a parent row.
   const seen = new Set<string>([me])
@@ -222,90 +415,47 @@ function DirectMessages({
     }
   }
 
-  async function block() {
-    if (!activeOther) return
-    if (!confirm(`Block ${activeOther.name}? Neither of you will be able to send direct messages to the other until you unblock them. They aren't told.`)) return
-    setErr('')
-    try {
-      const b = await pb.collection('dm_blocks').create<DmBlockRecord>({ user: me, blocked: activeOther.id })
-      setBlocks((prev) => [...prev, b])
-    } catch {
-      setErr("Couldn't block them just now. Try again in a minute.")
-    }
-  }
-
-  async function unblock() {
-    if (!myBlock) return
-    setErr('')
-    try {
-      await pb.collection('dm_blocks').delete(myBlock.id)
-      setBlocks((prev) => prev.filter((b) => b.id !== myBlock.id))
-    } catch {
-      setErr("Couldn't unblock them just now. Try again in a minute.")
-    }
+  if (!showForm) {
+    return (
+      <p>
+        <button type="button" className="link" aria-expanded={false} onClick={() => setShowForm(true)}>
+          💬 Message someone privately
+        </button>
+        <span className="hint"> — just between two adults (18+) in this show.</span>
+      </p>
+    )
   }
 
   return (
-    <Section id="direct-messages" title="Direct messages">
-      <p className="hint">
-        💬 Private conversations between two adults (18 or older) in this show. Managers can't read them.
-        If something's wrong, ⚑ report the message — reports go to Glow Tape's operator.
-      </p>
-      {dms.length > 0 && (
-        <div className="chips">
-          {dms.map((c) => (
-            <button
-              key={c.id}
-              aria-pressed={active === c.id}
-              className={`chip ${active === c.id ? 'chip-active' : ''}`}
-              onClick={() => onPick(c.id)}
-            >
-              {otherPerson(c, me, members).name}
-              {isMuted(c) ? ' 🔕' : ''}
-            </button>
+    <form className="stack" onSubmit={start}>
+      <label>
+        Message someone privately
+        <select value={pick} onChange={(e) => setPick(e.target.value)}>
+          <option value="">Pick a person…</option>
+          {people.map((m) => (
+            <option key={m.id} value={m.id}>
+              {chatName(memberName(m), m)}
+            </option>
           ))}
-        </div>
-      )}
-      {adult && !archived && (
-        <form className="row" onSubmit={start}>
-          <label>
-            Message someone privately
-            <select value={pick} onChange={(e) => setPick(e.target.value)}>
-              <option value="">Pick a person…</option>
-              {people.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {chatName(memberName(m), m)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button type="submit" disabled={!pick || busy}>
-            💬 Start
-          </button>
-        </form>
-      )}
+        </select>
+      </label>
+      <p className="hint" style={{ margin: 0 }}>
+        💬 Private between two adults (18 or older) in this show. Managers can't read it.
+      </p>
+      <div className="row">
+        <button type="submit" disabled={!pick || busy}>
+          💬 Start
+        </button>
+        <button type="button" className="link" onClick={() => setShowForm(false)}>
+          cancel
+        </button>
+      </div>
       {err && (
         <p className="error" role="alert">
           {err}
         </p>
       )}
-      {activeDm && activeOther && (
-        <>
-          <h3>💬 {activeOther.name}</h3>
-          {muteButton}{' '}
-          {myBlock ? (
-            <button className="link" onClick={unblock}>
-              🚫 You blocked {activeOther.name} — tap to unblock
-            </button>
-          ) : (
-            <button className="link" onClick={block}>
-              🚫 Block {activeOther.name}
-            </button>
-          )}
-          <ChannelView channelId={activeDm.id} members={members} />
-        </>
-      )}
-    </Section>
+    </form>
   )
 }
 
@@ -402,7 +552,7 @@ function TeamChannelButton({
     }
   }
 
-  if (existing) return null // it's already in the chip row
+  if (existing) return null // it's already in the Private list
 
   return (
     <p>
