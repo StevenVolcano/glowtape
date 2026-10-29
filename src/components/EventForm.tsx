@@ -5,7 +5,11 @@ import { groupMemberIds, groupUnitsByAct, resolveUnitMemberIds } from '../lib/br
 import { conflictAppliesTo, conflictHitsEvent, isWeekly, weeklyLabel } from '../lib/conflicts.ts'
 import { DEFAULT_EVENT_KINDS, isCommunityKind, looksLikeLink, memberName, pbDate, productionPlaces } from '../lib/types.ts'
 import { rsvpDefault } from '../lib/rsvp.ts'
+import { pbErrorMessage } from '../lib/files.ts'
 import type { ConflictRecord, EventRecord, GroupRecord, UnitRecord } from '../lib/types.ts'
+
+// Matches events.notes max (migration 1759700000).
+const NOTES_MAX = 10000
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
@@ -283,7 +287,7 @@ export default function EventForm({
       }
       await onDone()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong.')
+      setError(pbErrorMessage(err, 'Something went wrong.'))
     } finally {
       setBusy(false)
     }
@@ -459,12 +463,19 @@ export default function EventForm({
           in the room.
         </p>
       )}
-      <input
+      <textarea
         aria-label="Notes"
         value={notes}
         onChange={(e) => setNotes(e.target.value)}
-        placeholder="Notes (optional)"
+        placeholder="Notes (optional) — for example: what to bring, where to park"
+        rows={notes.length > 120 ? 6 : 2}
+        maxLength={NOTES_MAX}
       />
+      {notes.length > NOTES_MAX - 500 && (
+        <p className="hint" role="status">
+          {notes.length.toLocaleString()} of {NOTES_MAX.toLocaleString()} characters
+        </p>
+      )}
       {allGroups.length > 0 && (
         <div>
           <strong>Call a group</strong>
