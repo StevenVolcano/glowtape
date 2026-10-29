@@ -6,11 +6,14 @@ import { useProduction } from './Production.tsx'
 import { TimelineView } from '../components/Timeline.tsx'
 import { PollCard } from '../components/Poll.tsx'
 import RsvpPanel from '../components/RsvpPanel.tsx'
+import BringList from '../components/BringList.tsx'
+import SelfReport from '../components/SelfReport.tsx'
 import { myInvitees } from '../lib/rsvp.ts'
 import { externalHref, formatWhen, mapsUrl, pbDate, productionPlaces } from '../lib/types.ts'
 import type {
   AckRecord,
   AnnouncementRecord,
+  AttendanceRecord,
   ConflictRecord,
   EventRecord,
   LineNoteRecord,
@@ -18,6 +21,7 @@ import type {
   RsvpRecord,
   SlotRecord,
   TaskRecord,
+  UnitRecord,
   VideoCheckinRecord,
   VideoRequestRecord,
 } from '../lib/types.ts'
@@ -65,6 +69,8 @@ export default function TonightTab() {
   const [pushOn, setPushOn] = useState<boolean | null>(null)
   const [videosOwed, setVideosOwed] = useState<string[]>([])
   const [rsvps, setRsvps] = useState<RsvpRecord[]>([])
+  const [attendance, setAttendance] = useState<AttendanceRecord[]>([])
+  const [units, setUnits] = useState<UnitRecord[]>([])
   const [settledHidden, setSettledHidden] = useState(
     () => localStorage.getItem(`gt-settled-${production.id}`) === '1',
   )
@@ -120,6 +126,15 @@ export default function TonightTab() {
       .getFullList<RsvpRecord>({ filter: pb.filter('production = {:p}', { p }), fields: 'id,event,member' })
       .then(setRsvps)
       .catch(() => setRsvps([]))
+    // Own (and kids') late/can't-make-it reports, so Next up shows them.
+    pb.collection('attendance')
+      .getFullList<AttendanceRecord>({ filter: pb.filter('event.production = {:p}', { p }) })
+      .then(setAttendance)
+      .catch(() => setAttendance([]))
+    pb.collection('units')
+      .getFullList<UnitRecord>({ filter: pb.filter('production = {:p}', { p }), fields: 'id,name' })
+      .then(setUnits)
+      .catch(() => setUnits([]))
     // Open polls a manager pinned. The messages rules decide who sees each
     // one, so a poll in a 🔒 channel only shows for people in that channel.
     pb.collection('messages')
@@ -214,6 +229,20 @@ export default function TonightTab() {
     !!next && pbDate(next.start).toDateString() === now.toDateString()
   const nextAcked = !!next && acks.some((a) => a.event === next.id)
   const places = productionPlaces(production)
+  // Parties and potlucks get their own card with the RSVP and the
+  // bring-something list right here, so nobody has to go find the schedule.
+  const signups = events.filter(
+    (e) =>
+      e.id !== next?.id &&
+      pbDate(e.end || e.start) >= now &&
+      calledToMe(e) &&
+      (e.rsvp || (e.bringCategories?.length ?? 0) > 0),
+  )
+  const unitNames = (e: EventRecord) =>
+    (e.units ?? [])
+      .map((id) => units.find((u) => u.id === id)?.name)
+      .filter(Boolean)
+      .join(' · ')
 
   async function gotIt() {
     if (!next) return
@@ -248,13 +277,14 @@ export default function TonightTab() {
   const unbookedSheet = openSheets.find(
     (title) => !slots.some((s) => s.title === title && myMemberIds.includes(s.member)),
   )
-  const needs: { key: string; label: string; to: string }[] = []
+  // `to` = another page; `scrollTo` = a card further down this one.
+  const needs: { key: string; label: string; to?: string; scrollTo?: string }[] = []
   for (const title of videosOwed)
     needs.push({ key: `video-${title}`, label: `🎥 Record your video: ${title}`, to: `${base}/todo#videos` })
   if (myLineNotes > 0)
     needs.push({ key: 'ln', label: `🎯 ${myLineNotes} line note${myLineNotes === 1 ? '' : 's'} to work on`, to: `${base}/todo` })
   for (const e of rsvpOwed)
-    needs.push({ key: `rsvp-${e.id}`, label: `🎉 RSVP for ${e.title}`, to: `${base}/schedule` })
+    needs.push({ key: `rsvp-${e.id}`, label: `🎉 RSVP for ${e.title}`, scrollTo: `event-${e.id}` })
   if (unackedCount > 0)
     needs.push({ key: 'ack', label: `👍 ${unackedCount} event${unackedCount === 1 ? '' : 's'} waiting for your "Got it"`, to: `${base}/schedule` })
   if (myTasks > 0)
@@ -334,7 +364,7 @@ export default function TonightTab() {
         )}
 
         {next && (
-          <div className="card stack">
+          <div className="card stack" id={`event-${next.id}`} tabIndex={-1}>
             <strong>
               {nextIsToday ? '🌟 Tonight: ' : 'Next up for you: '}
               {next.title}
@@ -351,8 +381,16 @@ export default function TonightTab() {
               </a>
             )}
             {next.calledNote && <span className="hint">{next.calledNote}</span>}
+            {unitNames(next) && (
+              <span>
+                <strong>Rehearsing:</strong> {unitNames(next)}
+              </span>
+            )}
+            {next.notes && <span>{next.notes}</span>}
             <TimelineView event={next} />
             {next.rsvp && <RsvpPanel event={next} />}
+            {(next.bringCategories?.length ?? 0) > 0 && <BringList event={next} />}
+            <SelfReport event={next} attendance={attendance} onReported={load} />
             <div className="row">
               {next.rsvp ? null : !nextAcked ? (
                 <button onClick={gotIt}>Got it 👍</button>
@@ -365,6 +403,25 @@ export default function TonightTab() {
             </div>
           </div>
         )}
+        {signups.map((e) => (
+          <div key={e.id} className="card stack" id={`event-${e.id}`} tabIndex={-1}>
+            <strong>🎉 {e.title}</strong>
+            <span>{formatWhen(e.start, e.end)}</span>
+            {e.location && (
+              <a href={mapsUrl(places, e.location)} target="_blank" rel="noreferrer">
+                📍 {e.location}
+              </a>
+            )}
+            {e.videoUrl && (
+              <a className="join-call" href={externalHref(e.videoUrl)} target="_blank" rel="noreferrer">
+                💻 Join the video call
+              </a>
+            )}
+            {e.notes && <span>{e.notes}</span>}
+            {e.rsvp && <RsvpPanel event={e} />}
+            {(e.bringCategories?.length ?? 0) > 0 && <BringList event={e} />}
+          </div>
+        ))}
         {!next && events.length > 0 && (
           <p className="hint">Nothing on the calendar for you right now — enjoy the breather.</p>
         )}
@@ -380,9 +437,23 @@ export default function TonightTab() {
             <ul className="plain-list link-list">
               {needs.map((n) => (
                 <li key={n.key}>
-                  <Link className="link" to={n.to}>
-                    {n.label}
-                  </Link>
+                  {n.scrollTo ? (
+                    <button
+                      type="button"
+                      className="link"
+                      onClick={() => {
+                        const el = document.getElementById(n.scrollTo!)
+                        el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                        el?.focus({ preventScroll: true })
+                      }}
+                    >
+                      {n.label}
+                    </button>
+                  ) : (
+                    <Link className="link" to={n.to!}>
+                      {n.label}
+                    </Link>
+                  )}
                 </li>
               ))}
             </ul>
