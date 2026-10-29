@@ -386,7 +386,7 @@ export default function TonightTab() {
                 <strong>Rehearsing:</strong> {unitNames(next)}
               </span>
             )}
-            {next.notes && <span>{next.notes}</span>}
+            {next.notes && <span className="event-notes">{next.notes}</span>}
             <TimelineView event={next} />
             {next.rsvp && <RsvpPanel event={next} />}
             {(next.bringCategories?.length ?? 0) > 0 && <BringList event={next} />}
@@ -417,7 +417,7 @@ export default function TonightTab() {
                 💻 Join the video call
               </a>
             )}
-            {e.notes && <span>{e.notes}</span>}
+            {e.notes && <span className="event-notes">{e.notes}</span>}
             {e.rsvp && <RsvpPanel event={e} />}
             {(e.bringCategories?.length ?? 0) > 0 && <BringList event={e} />}
           </div>

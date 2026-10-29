@@ -356,7 +356,7 @@ export default function ScheduleTab() {
             <strong>Called:</strong> {calledLabel(e)}
             {e.calledNote && <em> — {e.calledNote}</em>}
           </div>
-          {e.notes && <div className="event-line">{e.notes}</div>}
+          {e.notes && <div className="event-line event-notes">{e.notes}</div>}
           {e.status !== 'cancelled' && <TimelineView event={e} />}
           {e.status !== 'cancelled' && (e.bringCategories?.length ?? 0) > 0 && (
             <BringList event={e} />

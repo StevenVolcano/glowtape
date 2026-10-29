@@ -1991,3 +1991,8 @@ progress {
 .conversation .messages {
   max-height: 65vh;
 }
+
+/* Event descriptions keep the line breaks the manager typed. */
+.event-notes {
+  white-space: pre-line;
+}

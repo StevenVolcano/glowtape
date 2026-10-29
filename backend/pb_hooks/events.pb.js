@@ -98,7 +98,7 @@ routerAdd(
           `<p>When: ${lib.formatPacific(ev.get("start"))} (Pacific)</p>`,
           lib.whereHtml(ev.get("location"), ev.get("videoUrl")),
           ev.get("calledNote") ? `<p>Called: ${ev.get("calledNote")}</p>` : "",
-          ev.get("notes") ? `<p>${ev.get("notes")}</p>` : "",
+          ev.get("notes") ? `<p>${String(ev.get("notes")).replace(/\n/g, "<br>")}</p>` : "",
           rsvp
             ? `<p><strong>Please RSVP:</strong> open Glow Tape and tap Going, Maybe or Can't go (and say if you're bringing guests).</p>`
             : `<p>Open Glow Tape to tap "Got it" so your stage manager knows you saw this.</p>`,
