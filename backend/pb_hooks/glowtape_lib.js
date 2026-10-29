@@ -37,6 +37,13 @@ function canManage(production, auth) {
 // Archived shows are read-only. The record API is guarded in archive.pb.js;
 // custom routes that write content through app.save() call this so they're
 // blocked too. Pass the resolved production record.
+// RSVP is on by default for parties and potlucks only (Steven 2026-10-29):
+// rehearsals and performances are calls, not invitations. Managers can tick
+// it on for anything else. Mirrors rsvpDefault in src/lib/rsvp.ts.
+function rsvpDefault(kind) {
+  return /party|potluck/i.test(String(kind || ""));
+}
+
 function assertNotArchived(production) {
   if (production && production.get("archived")) {
     throw new BadRequestError(
@@ -887,6 +894,7 @@ function isAdultAccount(app, user) {
 }
 
 module.exports = {
+  rsvpDefault,
   isAdultAccount,
   inviteRowsForPhone,
   inviteDefaults,

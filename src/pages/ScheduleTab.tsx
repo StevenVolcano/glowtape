@@ -11,6 +11,7 @@ import QrCode from '../components/QrCode.tsx'
 import FindTime from '../components/FindTime.tsx'
 import ShowReport from '../components/ShowReport.tsx'
 import BringList from '../components/BringList.tsx'
+import RsvpPanel from '../components/RsvpPanel.tsx'
 import TimelinePlanner, { TimelineView } from '../components/Timeline.tsx'
 import SlotsSection from '../components/Slots.tsx'
 import { JumpNav, scheduleJumps } from '../components/ManageJumpNav.tsx'
@@ -254,6 +255,7 @@ export default function ScheduleTab() {
       e.status !== 'cancelled' &&
       pbDate(e.end || e.start) >= now &&
       calledToMe(e) &&
+      !e.rsvp && // an RSVP answer stands in for "Got it"
       !acks.some((a) => a.event === e.id && a.user === user?.id),
   )
 
@@ -339,8 +341,10 @@ export default function ScheduleTab() {
             </a>
           </div>
         )}
+        {e.rsvp && e.status !== 'cancelled' && <RsvpPanel event={e} />}
         {iAmCalled &&
           e.status !== 'cancelled' &&
+          !e.rsvp &&
           (myAck ? (
             <div className="acked">✓ You got it</div>
           ) : (
@@ -428,7 +432,7 @@ export default function ScheduleTab() {
           )}
           {isManager && e.status !== 'cancelled' && (
             <div className="hint">
-              {ackCount} {ackCount === 1 ? 'person has' : 'people have'} tapped “Got it”
+              {!e.rsvp && `${ackCount} ${ackCount === 1 ? 'person has' : 'people have'} tapped “Got it”`}
               {(() => {
                 const rows = attendance.filter((a) => a.event === e.id)
                 if (rows.length === 0) return null
