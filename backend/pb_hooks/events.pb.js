@@ -33,7 +33,12 @@ routerAdd(
       // one entry per event: { start: ISO string, end: ISO string or "" }
       occurrences: [],
     });
+    // rsvp left out = the kind decides (on for parties); true/false = the
+    // manager's checkbox. Read raw because DynamicModel can't tell "left out"
+    // from false (gotcha #12). PB request bodies are re-readable.
+    const rawRsvp = (e.requestInfo().body || {}).rsvp;
     e.bindBody(data);
+    const rsvp = typeof rawRsvp === "boolean" ? rawRsvp : lib.rsvpDefault(data.kind);
 
     if (!data.title.trim()) throw new BadRequestError("The event needs a title.");
     const occurrences = data.occurrences || [];
@@ -76,6 +81,7 @@ routerAdd(
       rec.set("units", lib.toIdArray(data.units));
       rec.set("calledGroups", lib.toIdArray(data.calledGroups));
       rec.set("bringCategories", lib.toIdArray(data.bringCategories));
+      rec.set("rsvp", rsvp);
       rec.set("status", "scheduled");
       e.app.save(rec);
       created.push(rec);
@@ -93,7 +99,9 @@ routerAdd(
           lib.whereHtml(ev.get("location"), ev.get("videoUrl")),
           ev.get("calledNote") ? `<p>Called: ${ev.get("calledNote")}</p>` : "",
           ev.get("notes") ? `<p>${ev.get("notes")}</p>` : "",
-          `<p>Open Glow Tape to tap "Got it" so your stage manager knows you saw this.</p>`,
+          rsvp
+            ? `<p><strong>Please RSVP:</strong> open Glow Tape and tap Going, Maybe or Can't go (and say if you're bringing guests).</p>`
+            : `<p>Open Glow Tape to tap "Got it" so your stage manager knows you saw this.</p>`,
         ];
         lib.sendMail(
           e.app,
@@ -111,7 +119,9 @@ routerAdd(
           lib.whereHtml(place.location, place.videoUrl),
           data.calledNote ? `<p>Called: ${data.calledNote}</p>` : "",
           `<ul>${items}</ul>`,
-          `<p>All times Pacific. Open Glow Tape to see the full schedule and tap "Got it" on each.</p>`,
+          rsvp
+            ? `<p>All times Pacific. <strong>Please RSVP</strong> in Glow Tape: Going, Maybe or Can't go on each.</p>`
+            : `<p>All times Pacific. Open Glow Tape to see the full schedule and tap "Got it" on each.</p>`,
         ];
         lib.sendMail(
           e.app,
@@ -243,6 +253,8 @@ routerAdd(
       if (item.units !== undefined) rec.set("units", lib.toIdArray(item.units));
       if (item.calledGroups !== undefined) rec.set("calledGroups", lib.toIdArray(item.calledGroups));
       if (item.bringCategories !== undefined) rec.set("bringCategories", lib.toIdArray(item.bringCategories));
+      // Switching RSVP on/off is silent; answers already given are kept.
+      if (typeof item.rsvp === "boolean") rec.set("rsvp", item.rsvp);
       // Not part of the "significant" check below: a run-of-show edit doesn't
       // reset Got-it acks or send the schedule-change email/push.
       if (item.timeline !== undefined) rec.set("timeline", timelines[i]);

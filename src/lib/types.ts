@@ -455,6 +455,18 @@ export interface EventRecord {
   signinCode: string // non-empty = door check-in is on for this event
   timeline: TimelineItem[] | null // run-of-show segments; clock times computed from start
   bringCategories: string[] | null // non-empty = potluck sign-up list is on
+  rsvp: boolean // Going / Maybe / Can't go is on (default for parties)
+}
+
+export interface RsvpRecord {
+  id: string
+  production: string
+  event: string
+  member: string
+  user: string // who tapped it
+  answer: 'yes' | 'maybe' | 'no'
+  guests: number
+  updated: string
 }
 
 export interface BringItemRecord {

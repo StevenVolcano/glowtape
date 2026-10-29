@@ -38,6 +38,7 @@ const GUARDED = [
   "slots",
   "show_reports",
   "bring_items",
+  "rsvps",
   "timeline_templates",
   "video_requests",
   "video_checkins",

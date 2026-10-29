@@ -35,6 +35,7 @@ const SCOPE = {
   timeline_templates: "production",
   slots: "production",
   bring_items: "production",
+  rsvps: "production",
   messages: "channel.production",
   reactions: "message.channel.production",
   acks: "event.production",
@@ -291,6 +292,7 @@ const TOOLS = [
               called: { type: "array", items: { type: "string" } },
               calledGroups: { type: "array", items: { type: "string" } },
               timeline: TIMELINE_SCHEMA,
+              rsvp: { type: "boolean", description: "Ask for Going / Maybe / Can't go. Leave out = on for party/potluck kinds, off otherwise." },
             },
             required: ["title", "start"],
           },
@@ -327,6 +329,7 @@ const TOOLS = [
           called: Array.isArray(ev.called) ? ev.called.map(String) : [],
           calledGroups: Array.isArray(ev.calledGroups) ? ev.calledGroups.map(String) : [],
           timeline: timelineFor(ev.timeline, `Event ${i + 1}`, lib),
+          rsvp: typeof ev.rsvp === "boolean" ? ev.rsvp : lib.rsvpDefault(ev.kind),
         };
       });
       const col = app.findCollectionByNameOrId("events");
@@ -339,6 +342,7 @@ const TOOLS = [
           rec.set("called", ev.called);
           rec.set("calledGroups", ev.calledGroups);
           if (ev.timeline.length > 0) rec.set("timeline", ev.timeline);
+          rec.set("rsvp", ev.rsvp);
           rec.set("status", "scheduled");
           tx.save(rec);
           created.push(rec);
@@ -378,7 +382,7 @@ const TOOLS = [
   },
   {
     name: "update_events",
-    description: "Edit existing events (all in one show). Each item: {id, and any of title, kind, start, end, location, videoUrl, notes, calledNote, called, calledGroups, timeline}. Only fields you send change. Date/time/place/video-link changes reset 'Got it' acks and send ONE change digest to the people called — same as editing in the app. A timeline-only edit (the run of show) is silent: no email, no push, acks kept. timeline [] or null clears it.",
+    description: "Edit existing events (all in one show). Each item: {id, and any of title, kind, start, end, location, videoUrl, notes, calledNote, called, calledGroups, timeline, rsvp}. Only fields you send change. Date/time/place/video-link changes reset 'Got it' acks and send ONE change digest to the people called — same as editing in the app. A timeline-only edit (the run of show) is silent: no email, no push, acks kept. timeline [] or null clears it.",
     inputSchema: {
       type: "object",
       properties: {
@@ -399,6 +403,7 @@ const TOOLS = [
               called: { type: "array", items: { type: "string" }, description: "Member ids; [] = everyone." },
               calledGroups: { type: "array", items: { type: "string" } },
               timeline: TIMELINE_SCHEMA,
+              rsvp: { type: "boolean", description: "Turn Going / Maybe / Can't go on or off. Silent; answers are kept." },
             },
             required: ["id"],
           },

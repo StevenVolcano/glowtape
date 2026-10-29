@@ -4,6 +4,7 @@ import { useProduction } from '../pages/Production.tsx'
 import { groupMemberIds, groupUnitsByAct, resolveUnitMemberIds } from '../lib/breakdown.ts'
 import { conflictAppliesTo, conflictHitsEvent, isWeekly, weeklyLabel } from '../lib/conflicts.ts'
 import { DEFAULT_EVENT_KINDS, isCommunityKind, looksLikeLink, memberName, pbDate, productionPlaces } from '../lib/types.ts'
+import { rsvpDefault } from '../lib/rsvp.ts'
 import type { ConflictRecord, EventRecord, GroupRecord, UnitRecord } from '../lib/types.ts'
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -59,6 +60,9 @@ export default function EventForm({
   const [allConflicts, setAllConflicts] = useState<ConflictRecord[]>([])
   // Potluck sign-up: parties (and anything the team likes) can carry a
   // bring-something list; the event stores just the category names.
+  // RSVP: untouched = follow the type (on for parties); a tick or untick sticks.
+  const [rsvpPick, setRsvpPick] = useState<boolean | null>(event ? !!event.rsvp : null)
+  const rsvpOn = rsvpPick ?? rsvpDefault(kind)
   const [bringOn, setBringOn] = useState((event?.bringCategories ?? []).length > 0)
   const [bringCats, setBringCats] = useState(
     (event?.bringCategories ?? []).join(', ') || 'Mains, Sides, Desserts, Drinks',
@@ -237,6 +241,7 @@ export default function EventForm({
                 bringCategories: bringOn
                   ? bringCats.split(',').map((c) => c.trim()).filter(Boolean)
                   : [],
+                rsvp: rsvpOn,
                 start: new Date(`${date}T${startTime}`).toISOString(),
                 end: endTime ? new Date(`${date}T${endTime}`).toISOString() : '',
               },
@@ -260,6 +265,7 @@ export default function EventForm({
             bringCategories: bringOn
               ? bringCats.split(',').map((c) => c.trim()).filter(Boolean)
               : [],
+            rsvp: rsvpOn,
             occurrences: buildOccurrences(),
           },
         })
@@ -341,6 +347,14 @@ export default function EventForm({
           nudge the time and watch this update.
         </p>
       )}
+      <label className="row">
+        <input
+          type="checkbox"
+          checked={rsvpOn}
+          onChange={(e) => setRsvpPick(e.target.checked)}
+        />
+        🎉 Ask for an RSVP (Going / Maybe / Can't go, plus guests)
+      </label>
       {(bringOn || /party|potluck/i.test(kind)) && (
         <div className="stack">
           <label className="row">

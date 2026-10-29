@@ -5,6 +5,8 @@ import { useAuth } from '../lib/auth.tsx'
 import { useProduction } from './Production.tsx'
 import { TimelineView } from '../components/Timeline.tsx'
 import { PollCard } from '../components/Poll.tsx'
+import RsvpPanel from '../components/RsvpPanel.tsx'
+import { myInvitees } from '../lib/rsvp.ts'
 import { externalHref, formatWhen, mapsUrl, pbDate, productionPlaces } from '../lib/types.ts'
 import type {
   AckRecord,
@@ -13,6 +15,7 @@ import type {
   EventRecord,
   LineNoteRecord,
   MessageRecord,
+  RsvpRecord,
   SlotRecord,
   TaskRecord,
   VideoCheckinRecord,
@@ -61,6 +64,7 @@ export default function TonightTab() {
   const [conflicts, setConflicts] = useState<ConflictRecord[]>([])
   const [pushOn, setPushOn] = useState<boolean | null>(null)
   const [videosOwed, setVideosOwed] = useState<string[]>([])
+  const [rsvps, setRsvps] = useState<RsvpRecord[]>([])
   const [settledHidden, setSettledHidden] = useState(
     () => localStorage.getItem(`gt-settled-${production.id}`) === '1',
   )
@@ -111,6 +115,11 @@ export default function TonightTab() {
     setPinned(an[0] ?? null)
     setSlots(sl)
     setConflicts(cf)
+    // RSVP answers: rules give the cast only their own (and their kids').
+    pb.collection('rsvps')
+      .getFullList<RsvpRecord>({ filter: pb.filter('production = {:p}', { p }), fields: 'id,event,member' })
+      .then(setRsvps)
+      .catch(() => setRsvps([]))
     // Open polls a manager pinned. The messages rules decide who sees each
     // one, so a poll in a 🔒 channel only shows for people in that channel.
     pb.collection('messages')
@@ -218,8 +227,16 @@ export default function TonightTab() {
 
   // --- Needs you ---
   const unackedCount = events.filter(
-    (e) => pbDate(e.end || e.start) >= now && calledToMe(e) && !acks.some((a) => a.event === e.id),
+    (e) => pbDate(e.end || e.start) >= now && calledToMe(e) && !e.rsvp && !acks.some((a) => a.event === e.id),
   ).length
+  const rsvpOwed = events.filter(
+    (e) =>
+      e.rsvp &&
+      pbDate(e.end || e.start) >= now &&
+      myInvitees(e, members, user?.id ?? '').some(
+        (m) => !rsvps.some((r) => r.event === e.id && r.member === m.id),
+      ),
+  )
   const myLineNotes = lineNotes.filter((n) => myMemberIds.includes(n.member)).length
   const myTasks = tasks.filter(
     (t) => t.assignee && myMemberIds.includes(t.assignee) && !(production.noBios && t.kind === 'bio'),
@@ -236,6 +253,8 @@ export default function TonightTab() {
     needs.push({ key: `video-${title}`, label: `🎥 Record your video: ${title}`, to: `${base}/todo#videos` })
   if (myLineNotes > 0)
     needs.push({ key: 'ln', label: `🎯 ${myLineNotes} line note${myLineNotes === 1 ? '' : 's'} to work on`, to: `${base}/todo` })
+  for (const e of rsvpOwed)
+    needs.push({ key: `rsvp-${e.id}`, label: `🎉 RSVP for ${e.title}`, to: `${base}/schedule` })
   if (unackedCount > 0)
     needs.push({ key: 'ack', label: `👍 ${unackedCount} event${unackedCount === 1 ? '' : 's'} waiting for your "Got it"`, to: `${base}/schedule` })
   if (myTasks > 0)
@@ -333,8 +352,9 @@ export default function TonightTab() {
             )}
             {next.calledNote && <span className="hint">{next.calledNote}</span>}
             <TimelineView event={next} />
+            {next.rsvp && <RsvpPanel event={next} />}
             <div className="row">
-              {!nextAcked ? (
+              {next.rsvp ? null : !nextAcked ? (
                 <button onClick={gotIt}>Got it 👍</button>
               ) : (
                 <span className="acked">✓ You got it</span>
