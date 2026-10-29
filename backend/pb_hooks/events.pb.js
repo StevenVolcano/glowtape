@@ -258,7 +258,6 @@ routerAdd(
       // Not part of the "significant" check below: a run-of-show edit doesn't
       // reset Got-it acks or send the schedule-change email/push.
       if (item.timeline !== undefined) rec.set("timeline", timelines[i]);
-      e.app.save(rec);
 
       const significant =
         rec.get("status") !== "cancelled" &&
@@ -266,6 +265,23 @@ routerAdd(
           String(rec.get("end")) !== beforeEnd ||
           rec.get("location") !== beforeLocation ||
           rec.get("videoUrl") !== beforeVideo);
+      if (significant) {
+        // Remembered so a later 🔔 reminder (and the event card) can say what moved.
+        const note = lib.describeEventChange(
+          { start: beforeStart, end: beforeEnd, location: beforeLocation, videoUrl: beforeVideo },
+          {
+            start: String(rec.get("start")),
+            end: String(rec.get("end")),
+            location: rec.get("location"),
+            videoUrl: rec.get("videoUrl"),
+          },
+        );
+        if (note) {
+          rec.set("changeNote", note);
+          rec.set("changedAt", lib.pbNow());
+        }
+      }
+      e.app.save(rec);
 
       if (significant) {
         for (const col of ["acks", "reminders_sent"]) {

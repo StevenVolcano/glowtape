@@ -13,6 +13,7 @@ import ShowReport from '../components/ShowReport.tsx'
 import BringList from '../components/BringList.tsx'
 import RsvpPanel from '../components/RsvpPanel.tsx'
 import SelfReport from '../components/SelfReport.tsx'
+import RemindButton from '../components/RemindButton.tsx'
 import TimelinePlanner, { TimelineView } from '../components/Timeline.tsx'
 import SlotsSection from '../components/Slots.tsx'
 import { JumpNav, scheduleJumps } from '../components/ManageJumpNav.tsx'
@@ -328,6 +329,9 @@ export default function ScheduleTab() {
             </a>
           </div>
         )}
+        {e.changeNote && iAmCalled && !e.rsvp && !myAck && e.status !== 'cancelled' && (
+          <div className="warn">⚠ Changed: {e.changeNote}</div>
+        )}
         {e.rsvp && e.status !== 'cancelled' && <RsvpPanel event={e} />}
         {iAmCalled &&
           e.status !== 'cancelled' &&
@@ -393,6 +397,7 @@ export default function ScheduleTab() {
               })()}
             </div>
           )}
+          {isManager && <RemindButton event={e} acks={acks} />}
           {isManager && e.status !== 'cancelled' && (
             <button
               className="link"
