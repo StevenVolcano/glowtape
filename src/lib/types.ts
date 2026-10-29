@@ -456,6 +456,9 @@ export interface EventRecord {
   timeline: TimelineItem[] | null // run-of-show segments; clock times computed from start
   bringCategories: string[] | null // non-empty = potluck sign-up list is on
   rsvp: boolean // Going / Maybe / Can't go is on (default for parties)
+  changeNote?: string // what the last date/time/place edit changed (server-written)
+  changedAt?: string
+  remindedAt?: string // last 🔔 Remind people send ('' = never)
 }
 
 export interface RsvpRecord {

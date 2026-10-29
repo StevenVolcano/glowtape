@@ -526,6 +526,30 @@ function formatPacific(value) {
   );
 }
 
+// One plain-English line saying what a date/time/place edit changed, kept on
+// the event (events.changeNote) so reminders and the event card can show it
+// to people who haven't tapped Got it since. '' when nothing that matters moved.
+function describeEventChange(before, after) {
+  const parts = [];
+  const blank = (v) => !v || String(v).trim() === "";
+  if (String(before.start) !== String(after.start)) {
+    parts.push("time was " + formatPacific(before.start) + ", now " + formatPacific(after.start));
+  } else if (String(before.end) !== String(after.end) && !blank(after.end)) {
+    parts.push("now ends " + formatPacific(after.end));
+  }
+  if ((before.location || "") !== (after.location || "")) {
+    if (blank(after.location)) parts.push("no longer in person (was " + before.location + ")");
+    else if (blank(before.location)) parts.push("now at " + after.location);
+    else parts.push("place was " + before.location + ", now " + after.location);
+  }
+  if ((before.videoUrl || "") !== (after.videoUrl || "")) {
+    parts.push(blank(after.videoUrl) ? "video call removed" : "new video call link");
+  }
+  if (parts.length === 0) return "";
+  const line = parts.join("; ");
+  return (line.charAt(0).toUpperCase() + line.slice(1)).slice(0, 1000);
+}
+
 // --- calendar (ics) -------------------------------------------------------------
 
 function icsEscape(text) {
@@ -894,6 +918,7 @@ function isAdultAccount(app, user) {
 }
 
 module.exports = {
+  describeEventChange,
   rsvpDefault,
   isAdultAccount,
   inviteRowsForPhone,
