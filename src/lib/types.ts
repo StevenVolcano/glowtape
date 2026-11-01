@@ -517,9 +517,11 @@ export interface TrackerItemRecord {
   a: string
   b: string
   c: string
+  where: string
   status: string
   notes: string
   order: number
+  attachments: string[]
 }
 
 export interface AttendanceRecord {

@@ -1,3 +1,4 @@
+import { useCallback, useRef, useState } from 'react'
 import { pb } from './pb.ts'
 import type { ResourceRecord } from './types.ts'
 
@@ -26,4 +27,22 @@ export function pbErrorMessage(err: unknown, fallback: string): string {
     if (parts.length > 0) return parts.join(' · ')
   }
   return err instanceof Error && err.message ? err.message : fallback
+}
+
+// Protected-file token for pages that show many protected thumbnails (Sheets
+// attachments). Tokens live ~3 minutes; a lazy thumbnail scrolled into view
+// later 404s, so an <img onError> calls refresh(), which fetches a new token
+// at most once every 20 seconds (no loops when a file is genuinely gone).
+export function useFileToken() {
+  const [token, setToken] = useState('')
+  const last = useRef(0)
+  const refresh = useCallback(() => {
+    if (Date.now() - last.current < 20_000) return
+    last.current = Date.now()
+    pb.files
+      .getToken()
+      .then(setToken)
+      .catch(() => {})
+  }, [])
+  return { token, refresh }
 }
