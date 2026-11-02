@@ -80,3 +80,36 @@ routerAdd(
   },
   $apis.requireAuth(),
 );
+
+// Headcount by answer for everyone invited (Steven 2026-11-02: "people can
+// see numbers by answer"). Numbers only — who said what stays with the
+// managers (rsvps rules). Anyone who can see the event can see its counts.
+routerAdd(
+  "GET",
+  "/api/glowtape/rsvp/counts",
+  (e) => {
+    let event;
+    try {
+      event = e.app.findRecordById("events", String(e.request.url.query().get("event") || ""));
+    } catch {
+      throw new NotFoundError("Unknown event.");
+    }
+    const col = e.app.findCollectionByNameOrId("events");
+    if (!e.app.canAccessRecord(event, e.requestInfo(), String(col.viewRule || ""))) {
+      throw new NotFoundError("Unknown event.");
+    }
+    const counts = { yes: 0, maybe: 0, no: 0, guests: 0 };
+    if (!event.get("rsvp")) return e.json(200, counts);
+    const rows = e.app.findRecordsByFilter("rsvps", "event = {:ev}", "", 0, 0, { ev: event.id });
+    for (const r of rows) {
+      const a = String(r.get("answer"));
+      if (a === "yes") {
+        counts.yes++;
+        counts.guests += Number(r.get("guests")) || 0;
+      } else if (a === "maybe") counts.maybe++;
+      else if (a === "no") counts.no++;
+    }
+    return e.json(200, counts);
+  },
+  $apis.requireAuth(),
+);
