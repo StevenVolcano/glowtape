@@ -7,10 +7,13 @@ import { memberName } from '../lib/types.ts'
 import { RSVP_ANSWERS, invitees, myInvitees } from '../lib/rsvp.ts'
 import type { EventRecord, MemberRecord, RsvpRecord } from '../lib/types.ts'
 
+type RsvpCounts = { yes: number; maybe: number; no: number; guests: number }
+
 // Going / Maybe / Can't go on a party (or any event a manager switched RSVP
 // on for). Invitees answer for themselves and their kids, plus how many
-// guests they're bringing. Managers get the headcount and the names; the
-// cast only ever sees their own answers (collection rules).
+// guests they're bringing. Everyone sees the numbers by answer (counts
+// route); only managers see who said what (collection rules hide other
+// people's rows from the cast).
 export default function RsvpPanel({ event }: { event: EventRecord }) {
   const { members, isManager } = useProduction()
   const { user } = useAuth()
@@ -18,12 +21,18 @@ export default function RsvpPanel({ event }: { event: EventRecord }) {
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
   const [showNames, setShowNames] = useState(false)
+  const [counts, setCounts] = useState<RsvpCounts | null>(null)
 
   async function load() {
     const list = await pb.collection('rsvps').getFullList<RsvpRecord>({
       filter: pb.filter('event = {:e}', { e: event.id }),
     })
     setRows(list)
+    if (!isManager) {
+      setCounts(
+        await pb.send<RsvpCounts>('/api/glowtape/rsvp/counts', { query: { event: event.id } }),
+      )
+    }
   }
 
   useEffect(() => {
@@ -119,6 +128,16 @@ export default function RsvpPanel({ event }: { event: EventRecord }) {
           </div>
         )
       })}
+      {!isManager && counts && (
+        <div role="status">
+          <strong>
+            🎉 {counts.yes} going
+            {counts.guests > 0 && ` + ${counts.guests} guest${counts.guests === 1 ? '' : 's'}`}
+          </strong>
+          {' · '}
+          {counts.maybe} maybe · {counts.no} can't go
+        </div>
+      )}
       {isManager && (
         <div className="stack">
           <div role="status">
