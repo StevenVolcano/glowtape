@@ -322,21 +322,29 @@ function Conversation({
       <button type="button" className="link" onClick={onBack}>
         ← All conversations
       </button>
-      <h2 className="conversation-title">{name}</h2>
-      <div className="row conversation-tools">
-        <button type="button" className="link" aria-pressed={muted} onClick={onToggleMute}>
-          {muted ? '🔕 Muted — turn notifications on' : '🔔 Mute'}
-        </button>
-        {other &&
-          (myBlock ? (
-            <button type="button" className="link" onClick={unblock}>
-              🚫 Unblock {other.name}
-            </button>
-          ) : (
-            <button type="button" className="link" onClick={block}>
-              🚫 Block
-            </button>
-          ))}
+      <div className="conversation-head">
+        <h2 className="conversation-title">{name}</h2>
+        <div className="row conversation-tools">
+          <button
+            type="button"
+            className="link"
+            aria-pressed={muted}
+            aria-label={muted ? 'Muted. Turn notifications back on' : 'Mute notifications for this conversation'}
+            onClick={onToggleMute}
+          >
+            {muted ? '🔕 Muted' : '🔔 Mute'}
+          </button>
+          {other &&
+            (myBlock ? (
+              <button type="button" className="link" onClick={unblock}>
+                🚫 Unblock
+              </button>
+            ) : (
+              <button type="button" className="link" onClick={block}>
+                🚫 Block
+              </button>
+            ))}
+        </div>
       </div>
       {dm ? (
         <p className="hint" style={{ margin: 0 }}>
