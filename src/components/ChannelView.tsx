@@ -156,6 +156,7 @@ export default function ChannelView({
   const [gif, setGif] = useState<GifChoice | null>(null)
   const [showGifs, setShowGifs] = useState(false)
   const [showPoll, setShowPoll] = useState(false)
+  const [attachOpen, setAttachOpen] = useState(false)
   const [replyTo, setReplyTo] = useState<MessageRecord | null>(null)
   const [editing, setEditing] = useState<MessageRecord | null>(null)
   const [busy, setBusy] = useState(false)
@@ -442,110 +443,118 @@ export default function ChannelView({
                   {authorLabel(m)} · <time dateTime={pbDate(m.created).toISOString()}>{timeOf(m.created)}</time>
                   {m.edited && <span className="msg-edited"> · edited</span>}
                 </span>
-                <span className="msg-text">
-                  {m.replyTo && (
-                    <button
-                      type="button"
-                      className="msg-quote"
-                      onClick={() => jumpTo(m.replyTo)}
-                      aria-label={
-                        original
-                          ? `Replying to ${authorLabel(original)}: ${snippet(original)}. Show that message.`
-                          : 'Replying to an earlier message. Show that message.'
-                      }
-                    >
-                      <span aria-hidden="true">↩ </span>
-                      {original ? (
-                        <>
-                          <strong>{authorLabel(original)}</strong> {snippet(original)}
-                        </>
-                      ) : (
-                        'an earlier message'
-                      )}
-                    </button>
-                  )}
-                  {m.image && (
-                    <a href={imageUrl(m)} target="_blank" rel="noreferrer">
-                      <img
-                        className="msg-img"
-                        src={imageUrl(m, '400x0')}
-                        alt={`Photo from ${m.expand?.author?.name || 'a member'}`}
-                        loading="lazy"
+                <div className="msg-line">
+                  <span className="msg-text">
+                    {m.replyTo && (
+                      <button
+                        type="button"
+                        className="msg-quote"
+                        onClick={() => jumpTo(m.replyTo)}
+                        aria-label={
+                          original
+                            ? `Replying to ${authorLabel(original)}: ${snippet(original)}. Show that message.`
+                            : 'Replying to an earlier message. Show that message.'
+                        }
+                      >
+                        <span aria-hidden="true">↩ </span>
+                        {original ? (
+                          <>
+                            <strong>{authorLabel(original)}</strong> {snippet(original)}
+                          </>
+                        ) : (
+                          'an earlier message'
+                        )}
+                      </button>
+                    )}
+                    {m.image && (
+                      <a href={imageUrl(m)} target="_blank" rel="noreferrer">
+                        <img
+                          className="msg-img"
+                          src={imageUrl(m, '400x0')}
+                          alt={`Photo from ${m.expand?.author?.name || 'a member'}`}
+                          loading="lazy"
+                        />
+                      </a>
+                    )}
+                    {m.gif && <GifImage id={m.gif} title={m.gifTitle} />}
+                    {m.poll ? (
+                      <PollCard
+                        message={m}
+                        members={members}
+                        canManage={canModerate}
+                        onChange={(patch) =>
+                          setMessages((prev) => prev.map((x) => (x.id === m.id ? { ...x, ...patch } : x)))
+                        }
                       />
-                    </a>
-                  )}
-                  {m.gif && <GifImage id={m.gif} title={m.gifTitle} />}
-                  {m.poll ? (
-                    <PollCard
-                      message={m}
-                      members={members}
-                      canManage={canModerate}
-                      onChange={(patch) =>
-                        setMessages((prev) => prev.map((x) => (x.id === m.id ? { ...x, ...patch } : x)))
-                      }
-                    />
-                  ) : (
-                    <Linkified text={m.text} />
-                  )}
-                </span>
-                <span className="reactions">
-                  {reactionSummary(m).map(([emoji, rows]) => (
-                    <button
-                      type="button"
-                      key={emoji}
-                      className={`reaction ${rows.some((r) => r.user === user?.id) ? 'mine' : ''}`}
-                      onClick={() => toggleReaction(m, emoji)}
-                    >
-                      {emoji} {rows.length}
-                    </button>
-                  ))}
+                    ) : (
+                      <Linkified text={m.text} />
+                    )}
+                  </span>
                   <button
                     type="button"
-                    className="reaction reaction-add"
+                    className="msg-more"
                     aria-label="React, reply, and more"
                     aria-expanded={pickerFor === m.id}
                     onClick={() => setPickerFor(pickerFor === m.id ? null : m.id)}
                   >
-                    +
+                    <span aria-hidden="true">☺</span>
                   </button>
-                  {pickerFor === m.id && (
-                    <>
+                </div>
+                {reactionSummary(m).length > 0 && (
+                  <span className="reactions">
+                    {reactionSummary(m).map(([emoji, rows]) => (
+                      <button
+                        type="button"
+                        key={emoji}
+                        className={`reaction ${rows.some((r) => r.user === user?.id) ? 'mine' : ''}`}
+                        aria-pressed={rows.some((r) => r.user === user?.id)}
+                        onClick={() => toggleReaction(m, emoji)}
+                      >
+                        {emoji} {rows.length}
+                      </button>
+                    ))}
+                  </span>
+                )}
+                {pickerFor === m.id && (
+                  <div className="msg-actions" role="group" aria-label="Message options">
+                    <div className="msg-emoji">
                       {QUICK_EMOJI.map((emoji) => (
                         <button
                           type="button"
                           key={emoji}
-                          className="reaction"
+                          className="reaction-pick"
                           aria-label={`React with ${emoji}`}
                           onClick={() => toggleReaction(m, emoji)}
                         >
                           {emoji}
                         </button>
                       ))}
-                      <button type="button" className="reaction" onClick={() => startReply(m)}>
+                    </div>
+                    <div className="msg-action-row">
+                      <button type="button" className="link" onClick={() => startReply(m)}>
                         <span aria-hidden="true">↩</span> Reply
                       </button>
                       {mine && !m.poll && (
-                        <button type="button" className="reaction" onClick={() => startEdit(m)}>
+                        <button type="button" className="link" onClick={() => startEdit(m)}>
                           <span aria-hidden="true">✎</span> Edit
                         </button>
                       )}
                       {(mine || canModerate) && (
-                        <button type="button" className="reaction" onClick={() => remove(m)}>
+                        <button type="button" className="link" onClick={() => remove(m)}>
                           <span aria-hidden="true">🗑</span> Delete
                         </button>
                       )}
                       {!mine && (
-                        <button
-                          type="button"
-                          className="reaction report-button"
-                          onClick={() => report(m)}
-                        >
+                        <button type="button" className="link report-button" onClick={() => report(m)}>
                           <span aria-hidden="true">⚑</span> Report
                         </button>
                       )}
-                    </>
-                  )}
-                </span>
+                      <button type="button" className="link" onClick={() => setPickerFor(null)}>
+                        Close
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )
@@ -605,46 +614,61 @@ export default function ChannelView({
           }}
         />
       )}
-      <form onSubmit={send} className="row composer">
-        {!editing && (
-          <>
-            <label className="photo-btn" aria-label="Attach a photo">
-              📷
-              <input
-                type="file"
-                accept="image/*"
-                className="sr-only"
-                aria-label="Attach a photo"
-                onChange={(e) => {
-                  setFile(e.target.files?.[0] ?? null)
-                  setGif(null)
-                }}
-              />
-            </label>
+      {attachOpen && !editing && (
+        <div className="attach-tray" role="group" aria-label="Add to your message">
+          <label className="attach-btn">
+            <span aria-hidden="true">📷</span> Photo
+            <input
+              type="file"
+              accept="image/*"
+              className="sr-only"
+              onChange={(e) => {
+                setFile(e.target.files?.[0] ?? null)
+                setGif(null)
+                setAttachOpen(false)
+                inputRef.current?.focus()
+              }}
+            />
+          </label>
+          <button
+            type="button"
+            className="attach-btn"
+            aria-expanded={showGifs}
+            onClick={() => {
+              setShowGifs(!showGifs)
+              setShowPoll(false)
+              setAttachOpen(false)
+            }}
+          >
+            <span aria-hidden="true">🎞</span> GIF
+          </button>
+          {canPoll && (
             <button
               type="button"
-              className="photo-btn gif-btn"
-              aria-label="Add a GIF"
-              aria-expanded={showGifs}
-              onClick={() => setShowGifs(!showGifs)}
+              className="attach-btn"
+              aria-expanded={showPoll}
+              onClick={() => {
+                setShowPoll(!showPoll)
+                setShowGifs(false)
+                setAttachOpen(false)
+              }}
             >
-              GIF
+              <span aria-hidden="true">📊</span> Poll
             </button>
-            {canPoll && (
-              <button
-                type="button"
-                className="photo-btn gif-btn"
-                aria-label="Start a poll"
-                aria-expanded={showPoll}
-                onClick={() => {
-                  setShowPoll(!showPoll)
-                  setShowGifs(false)
-                }}
-              >
-                <span aria-hidden="true">📊</span>
-              </button>
-            )}
-          </>
+          )}
+        </div>
+      )}
+      <form onSubmit={send} className="row composer">
+        {!editing && (
+          <button
+            type="button"
+            className="attach-toggle"
+            aria-label={attachOpen ? 'Close the photo, GIF and poll options' : 'Add a photo, GIF or poll'}
+            aria-expanded={attachOpen}
+            onClick={() => setAttachOpen(!attachOpen)}
+          >
+            <span aria-hidden="true">{attachOpen ? '✕' : '+'}</span>
+          </button>
         )}
         <input
           ref={inputRef}
@@ -654,7 +678,7 @@ export default function ChannelView({
           onKeyDown={(e) => {
             if (e.key === 'Escape' && (editing || replyTo)) cancelCompose()
           }}
-          placeholder="Message…"
+          placeholder="Write a message…"
         />
         <button type="submit" disabled={busy || (!editing && !text.trim() && !file && !gif)}>
           {editing ? 'Save' : 'Send'}
