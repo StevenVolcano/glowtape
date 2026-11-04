@@ -53,7 +53,8 @@ self.addEventListener('notificationclick', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url)
-  if (event.request.method !== 'GET' || url.pathname.startsWith('/api')) return
+  // videos stream straight from the server (range requests can't be cached)
+  if (event.request.method !== 'GET' || url.pathname.startsWith('/api') || url.pathname.startsWith('/videos/')) return
 
   if (event.request.mode === 'navigate') {
     event.respondWith(fetch(event.request).catch(() => caches.match('/')))

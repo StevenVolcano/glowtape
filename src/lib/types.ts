@@ -31,6 +31,8 @@ export interface UserRecord {
   operator: boolean
   // chosen reminder keys (REMINDER_OPTIONS); null = default 10h + 2h, [] = none
   reminderTimes?: string[] | null
+  // how-to video slugs watched (lib/howto.ts) — drives the Getting settled step
+  videosSeen?: string[] | null
 }
 
 // Reminder times people can pick (up to 3) — keys match REMINDER_KEYS in

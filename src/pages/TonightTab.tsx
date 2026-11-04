@@ -9,6 +9,7 @@ import RsvpPanel from '../components/RsvpPanel.tsx'
 import BringList from '../components/BringList.tsx'
 import SelfReport from '../components/SelfReport.tsx'
 import { myInvitees } from '../lib/rsvp.ts'
+import { CORE_VIDEOS, seenCount } from '../lib/howto.ts'
 import { externalHref, formatWhen, mapsUrl, pbDate, productionPlaces } from '../lib/types.ts'
 import type {
   AckRecord,
@@ -304,7 +305,17 @@ export default function TonightTab() {
   const quote = pool[dayNumber % pool.length]
 
   // --- Get settled (new members) ---
+  const watched = seenCount(user?.videosSeen)
   const settled: { key: string; label: string; done: boolean; to: string }[] = [
+    {
+      key: 'videos',
+      label:
+        watched === 0
+          ? '🎬 Watch the how-to videos (about a minute each)'
+          : `🎬 Watch the how-to videos (${watched} of ${CORE_VIDEOS.length} watched)`,
+      done: watched >= CORE_VIDEOS.length,
+      to: '/videos',
+    },
     { key: 'push', label: '🔔 Turn on notifications', done: pushOn === true, to: '/settings' },
     { key: 'conf', label: '🚫 Enter your conflicts — dates and work hours', done: conflicts.length > 0, to: `${base}/schedule#conflicts` },
     { key: 'ack', label: '📅 Look over the schedule and tap "Got it"', done: acks.length > 0, to: `${base}/schedule` },

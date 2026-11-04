@@ -183,6 +183,11 @@ export default function SiteMenu({ current }: { current?: CurrentShow }) {
               </MenuLink>
             </li>
             <li>
+              <MenuLink to="/videos" here={pathname === '/videos'}>
+                🎬 How-to videos
+              </MenuLink>
+            </li>
+            <li>
               <a className="menu-link" href="/help.html">
                 ❓ Help
               </a>

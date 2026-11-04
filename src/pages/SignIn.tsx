@@ -399,6 +399,10 @@ export default function SignIn() {
 
         <InstallHelp />
 
+        <p className="hint">
+          🎬 New here? <a href="/videos">Watch the one-minute how-to videos</a>.
+        </p>
+
         <p className="hint legal-links">
           <a href="/help.html">Help</a> · <a href="/privacy.html">Privacy</a> ·{' '}
           <a href="/terms.html">Terms</a> · Free for Grays Harbor theater

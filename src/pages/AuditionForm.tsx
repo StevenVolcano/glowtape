@@ -189,7 +189,7 @@ export default function AuditionForm() {
       setSaved(
         existing
           ? "Updated — the show's managers see your latest answers. ✓"
-          : "You're signed up! The show's managers have your form. Break a leg! 🎭",
+          : "You're signed up! The show's managers have your form. Break a nail! 🎭",
       )
       setJustSignedUp(true)
     } catch (err) {

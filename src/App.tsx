@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { useAuth } from './lib/auth.tsx'
 import SignIn from './pages/SignIn.tsx'
 import Home from './pages/Home.tsx'
@@ -11,12 +11,15 @@ import Operator from './pages/Operator.tsx'
 import RequestProduction from './pages/RequestProduction.tsx'
 import Community from './pages/Community.tsx'
 import Connect from './pages/Connect.tsx'
+import HowTo from './pages/HowTo.tsx'
 
 export default function App() {
   const { user } = useAuth()
+  const { pathname } = useLocation()
 
   if (!user) {
-    return <SignIn />
+    // the videos start with how to sign in, so they work signed out too
+    return pathname === '/videos' ? <HowTo /> : <SignIn />
   }
 
   return (
@@ -31,6 +34,7 @@ export default function App() {
       <Route path="/request-production" element={<RequestProduction />} />
       <Route path="/community" element={<Community />} />
       <Route path="/connect" element={<Connect />} />
+      <Route path="/videos" element={<HowTo />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )

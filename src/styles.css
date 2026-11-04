@@ -2534,3 +2534,11 @@ button.sheet-photo-big:hover {
     min-height: 16rem;
   }
 }
+
+/* How-to videos (pages/HowTo.tsx): phone-shaped 9:16 players */
+.howto-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 16px; }
+.howto-title { margin: 0; font-size: 1.15rem; }
+.howto-title::before { display: none; }
+.howto-seen { font-size: 0.95rem; white-space: nowrap; }
+.howto-video { display: block; width: 100%; max-width: 360px; aspect-ratio: 9 / 16; margin: 0 auto; border-radius: 16px; background: #16181f; }
+.howto-card details p { margin: 0.4rem 0; }
