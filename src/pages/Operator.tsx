@@ -528,7 +528,7 @@ function ClaudeConnectorSection() {
       <p className="hint">
         Lets your own Claude read and change your shows — everything you can see and do here,
         including contacts and chats — so you can turn a calendar into schedule events without
-        the download-upload dance. Glow Tape itself still has no AI. In Claude: Settings →
+        the download-upload dance. In Claude: Settings →
         Connectors → Add custom connector, paste this address, then sign in to Glow Tape and tap
         Allow.
       </p>

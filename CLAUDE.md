@@ -11,8 +11,8 @@ can pick up mid-project — read it fully before changing anything.
 - **Purpose**: Glow Tape — free production and rehearsal management for the
   Grays Harbor community-theater scene (Driftwood Players, Bishop Center, Stage
   West, Plank Island, 7th Street Kids, schools). Free forever, self-hosted by
-  Steven Puvogel (steven@zucchinivolcano.com, Zucchini Volcano LLC), **no AI in
-  the product** (the community is AI-averse — all features are deterministic).
+  Steven Puvogel (steven@zucchinivolcano.com, Zucchini Volcano LLC). All features
+  are deterministic; the public "no AI" promise was dropped 2026-11-04 (see AI stance).
 - **Stack**: Vite + React 19 + TypeScript PWA frontend; PocketBase v0.30 backend
   (single Go binary, SQLite) with JS migrations (`pb_migrations/`) and JS hooks
   (`pb_hooks/`). PocketBase serves the built frontend from `backend/pb_public/`.
@@ -103,16 +103,14 @@ lives in terms.html, help.html ("What does it cost?"), why-glowtape.html,
 RequestProduction.tsx, and Home.tsx — keep them consistent. No billing is
 implemented; it's a manual/honor arrangement for now.
 
-**AI stance (2026-07, updated 2026-10 per Steven)**: two promises, both true —
-Glow Tape does NOT use AI (no AI functionality in the app), and user
-information is NEVER used for AI training. (The older "never fed to AI"
-wording was retired when the operator-only Claude connector shipped.) The app
-was BUILT with a combination of human and AI resources (stated honestly,
-never hidden). Wording lives in the help.html FAQ ("Does Glow Tape use AI?"),
-the help.html Stagehand FAQ, the privacy.html "AI" section (both it and the
-help FAQ also carry the caveat that a show's production team may use AI tools
-of their own outside Glow Tape, incl. show info they can see) and the
-why-glowtape.html "Your data is yours" bullet — keep them consistent.
+**AI stance (updated 2026-11-04 per Steven: "drop the no AI promise in the
+documentation. I don't think my audience actually cares")**: the docs no longer
+promise "no AI in the app" — the help.html "Does Glow Tape use AI?" FAQ is gone,
+and help/privacy/why-glowtape/breakdown-ai/Connect/Operator lost their "no AI"
+lines. The ONE promise kept: user information is NEVER used for AI training
+(privacy.html "AI" section — which also keeps the caveat that a show's production
+team may use AI tools of their own — why-glowtape.html "Your data is yours",
+youth-safety.html). Don't reintroduce "no AI" wording.
 
 ## Critical gotchas (violating these breaks production)
 
@@ -308,7 +306,7 @@ verifies deployments from his phone and reports back, often with screenshots.
 - Never build features that distribute licensed scripts (plan §4).
 - Update `public/help.html` whenever a user-facing feature changes — it is the
   product manual and Steven's community reads it.
-- No AI-powered features. No new documentation files unless asked.
+- No AI-powered features unless Steven asks. No new documentation files unless asked.
 - Never commit secrets; server env lives in `/etc/glowtape/env` only.
 
 ## Repository Structure

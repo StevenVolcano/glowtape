@@ -70,8 +70,7 @@ export default function Connect() {
         <div className="stack">
           <p>
             <strong>{name}</strong> wants to use Glow Tape as you. It will be able to read and
-            change everything you can see and do here, including contacts and chats. Glow Tape
-            itself still has no AI.
+            change everything you can see and do here, including contacts and chats.
           </p>
           <p className="hint">
             You can turn it off any time in the Operator console, under Claude connector.
