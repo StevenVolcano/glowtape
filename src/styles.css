@@ -2542,3 +2542,47 @@ button.sheet-photo-big:hover {
 .howto-seen { font-size: 0.95rem; white-space: nowrap; }
 .howto-video { display: block; width: 100%; max-width: 360px; aspect-ratio: 9 / 16; margin: 0 auto; border-radius: 16px; background: #16181f; }
 .howto-card details p { margin: 0.4rem 0; }
+
+/* @mentions in show chat (ChannelView, lib/mentions.ts) */
+.mention {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.msg.tags-me .msg-text {
+  box-shadow: inset 4px 0 0 var(--accent);
+}
+
+.msg-tagged {
+  font-weight: 700;
+}
+
+.mention-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  max-height: 16rem;
+  overflow-y: auto;
+  border: 2px solid var(--ctrl);
+  border-radius: 10px;
+  background: var(--card);
+  padding: 0.25rem;
+}
+
+.mention-pick {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  min-height: 44px;
+  padding: 0 0.6rem;
+  text-align: left;
+  background: transparent;
+  color: inherit;
+  border: 0;
+  border-radius: 8px;
+}
+
+.mention-pick:hover,
+.mention-pick:focus-visible {
+  background: var(--paper);
+}

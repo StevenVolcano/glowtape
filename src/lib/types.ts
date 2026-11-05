@@ -645,6 +645,8 @@ export interface MessageRecord {
   pollClosed: boolean
   pollPinned: boolean // shown on the Dashboard while open
   pollFor?: string[] // member ids a poll is asking; only they get the push (empty = whole channel)
+  mentionMembers?: string[] // @tagged members (migration 1760100000); set at create only
+  mentionGroups?: string[] // @tagged role groups, e.g. Cast
   created: string
   expand?: { author?: UserRecord; replyTo?: MessageRecord & { expand?: { author?: UserRecord } } }
 }
