@@ -104,6 +104,34 @@ onRecordCreateRequest((e) => {
     e.record.set("pollFor", []);
   }
 
+  // @mentions: people and role groups in THIS show. A DM, the community
+  // board or a poll carries none (a DM already pings its one reader; polls
+  // ask people through pollFor).
+  const mentionMembers = lib.toIdArray(e.record.get("mentionMembers"));
+  const mentionGroups = lib.toIdArray(e.record.get("mentionGroups"));
+  if (mentionMembers.length || mentionGroups.length) {
+    const channel = e.app.findRecordById("channels", e.record.get("channel"));
+    const productionId = String(channel.get("production") || "");
+    if (!productionId || rawPoll || lib.toIdArray(channel.get("dmUsers")).length) {
+      e.record.set("mentionMembers", []);
+      e.record.set("mentionGroups", []);
+    } else {
+      const inShow = (collection, id) => {
+        try {
+          return String(e.app.findRecordById(collection, id).get("production")) === productionId;
+        } catch {
+          return false;
+        }
+      };
+      for (const id of mentionMembers) {
+        if (!inShow("members", id)) throw new BadRequestError("Someone you tagged isn't in this show any more.");
+      }
+      for (const id of mentionGroups) {
+        if (!inShow("groups", id)) throw new BadRequestError("A group you tagged isn't in this show any more.");
+      }
+    }
+  }
+
   if (gif) {
     if (e.record.get("image")) throw new BadRequestError("Send a photo or a GIF, not both.");
     const key = ($os.getenv("GLOWTAPE_GIPHY_API_KEY") || "").trim();
@@ -146,8 +174,15 @@ onRecordCreateRequest((e) => {
 // gets marked edited so nobody is misled about what was said when.
 onRecordUpdateRequest((e) => {
   const before = e.record.original();
-  for (const f of ["channel", "author", "image", "gif", "gifTitle", "replyTo", "poll", "pollVotes", "pollClosed", "pollPinned", "pollFor"]) {
+  const lib = require(`${__hooks}/glowtape_lib.js`);
+  for (const f of ["channel", "author", "image", "gif", "gifTitle", "replyTo", "poll", "pollVotes", "pollClosed", "pollPinned"]) {
     if (String(e.record.getString(f) || "") !== String(before.getString(f) || "")) {
+      throw new BadRequestError("Only the text of a message can be changed.");
+    }
+  }
+  // Multi-relations: getString() gives "" for a list, so compare the ids.
+  for (const f of ["pollFor", "mentionMembers", "mentionGroups"]) {
+    if (lib.toIdArray(e.record.get(f)).join(",") !== lib.toIdArray(before.get(f)).join(",")) {
       throw new BadRequestError("Only the text of a message can be changed.");
     }
   }

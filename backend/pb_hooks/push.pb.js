@@ -126,15 +126,49 @@ onRecordAfterCreateSuccess((e) => {
             .recipientUserIds(e.app, productionId, pollFor)
             .filter((uid) => uid !== authorId && targets.includes(uid))
         : targets.filter(allowed);
-    if (finalTargets.length === 0) {
-      e.next();
-      return;
+
+    // @mentions: the tagged people (a child's guardians, everyone in a tagged
+    // group) get their own "mentioned you" push even if they muted the
+    // channel — but only among those who can read it.
+    let mentioned = [];
+    const mentionMembers = lib.toIdArray(e.record.get("mentionMembers"));
+    const mentionGroups = lib.toIdArray(e.record.get("mentionGroups"));
+    if (productionId && (mentionMembers.length || mentionGroups.length)) {
+      const ids = mentionMembers.slice();
+      if (mentionGroups.length) {
+        const rows = e.app.findRecordsByFilter("members", "production = {:p}", "", 500, 0, {
+          p: productionId,
+        });
+        for (const m of rows) {
+          if (lib.toIdArray(m.get("groups")).some((g) => mentionGroups.includes(g))) ids.push(m.id);
+        }
+      }
+      if (ids.length) {
+        mentioned = lib
+          .recipientUserIds(e.app, productionId, ids)
+          .filter((uid) => uid !== authorId && targets.includes(uid));
+      }
     }
 
     const text = String(e.record.get("text") || "");
-    lib.sendPush(e.app, finalTargets, {
-      title: lib.toIdArray(channel.get("dmUsers")).length ? `💬 ${where}` : `#${channel.get("name")} — ${where}`,
-      body: `${authorName}: ${text ? text.slice(0, 120) : e.record.get("gif") ? "GIF" : "📷 photo"}`,
+    const title = lib.toIdArray(channel.get("dmUsers")).length ? `💬 ${where}` : `#${channel.get("name")} — ${where}`;
+    const body = `${authorName}: ${text ? text.slice(0, 120) : e.record.get("gif") ? "GIF" : "📷 photo"}`;
+    if (mentioned.length) {
+      lib.sendPush(e.app, mentioned, {
+        title: `@ ${authorName} tagged you — #${channel.get("name")}`,
+        body: text.slice(0, 140) || body,
+        url,
+        tag: `channel-${channel.id}`,
+      });
+    }
+    const rest = finalTargets.filter((uid) => !mentioned.includes(uid));
+    if (rest.length === 0) {
+      e.next();
+      return;
+    }
+    lib.sendPush(e.app, rest, {
+      title,
+      body,
       url,
       tag: `channel-${channel.id}`,
     });

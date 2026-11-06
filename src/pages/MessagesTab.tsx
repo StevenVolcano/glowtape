@@ -367,7 +367,7 @@ function Conversation({
       {dm ? (
         <ChannelView channelId={channel.id} members={members} />
       ) : (
-        <ChannelView channelId={channel.id} members={members} canModerate={isManager} canPoll />
+        <ChannelView channelId={channel.id} channel={channel} members={members} canModerate={isManager} canPoll />
       )}
     </div>
   )

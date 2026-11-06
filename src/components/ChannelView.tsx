@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { pb } from '../lib/pb.ts'
 import { useAuth } from '../lib/auth.tsx'
@@ -6,7 +6,16 @@ import { scrubImage } from '../lib/images.ts'
 import { STAGEHAND_TITLE, chatName, formatStamp, pbDate } from '../lib/types.ts'
 import { PollCard, PollComposer } from './Poll.tsx'
 import GifPicker, { gifFallbackUrl, gifStillUrl, gifUrl, type GifChoice } from './GifPicker.tsx'
-import type { MemberRecord, MessageRecord, ReactionRecord } from '../lib/types.ts'
+import { firstLastInitial, memberName } from '../lib/types.ts'
+import type { ChannelRecord, GroupRecord, MemberRecord, MessageRecord, ReactionRecord } from '../lib/types.ts'
+import {
+  activeQuery,
+  keptMentions,
+  matchTargets,
+  mentionTargets,
+  splitMentions,
+  type MentionTarget,
+} from '../lib/mentions.ts'
 
 // Note links render with the note's actual title; a tiny cache keeps a busy
 // channel from refetching the same note per message.
@@ -32,12 +41,23 @@ function NoteLink({ path }: { path: string }) {
 
 // Make pasted URLs tappable. Links into Glow Tape itself (rehearsal notes,
 // events) stay in the app; anything else opens in a new tab.
-function Linkified({ text }: { text: string }) {
+function Linkified({ text, mentions = [] }: { text: string; mentions?: string[] }) {
   const parts = text.split(/(https?:\/\/\S+)/g)
   return (
     <>
       {parts.map((part, i) => {
-        if (!/^https?:\/\//.test(part)) return part
+        if (!/^https?:\/\//.test(part)) {
+          if (!mentions.length) return part
+          return splitMentions(part, mentions).map((p, j) =>
+            p.mention ? (
+              <strong key={`${i}-${j}`} className="mention">
+                {p.text}
+              </strong>
+            ) : (
+              p.text
+            ),
+          )
+        }
         try {
           const url = new URL(part)
           if (url.origin === window.location.origin) {
@@ -123,8 +143,12 @@ export default function ChannelView({
   members = [],
   canModerate = false,
   canPoll = false,
+  channel,
 }: {
   channelId: string
+  // The show channel itself — turns on @mentions (not DMs or the community
+  // board) and decides who can be tagged.
+  channel?: ChannelRecord
   members?: MemberRecord[]
   // Managers of the show (or the operator on the community board) can
   // remove anyone's message.
@@ -163,6 +187,78 @@ export default function ChannelView({
   const [pickerFor, setPickerFor] = useState<string | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  // @mentions
+  const [groups, setGroups] = useState<GroupRecord[]>([])
+  const [picked, setPicked] = useState<MentionTarget[]>([])
+  const [mq, setMq] = useState<{ start: number; query: string } | null>(null)
+  const productionId = channel?.production ?? ''
+  useEffect(() => {
+    if (!productionId) return
+    pb.collection('groups')
+      .getFullList<GroupRecord>({
+        filter: pb.filter('production = {:p}', { p: productionId }),
+        sort: 'order,created',
+      })
+      .then(setGroups)
+      .catch(() => {})
+  }, [productionId])
+  const targets = channel && user ? mentionTargets(channel, members, groups, user.id) : []
+  const suggestions = mq && !editing ? matchTargets(targets, mq.query) : []
+  // Rows that are me or a child I look after: a tag on them is a tag on me.
+  const myRows = members.filter((m) => m.user === user?.id || (m.guardians ?? []).includes(user?.id ?? ''))
+  function tagLabels(m: MessageRecord): string[] {
+    const out: string[] = []
+    for (const id of m.mentionMembers ?? []) {
+      const row = members.find((x) => x.id === id)
+      if (row) out.push(firstLastInitial(memberName(row)))
+    }
+    for (const id of m.mentionGroups ?? []) {
+      const g = groups.find((x) => x.id === id)
+      if (g) out.push(g.name.replace(/^🔒\s*/, ''))
+    }
+    return out
+  }
+  function tagsMe(m: MessageRecord): boolean {
+    if (m.author === user?.id) return false
+    return myRows.some(
+      (r) =>
+        (m.mentionMembers ?? []).includes(r.id) ||
+        (r.groups ?? []).some((g) => (m.mentionGroups ?? []).includes(g)),
+    )
+  }
+  function onType(value: string, caret: number | null) {
+    setText(value)
+    setMq(targets.length && caret !== null ? activeQuery(value, caret) : null)
+  }
+  function pickMention(t: MentionTarget) {
+    if (!mq) return
+    const caret = mq.start + 1 + mq.query.length
+    const insert = `@${t.label} `
+    const next = text.slice(0, mq.start) + insert + text.slice(caret)
+    setText(next)
+    setPicked((prev) => [...prev, t])
+    setMq(null)
+    caretTo.current = mq.start + insert.length
+  }
+  function startTag() {
+    const sep = text && !/\s$/.test(text) ? ' ' : ''
+    const next = `${text}${sep}@`
+    setText(next)
+    setMq({ start: next.length - 1, query: '' })
+    setAttachOpen(false)
+    caretTo.current = next.length
+  }
+  // After a tag is inserted, put the cursor right after it once the new
+  // text is on screen.
+  const caretTo = useRef<number | null>(null)
+  useLayoutEffect(() => {
+    if (caretTo.current === null) return
+    const at = caretTo.current
+    caretTo.current = null
+    inputRef.current?.focus()
+    inputRef.current?.setSelectionRange(at, at)
+  }, [text])
 
   const QUICK_EMOJI = ['👍', '❤️', '😂', '👏', '🎭', '😢', '🎉', '😮']
 
@@ -282,6 +378,7 @@ export default function ChannelView({
           ...(file ? { image: await scrubImage(file) } : {}),
           ...(gif ? { gif: gif.id } : {}),
           ...(replyTo ? { replyTo: replyTo.id } : {}),
+          ...(targets.length ? keptMentions(body, picked) : {}),
         },
         { expand: EXPAND },
       )
@@ -292,6 +389,8 @@ export default function ChannelView({
       setFile(null)
       setGif(null)
       setReplyTo(null)
+      setPicked([])
+      setMq(null)
       setSendErr('')
     } catch (err) {
       setSendErr(
@@ -438,10 +537,11 @@ export default function ChannelView({
                   {dayLabel(m.created)}
                 </p>
               )}
-              <div id={`msg-${m.id}`} className={`msg ${mine ? 'mine' : ''}`}>
+              <div id={`msg-${m.id}`} className={`msg ${mine ? 'mine' : ''} ${tagsMe(m) ? 'tags-me' : ''}`}>
                 <span className="msg-author">
                   {authorLabel(m)} · <time dateTime={pbDate(m.created).toISOString()}>{timeOf(m.created)}</time>
                   {m.edited && <span className="msg-edited"> · edited</span>}
+                  {tagsMe(m) && <span className="msg-tagged"> · @ tagged you</span>}
                 </span>
                 <div className="msg-line">
                   <span className="msg-text">
@@ -487,7 +587,7 @@ export default function ChannelView({
                         }
                       />
                     ) : (
-                      <Linkified text={m.text} />
+                      <Linkified text={m.text} mentions={tagLabels(m)} />
                     )}
                   </span>
                   <button
@@ -642,6 +742,11 @@ export default function ChannelView({
           >
             <span aria-hidden="true">🎞</span> GIF
           </button>
+          {targets.length > 0 && (
+            <button type="button" className="attach-btn" onClick={startTag}>
+              <span aria-hidden="true">@</span> Tag
+            </button>
+          )}
           {canPoll && (
             <button
               type="button"
@@ -658,12 +763,31 @@ export default function ChannelView({
           )}
         </div>
       )}
+      {suggestions.length > 0 && (
+        <div className="mention-picker" role="group" aria-label="Tag someone">
+          {suggestions.map((t) => (
+            <button key={`${t.kind}-${t.id}`} type="button" className="mention-pick"
+              // Keep the cursor in the message box while picking.
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => pickMention(t)}
+            >
+              <strong>@{t.label}</strong>
+              {t.hint && <span className="hint"> {t.hint}</span>}
+            </button>
+          ))}
+        </div>
+      )}
+      {mq && !editing && suggestions.length === 0 && mq.query.trim() && (
+        <p className="hint mention-none" role="status">
+          Nobody here matches “{mq.query.trim()}”.
+        </p>
+      )}
       <form onSubmit={send} className="row composer">
         {!editing && (
           <button
             type="button"
             className="attach-toggle"
-            aria-label={attachOpen ? 'Close the photo, GIF and poll options' : 'Add a photo, GIF or poll'}
+            aria-label={attachOpen ? 'Close the photo, GIF, tag and poll options' : 'Add a photo, GIF, tag or poll'}
             aria-expanded={attachOpen}
             onClick={() => setAttachOpen(!attachOpen)}
           >
@@ -674,8 +798,18 @@ export default function ChannelView({
           ref={inputRef}
           aria-label={editing ? 'Edit your message' : 'Message'}
           value={text}
-          onChange={(e) => setText(e.target.value)}
+          onChange={(e) => onType(e.target.value, e.target.selectionStart)}
           onKeyDown={(e) => {
+            // Enter picks the top suggestion while the @ list is open.
+            if (e.key === 'Enter' && suggestions.length > 0) {
+              e.preventDefault()
+              pickMention(suggestions[0])
+              return
+            }
+            if (e.key === 'Escape' && mq) {
+              setMq(null)
+              return
+            }
             if (e.key === 'Escape' && (editing || replyTo)) cancelCompose()
           }}
           placeholder="Write a message…"
