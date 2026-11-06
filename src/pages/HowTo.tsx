@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { pb } from '../lib/pb.ts'
 import { useAuth } from '../lib/auth.tsx'
 import { useTitle } from '../lib/useTitle.ts'
@@ -13,6 +13,13 @@ export default function HowTo() {
   const { user } = useAuth()
   const [seen, setSeen] = useState<string[]>(() => user?.videosSeen ?? [])
   const saving = useRef(new Set<string>())
+
+  // /videos#8-attendance (help.html links) — the list renders after the
+  // browser's own hash jump, so jump again once it's on the page.
+  useEffect(() => {
+    const id = decodeURIComponent(window.location.hash.slice(1))
+    if (id) document.getElementById(id)?.scrollIntoView()
+  }, [])
 
   async function markSeen(slug: string) {
     if (!user || seen.includes(slug) || saving.current.has(slug)) return
@@ -39,8 +46,9 @@ export default function HowTo() {
 
       <h1>How-to videos</h1>
       <p className="hint">
-        Short videos, about a minute each, that walk you through getting started. Each one has
-        captions on the screen and a written version under it.
+        Short videos, about a minute each, that walk you through getting started, plus one for
+        managers on taking attendance. Each one has captions on the screen and a written version
+        under it.
         {user && (
           <>
             {' '}
@@ -87,7 +95,7 @@ function VideoCard({
   return (
     <li className="card stack howto-card" id={v.slug}>
       <h2 className="howto-title">
-        {v.bonus ? 'Bonus' : `Part ${n}`}: {v.title}{' '}
+        {v.managers ? 'For managers' : v.bonus ? 'Bonus' : `Part ${n}`}: {v.title}{' '}
         <span className="hint">({mins})</span>
         {seen && <span className="acked howto-seen"> ✓ Watched</span>}
       </h2>

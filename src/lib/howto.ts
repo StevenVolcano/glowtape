@@ -1,12 +1,13 @@
 // The how-to video series (public/videos/). GENERATED from the video build
 // specs — the files are made outside the repo (narrated in Steven's voice,
 // subtitles burned in), so keep slugs in step with the files in public/videos/.
-// Core (non-bonus) videos make up the "Watch the how-to videos" Getting
-// settled step; users.videosSeen holds the slugs someone has watched.
+// Core videos (not bonus, not for-managers) make up the "Watch the how-to
+// videos" Getting settled step; users.videosSeen holds the slugs watched.
 export interface HowToVideo {
   slug: string
   title: string
   bonus: boolean
+  managers: boolean
   seconds: number
   blurb: string
   transcript: string[]
@@ -17,6 +18,7 @@ export const HOWTO_VIDEOS: HowToVideo[] = [
     "slug": "1-sign-in-and-join",
     "title": "Sign in & join your show",
     "bonus": false,
+    "managers": false,
     "seconds": 81,
     "blurb": "Make your account with the code from your director and find your show.",
     "transcript": [
@@ -39,6 +41,7 @@ export const HOWTO_VIDEOS: HowToVideo[] = [
     "slug": "2-home-screen",
     "title": "Put it on your home screen",
     "bonus": false,
+    "managers": false,
     "seconds": 62,
     "blurb": "Put Glow Tape on your home screen like an app. On iPhone it’s needed for notifications.",
     "transcript": [
@@ -57,6 +60,7 @@ export const HOWTO_VIDEOS: HowToVideo[] = [
     "slug": "3-notifications",
     "title": "Turn on notifications",
     "bonus": false,
+    "managers": false,
     "seconds": 60,
     "blurb": "Turn on notifications and pick when reminders arrive.",
     "transcript": [
@@ -76,6 +80,7 @@ export const HOWTO_VIDEOS: HowToVideo[] = [
     "slug": "4-text-reminders",
     "title": "Get text reminders",
     "bonus": false,
+    "managers": false,
     "seconds": 50,
     "blurb": "Get reminder texts before each call, and sign in by text.",
     "transcript": [
@@ -94,6 +99,7 @@ export const HOWTO_VIDEOS: HowToVideo[] = [
     "slug": "5-calendar",
     "title": "Put rehearsals on your calendar",
     "bonus": false,
+    "managers": false,
     "seconds": 60,
     "blurb": "Put every call you’re in on Google, Apple, or any calendar, kept up to date.",
     "transcript": [
@@ -113,6 +119,7 @@ export const HOWTO_VIDEOS: HowToVideo[] = [
     "slug": "6-first-week",
     "title": "Your first week",
     "bonus": false,
+    "managers": false,
     "seconds": 51,
     "blurb": "Three habits for the first week: Got it, conflicts, and Messages.",
     "transcript": [
@@ -130,6 +137,7 @@ export const HOWTO_VIDEOS: HowToVideo[] = [
     "slug": "7-fingerprint",
     "title": "Sign in with your fingerprint",
     "bonus": true,
+    "managers": false,
     "seconds": 55,
     "blurb": "Optional: skip the emailed code and sign in with your fingerprint or face.",
     "transcript": [
@@ -143,10 +151,36 @@ export const HOWTO_VIDEOS: HowToVideo[] = [
       "Your fingerprint never leaves your phone, and Glow Tape never sees it. The emailed code always still works.",
       "Set it up on each phone or computer you use. Break a nail!"
     ]
+  },
+  {
+    "slug": "8-attendance",
+    "title": "Take attendance",
+    "bonus": false,
+    "managers": true,
+    "seconds": 91,
+    "blurb": "For directors and stage managers: roll call, called-in notes, door check-in, and the attendance report.",
+    "transcript": [
+      "Stage managers, this one's for you: taking roll in Glow Tape, in a few taps.",
+      "Open the Schedule and tap tonight's rehearsal.",
+      "Tap Roll call.",
+      "Everyone called tonight is listed. Tap a name once to mark them here.",
+      "Tap again for late, and again for missing. One more tap clears it.",
+      "Missing names stand out in red, so you know who to check on.",
+      "Anyone who tapped Running late or Can't make it is already filed under Called in, with their note.",
+      "Got a text or a call instead? Tap Called in beside their name, so they don't count as missing.",
+      "Or let the cast check themselves in. Tap Turn on door check-in.",
+      "You get a code to scan. Tap Door poster to print it.",
+      "Tape it up by the door, or prop an old phone there in kiosk mode.",
+      "Cast scan it with their phone camera and tap I'm here. Parents can check in their kids.",
+      "They're checked in, with the time.",
+      "It lands in your roll call. Tap Refresh roll to catch the latest.",
+      "Every rehearsal adds up in Manage, under Attendance report, with season totals for each person. Only managers can see it.",
+      "Questions? Open the menu and tap Help for the whole manual. Break a nail!"
+    ]
   }
 ]
 
-export const CORE_VIDEOS = HOWTO_VIDEOS.filter((v) => !v.bonus)
+export const CORE_VIDEOS = HOWTO_VIDEOS.filter((v) => !v.bonus && !v.managers)
 
 export function seenCount(seen: string[] | null | undefined): number {
   const s = new Set(seen ?? [])
